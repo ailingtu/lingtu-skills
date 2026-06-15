@@ -16,7 +16,7 @@
 ## 环境
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 可选：

@@ -14,10 +14,10 @@ Current package version: `0.2.0`. Remote installers can compare the `version` fi
 
 ## Requirements
 
-Set `LINGTU_AI_API_KEY` before running API calls:
+Set `LINGTU_API_KEY` before running API calls:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 The package sends the key as:

@@ -23,10 +23,10 @@ The main package instruction file is [`SKILL.md`](./SKILL.md). Codex can read it
 
 ## Requirements
 
-Set `LINGTU_AI_API_KEY` before running task creation:
+Set `LINGTU_API_KEY` before running task creation:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 The skill sends the key as:

@@ -192,6 +192,11 @@ generate_agent_doc() {
     echo
     echo "Use the selected Lingtu AI packages from this project when the user requests matching capabilities."
     echo
+    echo "## Repository Source"
+    echo
+    echo "- GitHub: https://github.com/ailingtu/lingtu-skills"
+    echo "- When the user asks to update Lingtu AI skills, pull the latest version from this repository."
+    echo
     echo "## Installed Packages"
     echo
     local id idx
@@ -202,7 +207,7 @@ generate_agent_doc() {
     echo
     echo "## Shared Rules"
     echo
-    echo "- Require \`LINGTU_AI_API_KEY\` in the process environment."
+    echo "- Require \`LINGTU_API_KEY\` in the process environment."
     echo "- Send the key as request header \`x-api-key\`."
     echo "- Start from each package's \`SKILL.md\` instruction file."
     echo "- Read the package \`references/api.md\` before changing endpoint paths, request fields, response fields, or status handling."

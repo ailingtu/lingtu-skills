@@ -6,6 +6,11 @@ description: 视频理解、视频内容分析与复刻提示词生成。任何�
 
 # 视频理解与复刻提示词生成
 
+## Repository Source
+
+- GitHub: https://github.com/ailingtu/lingtu-skills
+- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 ## Overview
 
 Use this skill to turn a video into a natural-language replication prompt.
@@ -27,10 +32,10 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 Use the same authentication pattern as the other Lingtu skills.
 
-Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_AI_API_KEY` before making requests:
+Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_API_KEY` before making requests:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 Send the key as the request header `x-api-key: <key>`. Do not store user API keys in this skill directory or commit them to source control.

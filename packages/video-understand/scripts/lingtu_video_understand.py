@@ -18,14 +18,14 @@ PROGRESS_MIN_BYTES = 1024 * 1024
 
 
 def api_key():
-    key = os.environ.get("LINGTU_AI_API_KEY")
+    key = os.environ.get("LINGTU_API_KEY")
     if not key:
         raise SystemExit(
-            "Missing LINGTU_AI_API_KEY.\n"
+            "Missing LINGTU_API_KEY.\n"
             "Get a key at https://app.ailingtu.com/api-key-management, then set it before retrying:\n"
-            "  export LINGTU_AI_API_KEY=\"<your key>\"\n"
-            "On macOS apps launched outside your shell: launchctl setenv LINGTU_AI_API_KEY \"<your key>\"\n"
-            "On Windows: setx LINGTU_AI_API_KEY \"<your key>\""
+            "  export LINGTU_API_KEY=\"<your key>\"\n"
+            "On macOS apps launched outside your shell: launchctl setenv LINGTU_API_KEY \"<your key>\"\n"
+            "On Windows: setx LINGTU_API_KEY \"<your key>\""
         )
     return key
 

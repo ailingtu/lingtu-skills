@@ -6,6 +6,11 @@ description: TK 店铺数据查询与日报。通过灵途 AI 接口查询 TK �
 
 # TK 店铺数据查询与日报
 
+## Repository Source
+
+- GitHub: https://github.com/ailingtu/lingtu-skills
+- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 ## Overview
 
 Use this skill for TK shop/store data lookup and analysis requests.
@@ -23,22 +28,22 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 Use the same authentication pattern as `lingtu-content-create`.
 
-Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_AI_API_KEY` before making requests. For a one-off shell session:
+Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_API_KEY` before making requests. For a one-off shell session:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 For macOS apps launched outside your shell, set a user launchd environment variable, then restart Codex:
 
 ```bash
-launchctl setenv LINGTU_AI_API_KEY "..."
+launchctl setenv LINGTU_API_KEY "..."
 ```
 
 For Windows, set a user environment variable, then restart Codex or the terminal:
 
 ```powershell
-setx LINGTU_AI_API_KEY "..."
+setx LINGTU_API_KEY "..."
 ```
 
 Send the key as the request header `x-api-key: <key>`. Do not store user API keys in this skill directory or commit them to source control.

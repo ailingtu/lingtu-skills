@@ -101,9 +101,9 @@ THEME_RULES = {
 # -------------------- 通用工具 --------------------
 
 def require_api_key() -> str:
-    key = os.environ.get("LINGTU_AI_API_KEY")
+    key = os.environ.get("LINGTU_API_KEY")
     if not key:
-        raise SystemExit("缺少环境变量 LINGTU_AI_API_KEY，请先配置后再使用本技能。")
+        raise SystemExit("缺少环境变量 LINGTU_API_KEY，请先配置后再使用本技能。")
     return key
 
 

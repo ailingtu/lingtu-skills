@@ -12,9 +12,9 @@ DEFAULT_BASE_URL = "https://api.ailingtu.com"
 
 
 def api_key():
-    key = os.environ.get("LINGTU_AI_API_KEY")
+    key = os.environ.get("LINGTU_API_KEY")
     if not key:
-        raise SystemExit("Missing LINGTU_AI_API_KEY. Set it before using this skill.")
+        raise SystemExit("Missing LINGTU_API_KEY. Set it before using this skill.")
     return key
 
 

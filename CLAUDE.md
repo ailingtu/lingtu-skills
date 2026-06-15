@@ -2,6 +2,11 @@
 
 Use this repository as a reusable Lingtu AI capability kit.
 
+## Repository Source
+
+- GitHub: https://github.com/ailingtu/lingtu-skills
+- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 ## Routing
 
 - For turning a video file (uploaded material) or a TikTok/YouTube URL into a natural-language replication prompt (for 二创 generation or video tagging/understanding), read `packages/video-understand/SKILL.md`.
@@ -12,7 +17,7 @@ Use this repository as a reusable Lingtu AI capability kit.
 
 ## Environment
 
-Require `LINGTU_AI_API_KEY` in the process environment. Get your key at https://app.ailingtu.com/api-key-management. Send it as the request header `x-api-key`.
+Require `LINGTU_API_KEY` in the process environment. Get your key at https://app.ailingtu.com/api-key-management. Send it as the request header `x-api-key`.
 
 ## Execution
 

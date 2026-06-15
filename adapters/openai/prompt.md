@@ -1,5 +1,7 @@
 # Lingtu AI OpenAI Adapter Prompt
 
+Repository source: https://github.com/ailingtu/lingtu-skills. When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 You can use three Lingtu AI packages:
 
 1. Content creation package: `packages/content-create`
@@ -12,6 +14,6 @@ For TK shop-data requests, follow `packages/tkshop-query/SKILL.md` and call `scr
 
 For TikTok creator/competitor monitoring requests, follow `packages/tiktok-monitor/SKILL.md` and call `scripts/lingtu_tiktok_monitor.py`.
 
-Require `LINGTU_AI_API_KEY` in the runtime environment and send it as `x-api-key`.
+Require `LINGTU_API_KEY` in the runtime environment and send it as `x-api-key`.
 
 Before changing endpoint paths or response parsing, read the package `references/api.md`.

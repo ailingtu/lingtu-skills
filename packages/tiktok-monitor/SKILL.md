@@ -6,6 +6,11 @@ description: TikTok 达人/竞品监控与日报。通过灵途 `/v1/influencer/
 
 # TikTok 达人 / 竞品监控与日报
 
+## Repository Source
+
+- GitHub: https://github.com/ailingtu/lingtu-skills
+- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 ## 适用场景
 
 当用户要求监控 TikTok 达人 / 竞品 / 对标账号、查看群里的监控列表、订阅每日内容情报日报、或基于已抓取的视频数据出报告时，调用本技能。每个群（`group_id`）的监控列表互相独立。
@@ -32,14 +37,14 @@ description: TikTok 达人/竞品监控与日报。通过灵途 `/v1/influencer/
 获取 API Key：https://app.ailingtu.com/api-key-management。设置环境变量：
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 桌面应用使用：
 
 ```bash
-launchctl setenv LINGTU_AI_API_KEY "..."   # macOS
-setx LINGTU_AI_API_KEY "..."               # Windows
+launchctl setenv LINGTU_API_KEY "..."   # macOS
+setx LINGTU_API_KEY "..."               # Windows
 ```
 
 可选环境变量：
@@ -149,6 +154,6 @@ python3 scripts/lingtu_tiktok_monitor.py analyze --input-json ./posts.json --for
 ## 错误处理约定
 
 - `code:-1`（uniqueId 不存在）→ 抛中文提示："未获取到该达人数据：…（uniqueId=xxx）"，原样回显给用户。
-- 缺 `LINGTU_AI_API_KEY` → 中文提示。
+- 缺 `LINGTU_API_KEY` → 中文提示。
 - 网络/HTTP 错误 → 中文提示。
 - `digest` 中单个达人的 snapshot 缺失不会中断流程，会进入"未抓取到数据"段。

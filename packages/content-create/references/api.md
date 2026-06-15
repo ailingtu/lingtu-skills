@@ -6,7 +6,7 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 
 - Base URL: `https://api.ailingtu.com`
 - Auth header: `x-api-key: <key>`
-- Shared key config: read `LINGTU_AI_API_KEY` from the process environment.
+- Shared key config: read `LINGTU_API_KEY` from the process environment.
 - Creation model: create a schedule, receive a schedule id and optional task ids, poll until completion.
 - The script sends a caller-generated 8-character `taskId` by default. In schedule mode, query task lists with `scheduleId`; if the create response returns `taskIds`, use them as an additional precise match.
 - Reference images from local files are sent as data URLs such as `data:image/jpeg;base64,...`. Image generation uses `params.inputReferences` as an array; video generation uses `params.inputReference` for one reference or `params.inputReferences` for multiple references.
@@ -19,7 +19,7 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 
 ## Environment Variables
 
-- `LINGTU_AI_API_KEY`: required API key.
+- `LINGTU_API_KEY`: required API key.
 - `LINGTU_AI_BASE_URL`: optional override; defaults to `https://api.ailingtu.com`.
 - `LINGTU_AI_CREATE_PATH`: optional create endpoint path; defaults to `/v1/ai/task/create`.
 - `LINGTU_AI_STATUS_PATH`: optional status endpoint path with `{task_id}`; defaults to `/v1/ai/task/query?taskId={task_id}`.
@@ -33,13 +33,13 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 One-off shell session:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 macOS app environment:
 
 ```bash
-launchctl setenv LINGTU_AI_API_KEY "..."
+launchctl setenv LINGTU_API_KEY "..."
 ```
 
 Restart Codex after setting it.
@@ -47,7 +47,7 @@ Restart Codex after setting it.
 Windows user environment:
 
 ```powershell
-setx LINGTU_AI_API_KEY "..."
+setx LINGTU_API_KEY "..."
 ```
 
 Restart Codex or the terminal after setting it.

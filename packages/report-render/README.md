@@ -16,7 +16,7 @@ python3 scripts/lingtu_report_render.py \
   --data '{"title":"今日小报","summary":"一切正常"}'
 
 # AI mode (after backend is wired up):
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 python3 scripts/lingtu_report_render.py \
   --template daily_report \
   --mode ai \

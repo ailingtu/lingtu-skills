@@ -4,6 +4,8 @@
 
 将灵途 AI 的能力封装为可复用的技能包，适配 Codex、Claude Code、Cursor、Dify、OpenAI 等不同智能体和平台。核心包与模型无关，适配器仅做薄层翻译。
 
+仓库地址：[ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills)。需要更新时，从该 GitHub 仓库拉取最新版本。
+
 ## 简介
 
 将灵途 AI 的能力封装为可复用的技能包，适配以下平台：
@@ -44,23 +46,23 @@ install.sh          # 一键安装脚本
 
 ## 环境准备
 
-使用前需配置 `LINGTU_AI_API_KEY`：
+使用前需配置 `LINGTU_API_KEY`：
 
 ```bash
-export LINGTU_AI_API_KEY="你的密钥"
+export LINGTU_API_KEY="你的密钥"
 ```
 
 | 平台 | 持久化设置命令 |
 |------|---------------|
-| macOS（桌面应用） | `launchctl setenv LINGTU_AI_API_KEY "你的密钥"` |
-| Windows（桌面应用） | `setx LINGTU_AI_API_KEY "你的密钥"` |
+| macOS（桌面应用） | `launchctl setenv LINGTU_API_KEY "你的密钥"` |
+| Windows（桌面应用） | `setx LINGTU_API_KEY "你的密钥"` |
 
 设置后重启对应的应用或终端。请求通过请求头 `x-api-key` 传递密钥。切勿将密钥或业务数据提交到 Git。
 
 ## 安装
 
 ```bash
-git clone https://github.com/<your-org>/lingtu-skills.git
+git clone https://github.com/ailingtu/lingtu-skills.git
 cd lingtu-skills
 ./install.sh                               # 自动识别平台，然后引导选择要安装的能力
 ```

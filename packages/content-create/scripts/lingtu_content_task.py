@@ -636,9 +636,9 @@ def main() -> int:
         args.model = "gpt-image-2" if args.kind.lower() == "image" else "gemini-omni-video"
     if args.kind.lower() == "video" and not args.seconds_was_set:
         args.seconds = default_video_seconds(args.model)
-    api_key = os.getenv("LINGTU_AI_API_KEY")
+    api_key = os.getenv("LINGTU_API_KEY")
     if not api_key:
-        print_error({"error": "Missing LINGTU_AI_API_KEY."}, stderr=True)
+        print_error({"error": "Missing LINGTU_API_KEY."}, stderr=True)
         return 2
     try:
         reference_images = [read_reference_image(path) for path in args.reference_image]

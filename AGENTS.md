@@ -2,6 +2,11 @@
 
 Use this repository when a user asks for Lingtu AI content generation, TK shop data analysis, or TikTok creator/competitor monitoring.
 
+## Repository Source
+
+- GitHub: https://github.com/ailingtu/lingtu-skills
+- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 ## Available Packages
 
 - `packages/content-create`: media generation, product reference images, ecommerce videos, and viral remake workflows.
@@ -11,7 +16,7 @@ Use this repository when a user asks for Lingtu AI content generation, TK shop d
 
 ## Shared Rules
 
-- Require `LINGTU_AI_API_KEY` in the process environment.
+- Require `LINGTU_API_KEY` in the process environment.
 - Send the key as `x-api-key`.
 - Read the package `references/api.md` before changing endpoint paths, request fields, response fields, or status handling.
 - Prefer the package scripts over ad hoc API calls.

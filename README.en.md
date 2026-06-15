@@ -4,6 +4,8 @@
 
 Packages reusable Lingtu AI capabilities for different AI agents and platforms. Core packages are model-agnostic; adapters provide thin translation layers.
 
+Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills). When users ask to update, pull the latest version from this GitHub repository.
+
 ## What's Inside
 
 - **`packages/content-create`** — generate product images, AI video reference packs, ecommerce/UGC selling videos, and viral-remake media through Lingtu AI.
@@ -32,23 +34,23 @@ install.sh          # One-command installer
 
 ## Prerequisites
 
-Set `LINGTU_AI_API_KEY` before using any package:
+Set `LINGTU_API_KEY` before using any package:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 | Platform | Command |
 |----------|---------|
-| macOS (app) | `launchctl setenv LINGTU_AI_API_KEY "..."` |
-| Windows (app) | `setx LINGTU_AI_API_KEY "..."` |
+| macOS (app) | `launchctl setenv LINGTU_API_KEY "..."` |
+| Windows (app) | `setx LINGTU_API_KEY "..."` |
 
 Restart the app or terminal after setting. Requests send the key as header `x-api-key`. Never commit API keys or generated business data.
 
 ## Install
 
 ```bash
-git clone https://github.com/<your-org>/lingtu-skills.git
+git clone https://github.com/ailingtu/lingtu-skills.git
 cd lingtu-skills
 ./install.sh                               # Auto-detect platform, then ask which packages to install
 ```

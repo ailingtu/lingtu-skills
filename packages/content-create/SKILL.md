@@ -6,6 +6,11 @@ description: 灵途 AI 内容生成。通过灵途 AI 的任务化接口生成�
 
 # 灵途 AI 内容生成（图片 / 视频 / 爆款复刻）
 
+## Repository Source
+
+- GitHub: https://github.com/ailingtu/lingtu-skills
+- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 ## Overview
 
 Use Lingtu AI's shared schedule API to create generated media from a prompt and optional reference images. Treat image and video creation as variants of the same workflow: submit a schedule creation request, poll by the returned schedule id, then return the generated assets.
@@ -20,22 +25,22 @@ Use only the workflow references needed for the request; do not load all of them
 
 ## Configuration
 
-Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_AI_API_KEY` before running the script. For a one-off shell session:
+Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_API_KEY` before running the script. For a one-off shell session:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 For macOS apps launched outside your shell, set a user launchd environment variable, then restart Codex:
 
 ```bash
-launchctl setenv LINGTU_AI_API_KEY "..."
+launchctl setenv LINGTU_API_KEY "..."
 ```
 
 For Windows, set a user environment variable, then restart Codex or the terminal:
 
 ```powershell
-setx LINGTU_AI_API_KEY "..."
+setx LINGTU_API_KEY "..."
 ```
 
 Send the key as the request header `x-api-key: <key>`. Do not store user API keys in this skill directory or commit them to source control.

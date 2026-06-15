@@ -6,6 +6,11 @@ description: 报告 JSON 转长图分享。把灵途各类结构化报告（店�
 
 # 报告 JSON 转长图分享
 
+## Repository Source
+
+- GitHub: https://github.com/ailingtu/lingtu-skills
+- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+
 ## Overview
 
 Turns a structured JSON payload (or just a few fields) into a single PNG long-image suitable for sharing in Feishu, WeChat, or DMs.
@@ -79,22 +84,22 @@ All fields are optional — sensible defaults fill in. Any section without data 
 
 Same authentication pattern as the other Lingtu skills. Only `ai` mode needs the key — `fill` mode runs offline.
 
-Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_AI_API_KEY`:
+Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_API_KEY`:
 
 ```bash
-export LINGTU_AI_API_KEY="..."
+export LINGTU_API_KEY="..."
 ```
 
 For macOS apps launched outside your shell:
 
 ```bash
-launchctl setenv LINGTU_AI_API_KEY "..."
+launchctl setenv LINGTU_API_KEY "..."
 ```
 
 For Windows:
 
 ```powershell
-setx LINGTU_AI_API_KEY "..."
+setx LINGTU_API_KEY "..."
 ```
 
 ## Install (one-time)

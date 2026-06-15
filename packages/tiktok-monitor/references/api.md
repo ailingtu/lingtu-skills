@@ -3,7 +3,7 @@
 ## Shared Configuration
 
 - Base URL: `https://api.ailingtu.com`
-- Authentication header: `x-api-key: <LINGTU_AI_API_KEY>`
+- Authentication header: `x-api-key: <LINGTU_API_KEY>`
 - Do not commit API keys or private monitoring data.
 
 ## Fetch Recent Posts
