@@ -2,7 +2,7 @@
 
 [中文版](README.md)
 
-Packages reusable Lingtu AI capabilities for different AI agents and platforms. Core packages are model-agnostic; adapters provide thin translation layers.
+Packages reusable Lingtu AI capabilities for different AI agents and platforms, including Codex, Claude Code, Cursor, OpenClaw, Dify, and OpenAI. Core packages are model-agnostic; adapters provide thin translation layers.
 
 Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills). When users ask to update, pull the latest version from this GitHub repository.
 
@@ -27,6 +27,7 @@ adapters/
   codex/            # Codex skill installation
   claude/           # Claude Code CLAUDE.md
   cursor/           # Cursor AGENTS.md
+  openclaw/         # OpenClaw AGENTS.md
   dify/             # Dify workflow export
   openai/           # OpenAI custom GPT prompt
 install.sh          # One-command installer
@@ -62,6 +63,7 @@ Or specify a target and packages explicitly:
 ./install.sh codex content-create tkshop-query tiktok-monitor video-understand
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
+./install.sh openclaw /path/to/project all
 ./install.sh openai /path/to/export/dir tkshop-query
 ./install.sh dify /path/to/export/dir all
 ```

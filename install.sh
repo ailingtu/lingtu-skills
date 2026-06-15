@@ -16,6 +16,7 @@ Usage:
   ./install.sh codex [packages...]
   ./install.sh claude [destination] [packages...]
   ./install.sh cursor [destination] [packages...]
+  ./install.sh openclaw [destination] [packages...]
   ./install.sh openai [destination] [packages...]
   ./install.sh dify [destination] [packages...]
 
@@ -25,12 +26,14 @@ Examples:
   ./install.sh codex content-create tkshop-query tiktok-monitor
   ./install.sh claude /path/to/project content-create
   ./install.sh cursor /path/to/project all
+  ./install.sh openclaw /path/to/project all
 
 Targets:
   auto    Detect the current AI platform and install the matching adapter.
   codex   Install selected packages as Codex skills under ~/.codex/skills.
   claude  Install selected packages and CLAUDE.md into a project.
   cursor  Install selected packages and AGENTS.md into a project.
+  openclaw  Install selected packages and AGENTS.md into an OpenClaw project.
   openai  Export selected packages with an OpenAI adapter prompt.
   dify    Export selected packages with Dify notes.
 
@@ -56,6 +59,11 @@ detect_platform() {
 
   if [[ -d ".cursor" ]]; then
     echo "cursor"
+    return
+  fi
+
+  if [[ -d ".openclaw" ]] || [[ -n "${OPENCLAW:-}" ]]; then
+    echo "openclaw"
     return
   fi
 
@@ -244,6 +252,12 @@ install_project_adapter() {
       generate_agent_doc cursor "$dest/AGENTS.md" "$@"
       echo "Installed Cursor adapter to $dest/AGENTS.md"
       ;;
+    openclaw)
+      mkdir -p "$dest/.lingtu-agent-kit/packages"
+      install_selected_packages_to_dir "$dest/.lingtu-agent-kit/packages" "$@"
+      generate_agent_doc openclaw "$dest/AGENTS.md" "$@"
+      echo "Installed OpenClaw adapter to $dest/AGENTS.md"
+      ;;
     openai)
       mkdir -p "$dest/lingtu-openai-adapter"
       copy_dir "$ROOT_DIR/adapters/openai" "$dest/lingtu-openai-adapter"
@@ -286,7 +300,7 @@ main() {
   case "$target" in
     codex)
       ;;
-    claude|cursor|openai|dify)
+    claude|cursor|openclaw|openai|dify)
       if [[ "${1:-}" != "" ]] && [[ "${1:-}" != "all" ]] && ! package_index "${1:-}" >/dev/null 2>&1 && ! [[ "${1:-}" =~ ^[0-9,]+$ ]]; then
         dest="$1"
         shift
@@ -317,7 +331,7 @@ main() {
     codex)
       install_codex "${selected[@]}"
       ;;
-    claude|cursor|openai|dify)
+    claude|cursor|openclaw|openai|dify)
       install_project_adapter "$target" "$dest" "${selected[@]}"
       ;;
   esac

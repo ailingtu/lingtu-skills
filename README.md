@@ -2,7 +2,7 @@
 
 [English Version](README.en.md)
 
-将灵途 AI 的能力封装为可复用的技能包，适配 Codex、Claude Code、Cursor、Dify、OpenAI 等不同智能体和平台。核心包与模型无关，适配器仅做薄层翻译。
+将灵途 AI 的能力封装为可复用的技能包，适配 Codex、Claude Code、Cursor、OpenClaw、Dify、OpenAI 等不同智能体和平台。核心包与模型无关，适配器仅做薄层翻译。
 
 仓库地址：[ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills)。需要更新时，从该 GitHub 仓库拉取最新版本。
 
@@ -15,6 +15,7 @@
 | Codex | 安装为 Codex Skills |
 | Claude Code | 注入 CLAUDE.md |
 | Cursor | 注入 AGENTS.md |
+| OpenClaw | 注入 AGENTS.md |
 | Dify | 导出工作流配置 |
 | OpenAI | 导出 GPT 提示词 |
 
@@ -39,6 +40,7 @@ adapters/
   codex/            # Codex 技能安装
   claude/           # Claude Code 适配
   cursor/           # Cursor 适配
+  openclaw/         # OpenClaw 适配
   dify/             # Dify 工作流导出
   openai/           # OpenAI GPT 适配
 install.sh          # 一键安装脚本
@@ -74,6 +76,7 @@ cd lingtu-skills
 ./install.sh codex content-create tkshop-query tiktok-monitor video-understand
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
+./install.sh openclaw /path/to/project all
 ./install.sh openai /path/to/export/dir tkshop-query
 ./install.sh dify /path/to/export/dir all
 ```
