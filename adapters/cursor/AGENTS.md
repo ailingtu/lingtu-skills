@@ -15,6 +15,14 @@ Use for generated product images, reference images, ecommerce videos, viral rema
 
 Use for shop list lookup, daily reports, merchant/store metrics, and business-operation questions. Start with `packages/tkshop-query/SKILL.md`.
 
+## Use `packages/tiktok-monitor`
+
+Use for TikTok creator links, usernames, creator/competitor monitoring, single-video material metrics, video comment exports/downloads, comment feedback summaries, group-level monitoring lists, daily digest subscriptions, and yesterday-vs-today TikTok reports. Start with `packages/tiktok-monitor/SKILL.md`.
+
+## Use `packages/video-understand`
+
+Use for single local videos, TikTok URLs, or YouTube URLs that need summarization, tagging, breakdown, remix planning, or a replication prompt. If the user also asks for metrics or comments, fetch them first with `packages/tiktok-monitor`.
+
 ## Use `packages/tk-blacklist`
 
 Use for TK 达人黑名单查询, TikTok influencer blacklist lookup, and batch uniqueId blacklist checks. Start with `packages/tk-blacklist/SKILL.md`.

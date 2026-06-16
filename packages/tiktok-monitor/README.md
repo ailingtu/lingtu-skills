@@ -1,8 +1,8 @@
 # Lingtu TikTok Monitor
 
-灵途 TikTok Monitor 是一个可复用的达人监控技能包：解析输入 → 调灵途 `/v1/influencer/fetchPosts` 拉最近视频 → 写入群级监控列表 → 按"昨日 vs 今日"出每日中文日报。
+灵途 TikTok Monitor 是一个可复用的达人监控和 TikTok 素材数据技能包：解析输入 → 调灵途 TikTok 接口拉达人最近视频、单条素材数据或评论 → 写入群级监控列表 → 按"昨日 vs 今日"出每日中文日报。
 
-当前版本：`0.3.0`。远端安装器可读取 [`SKILL.md`](./SKILL.md) frontmatter 的 `version` 字段决定是否更新。
+当前版本：`0.5.0`。远端安装器可读取 [`SKILL.md`](./SKILL.md) frontmatter 的 `version` 字段决定是否更新。
 
 ## 能力
 
@@ -11,6 +11,8 @@
 - 维护群级监控列表，每个群独立；支持 `daily_enabled` 订阅开关。
 - 即时账号分析：发布频率、爆款 Top3、内容方向、开头钩子、hashtag 线索、内容结构、账号价值判断。
 - 每日日报（昨日 vs 今日）：涨粉 Top、新爆款 Top、播放量增长 Top、停更/高频发布预警、逐账号速览。
+- 获取单条 TikTok 素材实时数据：播放、点赞、评论、分享、收藏、视频地址、封面、发布时间等。
+- 获取并导出单条 TikTok 素材评论数据。
 - 提供 `tutorial` 子命令输出"如何添加监控"的中文教程文本，供 bot 直接贴回群里。
 
 ## 环境
@@ -40,6 +42,8 @@ export LINGTU_TIKTOK_MONITOR_SNAPSHOTS="~/.lingtu/tiktok-monitor/snapshots"
 | `snapshot` | 拉取并落盘当日快照（每日 8 点编排循环用） |
 | `digest` | 生成某群的每日日报 |
 | `videos` | 直接拉视频（`--raw` 输出原始响应） |
+| `material` | 获取单条 TikTok 素材实时数据 |
+| `comments` | 获取单条 TikTok 素材评论数据 |
 | `analyze` | 分析一份 fetchPosts JSON 文件 |
 
 详细参数与流程见 [`SKILL.md`](./SKILL.md)，接口字段见 [`references/api.md`](./references/api.md)。

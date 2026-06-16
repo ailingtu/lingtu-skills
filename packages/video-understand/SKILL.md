@@ -69,6 +69,7 @@ The replication prompt the script returns is the source of truth for what's in t
 5. Downstream usage:
    - For 二创/生成, hand the prompt to `lingtu-content-create`.
    - For 打标/检索, keep the prompt as-is or extract tags from it.
+   - For "结合数据分析这个 TikTok 视频" / "为什么爆" / "看评论区反馈", first call `lingtu-tiktok-monitor` `material` and optionally `comments` for real-time metrics and comment context, then use those results together with this skill's replication prompt to answer.
 
 ## Batch / Concurrency Limit
 

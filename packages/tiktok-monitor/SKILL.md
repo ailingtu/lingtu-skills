@@ -1,7 +1,7 @@
 ---
 name: lingtu-tiktok-monitor
-version: 0.4.0
-description: TikTok 达人/竞品监控与日报。通过灵途 `/v1/influencer/fetchPosts` 接口监控 TikTok 达人或对标账号，支持加入群级监控列表、即时分析（综合/发布策略/内容形式 三种分析方向）、每日订阅，并按"昨日 vs 今日"差异生成中文日报，覆盖涨粉 Top、新爆款 Top、播放量增长 Top、停更/高频发布预警。
+version: 0.5.0
+description: TikTok 达人/竞品监控、单条素材数据与评论抓取/导出/下载、日报。通过灵途 `/v1/influencer/fetchPosts`、`/v1/material/tiktok/fetch`、`/v1/material/tiktok/fetchComments` 接口监控 TikTok 达人或对标账号，支持导出视频评论、下载评论、获取评论区反馈、更新单条或批量视频实时数据、加入群级监控列表、即时分析（综合/发布策略/内容形式 三种分析方向）、每日订阅，并按"昨日 vs 今日"差异生成中文日报。
 ---
 
 # TikTok 达人 / 竞品监控与日报
@@ -13,7 +13,9 @@ description: TikTok 达人/竞品监控与日报。通过灵途 `/v1/influencer/
 
 ## 适用场景
 
-当用户要求监控 TikTok 达人 / 竞品 / 对标账号、查看群里的监控列表、订阅每日内容情报日报、或基于已抓取的视频数据出报告时，调用本技能。每个群（`group_id`）的监控列表互相独立。
+当用户要求监控 TikTok 达人 / 竞品 / 对标账号、查看群里的监控列表、订阅每日内容情报日报、导出/下载/获取某条 TikTok 视频评论、总结评论区反馈、更新一批视频实时数据、或基于已抓取的视频数据出报告时，调用本技能。每个群（`group_id`）的监控列表互相独立。
+
+如果用户要"分析某个视频内容/讲了什么/复刻/二创"，优先使用 `lingtu-video-understand`；若问题同时要求结合播放、点赞、评论或评论区反馈，先用本技能的 `material` / `comments` 获取数据，再把结果作为分析上下文交给视频理解流程。
 
 ## 使用流程
 
@@ -123,6 +125,25 @@ python3 scripts/lingtu_tiktok_monitor.py videos  --input mrbeast --count 40
 python3 scripts/lingtu_tiktok_monitor.py videos  --input mrbeast --count 5 --raw
 python3 scripts/lingtu_tiktok_monitor.py analyze --input-json ./posts.json --format text
 ```
+
+### 单条素材数据 / 评论
+```bash
+python3 scripts/lingtu_tiktok_monitor.py material \
+  --video-url "https://www.tiktok.com/@user/video/7624922739500993822"
+
+python3 scripts/lingtu_tiktok_monitor.py material \
+  --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
+  --format text
+
+python3 scripts/lingtu_tiktok_monitor.py comments \
+  --video-url "https://www.tiktok.com/@user/video/7624922739500993822"
+
+python3 scripts/lingtu_tiktok_monitor.py comments \
+  --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
+  --raw
+```
+
+`material` 用于更新单条或批量视频实时指标；批量时由编排层循环调用即可。`comments` 默认输出规范化评论 JSON，适合导出；加 `--raw` 可保留接口原始字段。
 
 ## 编排层（bot/cron）建议
 

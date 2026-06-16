@@ -23,7 +23,7 @@
 
 - **`packages/content-create`** — 生成商品图、AI 视频参考图、电商卖货视频、爆款复刻视频等。
 - **`packages/tkshop-query`** — 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。
-- **`packages/tiktok-monitor`** — 添加 TikTok 达人/竞品监控，并生成近期视频情报报告。
+- **`packages/tiktok-monitor`** — 添加 TikTok 达人/竞品监控，获取单条视频素材数据，导出视频评论，并生成近期视频情报报告。
 - **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/YouTube 链接解析为自然语言的复刻提示词，可用于二创、打标和视频拆解。
 - **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询 TK 达人黑名单记录。
 - **`packages/report-render`** — 将结构化报告 JSON 渲染为可分享的 PNG 长图（开发中，暂未支持安装）。
@@ -34,7 +34,7 @@
 packages/
   content-create/   # 图片与视频生成
   tkshop-query/     # TK 店铺数据查询
-  tiktok-monitor/   # TikTok 达人/竞品监控
+  tiktok-monitor/   # TikTok 达人/竞品监控、素材数据、评论导出
   video-understand/ # 视频理解与复刻提示词生成
   tk-blacklist/ # TK 达人黑名单查询
   report-render/    # 报告 JSON 转分享长图

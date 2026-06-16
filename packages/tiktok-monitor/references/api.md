@@ -111,3 +111,128 @@ Response envelope: `{ code, message, data, timestamp }`.
 ```
 
 Surface `message` to the user verbatim — it is already a human-readable Chinese hint.
+
+## Fetch TikTok Material
+
+Endpoint: `POST /v1/material/tiktok/fetch`
+
+Request body:
+
+| Name | Required | Type | Description |
+|------|----------|------|-------------|
+| `videoUrl` | yes | string | Public TikTok video URL. |
+
+Response envelope: `{ code, message, data, timestamp }`.
+
+### Success response
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "videoId": "7624922739500993822",
+    "uniqueId": "steamed.bun.siste",
+    "playCount": 2109422,
+    "diggCount": 143027,
+    "commentCount": 1320,
+    "shareCount": 36150,
+    "collectCount": 17710,
+    "downloadCount": 0,
+    "forwardCount": 0,
+    "secUid": "MS4wLjAB...",
+    "playAddr": "https://api16-normal-no1a.tiktokv.eu/...",
+    "downloadAddr": "https://api16-normal-no1a.tiktokv.eu/...",
+    "coverUrl": "https://p16-common-sign.tiktokcdn-eu.com/...",
+    "videoDesc": "Fun, love to have fun#pet #Cute #dog ",
+    "descLanguage": "en",
+    "duration": 6758,
+    "isEcVideo": null,
+    "isAds": null,
+    "musicId": null,
+    "musicTitle": null,
+    "region": null,
+    "releaseAt": 1775315687
+  },
+  "timestamp": 1781491163414
+}
+```
+
+### Field semantics
+
+| Field | Meaning | Notes |
+|-------|---------|-------|
+| `videoId` | Per-video id. | The normalized script output maps this to `video.video_id`. |
+| `uniqueId` | TikTok creator handle. | The normalized script output maps this to `video.username`. |
+| `playCount` / `diggCount` / `commentCount` / `shareCount` / `collectCount` | Views, likes, comments, shares, saves. | Use these for real-time video metric refreshes. |
+| `downloadCount` / `forwardCount` | Downloads and forwards. | May be `0` depending on upstream availability. |
+| `secUid` | TikTok secure creator id. | |
+| `playAddr` / `downloadAddr` | Direct video URLs. | Signed and short-lived; re-fetch when stale. |
+| `coverUrl` | Cover image URL. | Signed and short-lived. |
+| `videoDesc` | Caption. | Hashtags must be parsed from this string with a `#xxx` regex. |
+| `descLanguage` | Caption language. | |
+| `duration` | Video length. | **Milliseconds.** Divide by 1000 for seconds. |
+| `releaseAt` | Publish time. | **Unix seconds, UTC.** |
+
+## Fetch TikTok Material Comments
+
+Endpoint: `POST /v1/material/tiktok/fetchComments`
+
+Request body:
+
+| Name | Required | Type | Description |
+|------|----------|------|-------------|
+| `videoUrl` | yes | string | Public TikTok video URL. |
+
+Response envelope: `{ code, message, data, timestamp }`.
+
+### Success response shape
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "comments": [
+      {
+        "author_pin": false,
+        "aweme_id": "7624922739500993822",
+        "collect_stat": 0,
+        "comment_language": "en",
+        "create_time": 1779085557,
+        "digg_count": 28,
+        "is_author_digged": false,
+        "no_show": false,
+        "reply_comment": null,
+        "reply_id": "0",
+        "text": "That dog is so patient",
+        "user": {
+          "nickname": "Mama_Caye",
+          "uid": "6904573909506688001",
+          "unique_id": "mama_caye.v",
+          "user_tags": null
+        },
+        "user_digged": 0
+      }
+    ]
+  },
+  "timestamp": 1781491112143
+}
+```
+
+### Field semantics
+
+`data.comments[]`:
+
+| Field | Meaning |
+|-------|---------|
+| `aweme_id` | TikTok video id. |
+| `text` | Comment text. |
+| `comment_language` | Detected comment language. |
+| `create_time` | Comment publish time, Unix seconds UTC. |
+| `digg_count` | Comment like count. |
+| `author_pin` | Whether the creator pinned the comment. |
+| `is_author_digged` | Whether the creator liked the comment. |
+| `reply_id` / `reply_comment` | Reply relationship fields from upstream. |
+| `no_show` | Hidden / not shown flag. |
+| `user.uid` / `user.unique_id` / `user.nickname` | Comment author fields. |

@@ -1,6 +1,6 @@
 # Lingtu AI Capabilities
 
-Use Lingtu AI packages from this repository when the user requests media generation, TK shop data analysis, TikTok creator or competitor monitoring, single-video understanding, or TK blacklist lookup.
+Use Lingtu AI packages from this repository when the user requests media generation, TK shop data analysis, TikTok creator or competitor monitoring, TikTok single-video metric/comment export, single-video understanding, or TK blacklist lookup.
 
 ## Repository Source
 
@@ -11,7 +11,7 @@ Use Lingtu AI packages from this repository when the user requests media generat
 
 - `packages/content-create`: product images, optimized product reference images, ecommerce videos, UGC videos, viral remakes, and other Lingtu AI media-generation tasks.
 - `packages/tkshop-query`: shop lists, shop daily reports, store metrics, merchant metrics, product metrics, order metrics, customer metrics, and shop operations analysis.
-- `packages/tiktok-monitor`: TikTok creator links, usernames, creator or competitor monitoring, group-level monitoring lists, daily digest subscriptions, and yesterday-vs-today TikTok reports.
+- `packages/tiktok-monitor`: TikTok creator links, usernames, creator or competitor monitoring, single-video material metrics, video comment exports/downloads, group-level monitoring lists, daily digest subscriptions, and yesterday-vs-today TikTok reports.
 - `packages/video-understand`: single local videos, TikTok URLs, or YouTube URLs that need summarization, tagging, breakdown, remix planning, or a replication prompt.
 - `packages/tk-blacklist`: TK blacklist lookup and batch uniqueId checks.
 

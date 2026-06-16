@@ -10,6 +10,7 @@ Current package version: `0.5.0`. Remote installers can compare the `version` fi
 - Local files are uploaded through `POST /v1/file/upload` (multipart form field `file`); the returned `data.id` is reused as `businessId` with `businessType: "FILE"`.
 - Streams a replication prompt from `POST /v1/material/analysisTask/stream` (`type: "REPLICATION"`).
 - Prints the assembled prompt to stdout, or raw SSE lines with `--raw` for debugging.
+- For TikTok video analysis that needs real-time metrics or comment context, fetch those first with `packages/tiktok-monitor` `material` / `comments`, then combine them with this replication prompt.
 
 This skill currently only sends `type: "REPLICATION"`. The `ANALYSIS` mode is reserved.
 

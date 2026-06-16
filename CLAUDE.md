@@ -12,7 +12,7 @@ Use this repository as a reusable Lingtu AI capability kit.
 - For turning a video file (uploaded material) or a TikTok/YouTube URL into a natural-language replication prompt (for 二创 generation or video tagging/understanding), read `packages/video-understand/SKILL.md`.
 - For image generation, product reference optimization, ecommerce videos, and viral-remake media workflows, read `packages/content-create/SKILL.md`.
 - For TK shop data lookup, daily reports, shop lists, and operations analysis, read `packages/tkshop-query/SKILL.md`.
-- For TikTok creator/competitor monitoring, recent-video lookups, and content intelligence reports, read `packages/tiktok-monitor/SKILL.md`.
+- For TikTok creator/competitor monitoring, recent-video lookups, single-video metric refreshes, TikTok video comment exports/downloads, comment feedback summaries, and content intelligence reports, read `packages/tiktok-monitor/SKILL.md`.
 - (WIP, do not advertise to end users) For turning structured report JSON into a shareable PNG long-image, read `packages/report-render/SKILL.md`. Still under development — only invoke when explicitly asked.
 
 ## Environment

@@ -13,7 +13,7 @@ For media-generation requests, follow `packages/content-create/SKILL.md` and cal
 
 For TK shop-data requests, follow `packages/tkshop-query/SKILL.md` and call `scripts/lingtu_shop_data.py`.
 
-For TikTok creator/competitor monitoring requests, follow `packages/tiktok-monitor/SKILL.md` and call `scripts/lingtu_tiktok_monitor.py`.
+For TikTok creator/competitor monitoring, single-video metric refresh, TikTok video comment export/download, or comment feedback summary requests, follow `packages/tiktok-monitor/SKILL.md` and call `scripts/lingtu_tiktok_monitor.py`.
 
 For TK blacklist lookup requests, follow `packages/tk-blacklist/SKILL.md` and call `scripts/lingtu_tk_blacklist.py`.
 

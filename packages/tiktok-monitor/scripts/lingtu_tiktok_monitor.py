@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""TikTok 达人监控与每日内容情报报告。
+"""TikTok 达人监控、素材数据与每日内容情报报告。
 
-后端依赖灵途 `/v1/influencer/fetchPosts` 接口。
+后端依赖灵途 TikTok 相关接口。
 """
 
 from __future__ import annotations
@@ -27,6 +27,8 @@ DEFAULT_STORE = Path.home() / ".lingtu" / "tiktok-monitor" / "monitors.json"
 DEFAULT_SNAPSHOTS = Path.home() / ".lingtu" / "tiktok-monitor" / "snapshots"
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
 FETCH_POSTS_PATH = "/v1/influencer/fetchPosts"
+FETCH_MATERIAL_PATH = "/v1/material/tiktok/fetch"
+FETCH_MATERIAL_COMMENTS_PATH = "/v1/material/tiktok/fetchComments"
 PLATFORM = "tiktok"
 HASHTAG_PATTERN = re.compile(r"[#＃]([\w一-鿿]+)")
 STALL_DAYS = 7
@@ -223,6 +225,37 @@ def fetch_posts(unique_id: str, count: int) -> dict[str, Any]:
     raise SystemExit(f"fetchPosts 调用失败 (code={code})：{message}")
 
 
+def post_json(path: str, body: dict[str, Any], label: str, timeout: int = 60) -> dict[str, Any]:
+    api_key = require_api_key()
+    payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    req = urllib_request.Request(f"{base_url()}{path}", data=payload, method="POST")
+    req.add_header("x-api-key", api_key)
+    req.add_header("Accept", "application/json")
+    req.add_header("Content-Type", "application/json")
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib_error.HTTPError as exc:
+        raise SystemExit(f"{label} HTTP 错误：{exc.code} {exc.reason}")
+    except urllib_error.URLError as exc:
+        raise SystemExit(f"{label} 网络错误：{exc.reason}")
+
+    code = result.get("code")
+    if code == 0 and isinstance(result.get("data"), dict):
+        return result
+
+    message = result.get("message") or "未知错误"
+    raise SystemExit(f"{label} 调用失败 (code={code})：{message}")
+
+
+def fetch_material(video_url: str) -> dict[str, Any]:
+    return post_json(FETCH_MATERIAL_PATH, {"videoUrl": video_url}, "fetchTikTokMaterial")
+
+
+def fetch_material_comments(video_url: str) -> dict[str, Any]:
+    return post_json(FETCH_MATERIAL_COMMENTS_PATH, {"videoUrl": video_url}, "fetchTikTokMaterialComments")
+
+
 def normalize_response(data: dict[str, Any]) -> dict[str, Any]:
     author = data.get("authorInfo") or {}
     unique_id = author.get("uniqueId") or ""
@@ -267,6 +300,80 @@ def normalize_response(data: dict[str, Any]) -> dict[str, Any]:
         "videos": videos,
         "cursor": data.get("cursor"),
         "has_more": bool(data.get("hasMore")),
+    }
+
+
+def normalize_material_response(payload: dict[str, Any]) -> dict[str, Any]:
+    data = payload.get("data") or payload
+    video_id = str(data.get("videoId") or "")
+    unique_id = data.get("uniqueId") or ""
+    desc = data.get("videoDesc") or ""
+    return {
+        "video": {
+            "platform": PLATFORM,
+            "video_id": video_id,
+            "video_url": f"https://www.tiktok.com/@{unique_id}/video/{video_id}" if unique_id and video_id else "",
+            "username": unique_id,
+            "sec_uid": data.get("secUid") or "",
+            "caption": desc,
+            "description_language": data.get("descLanguage"),
+            "publish_time": iso_utc_from_epoch_seconds(data.get("releaseAt")),
+            "duration": round((data.get("duration") or 0) / 1000, 2),
+            "is_ec_video": data.get("isEcVideo"),
+            "is_ad": data.get("isAds"),
+            "region": data.get("region"),
+            "music_id": data.get("musicId"),
+            "music_title": data.get("musicTitle"),
+            "views": int(data.get("playCount") or 0),
+            "likes": int(data.get("diggCount") or 0),
+            "comments": int(data.get("commentCount") or 0),
+            "shares": int(data.get("shareCount") or 0),
+            "saves": int(data.get("collectCount") or 0),
+            "downloads": int(data.get("downloadCount") or 0),
+            "forwards": int(data.get("forwardCount") or 0),
+            "cover_url": data.get("coverUrl") or "",
+            "play_url": data.get("playAddr") or "",
+            "download_url": data.get("downloadAddr") or "",
+            "hashtags": extract_hashtags(desc),
+        },
+        "timestamp": payload.get("timestamp"),
+    }
+
+
+def normalize_comment(item: dict[str, Any]) -> dict[str, Any]:
+    user = item.get("user") or {}
+    return {
+        "video_id": str(item.get("aweme_id") or ""),
+        "text": item.get("text") or "",
+        "language": item.get("comment_language"),
+        "created_at": iso_utc_from_epoch_seconds(item.get("create_time")),
+        "like_count": int(item.get("digg_count") or 0),
+        "author_pinned": bool(item.get("author_pin")),
+        "author_liked": bool(item.get("is_author_digged")),
+        "reply_id": str(item.get("reply_id") or ""),
+        "reply_comment": item.get("reply_comment"),
+        "hidden": bool(item.get("no_show")),
+        "user": {
+            "uid": str(user.get("uid") or ""),
+            "unique_id": user.get("unique_id") or "",
+            "nickname": user.get("nickname") or "",
+            "tags": user.get("user_tags"),
+        },
+    }
+
+
+def normalize_comments_response(payload: dict[str, Any]) -> dict[str, Any]:
+    data = payload.get("data") or payload
+    comments = [normalize_comment(item) for item in data.get("comments") or []]
+    language_counts = Counter(c.get("language") or "unknown" for c in comments)
+    return {
+        "comments": comments,
+        "summary": {
+            "comment_count": len(comments),
+            "top_languages": language_counts.most_common(5),
+            "top_liked_comments": sorted(comments, key=lambda c: c["like_count"], reverse=True)[:5],
+        },
+        "timestamp": payload.get("timestamp"),
     }
 
 
@@ -1339,6 +1446,62 @@ def command_videos(args: argparse.Namespace) -> None:
         print_json(normalize_response(raw))
 
 
+def build_material_text(video: dict[str, Any]) -> str:
+    return (
+        f"【TikTok 素材数据】@{video.get('username','')} / {video.get('video_id','')}\n"
+        f"播放 {format_number(video.get('views'))}，点赞 {format_number(video.get('likes'))}，"
+        f"评论 {format_number(video.get('comments'))}，分享 {format_number(video.get('shares'))}，"
+        f"收藏 {format_number(video.get('saves'))}。\n"
+        f"发布时间：{video.get('publish_time') or '-'}；时长：{format_number(video.get('duration'))} 秒。\n"
+        f"文案：{video.get('caption') or '-'}"
+    )
+
+
+def command_material(args: argparse.Namespace) -> None:
+    raw = fetch_material(args.video_url)
+    if args.raw:
+        print_json(raw)
+        return
+
+    normalized = normalize_material_response(raw)
+    if args.format == "text":
+        print(build_material_text(normalized["video"]))
+    else:
+        print_json(normalized)
+
+
+def build_comments_text(normalized: dict[str, Any]) -> str:
+    summary = normalized.get("summary") or {}
+    top_languages = summary.get("top_languages") or []
+    language_line = "、".join(f"{lang}:{count}" for lang, count in top_languages) or "-"
+    top_lines = []
+    for item in summary.get("top_liked_comments") or []:
+        author = (item.get("user") or {}).get("unique_id") or (item.get("user") or {}).get("nickname") or "unknown"
+        text = item.get("text") or ""
+        top_lines.append(f"  - @{author}：{format_number(item.get('like_count'))} 赞，{text}")
+    if not top_lines:
+        top_lines.append("  - 暂无评论。")
+
+    return (
+        f"【TikTok 素材评论】共 {format_number(summary.get('comment_count'))} 条。\n"
+        f"语言分布：{language_line}\n"
+        f"高赞评论：\n" + "\n".join(top_lines)
+    )
+
+
+def command_comments(args: argparse.Namespace) -> None:
+    raw = fetch_material_comments(args.video_url)
+    if args.raw:
+        print_json(raw)
+        return
+
+    normalized = normalize_comments_response(raw)
+    if args.format == "text":
+        print(build_comments_text(normalized))
+    else:
+        print_json(normalized)
+
+
 def command_analyze(args: argparse.Namespace) -> None:
     require_api_key()
     with open(args.input_json, "r", encoding="utf-8") as handle:
@@ -1487,6 +1650,18 @@ def main() -> None:
     add_count_argument(p)
     p.add_argument("--raw", action="store_true", help="输出原始 fetchPosts 响应而非 normalize 结果。")
     p.set_defaults(func=command_videos)
+
+    p = subparsers.add_parser("material", help="获取单条 TikTok 素材数据。")
+    p.add_argument("--video-url", required=True, help="TikTok 视频 URL。")
+    p.add_argument("--raw", action="store_true", help="输出原始 fetch 响应而非 normalize 结果。")
+    add_format_argument(p, default="json")
+    p.set_defaults(func=command_material)
+
+    p = subparsers.add_parser("comments", help="获取单条 TikTok 素材评论数据。")
+    p.add_argument("--video-url", required=True, help="TikTok 视频 URL。")
+    p.add_argument("--raw", action="store_true", help="输出原始 fetchComments 响应而非 normalize 结果。")
+    add_format_argument(p, default="json")
+    p.set_defaults(func=command_comments)
 
     p = subparsers.add_parser("analyze", help="分析一份 fetchPosts JSON（原始或 normalize）。")
     p.add_argument("--input-json", required=True, help="JSON 文件路径。")

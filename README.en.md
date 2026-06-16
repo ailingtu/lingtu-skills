@@ -10,7 +10,7 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 
 - **`packages/content-create`** — generate product images, AI video reference packs, ecommerce/UGC selling videos, and viral-remake media through Lingtu AI.
 - **`packages/tkshop-query`** — query TK shop data: daily reports, shop lists, and AI-powered operations Q&A.
-- **`packages/tiktok-monitor`** — add TikTok creators or competitor accounts to monitoring and generate recent-video intelligence reports.
+- **`packages/tiktok-monitor`** — add TikTok creators or competitor accounts to monitoring, fetch single-video material metrics, export video comments, and generate recent-video intelligence reports.
 - **`packages/video-understand`** — turn a local video file or a TikTok/YouTube URL into a natural-language replication prompt for remixing, tagging, or video breakdown.
 - **`packages/tk-blacklist`** — batch query TK blacklist records by TikTok uniqueId.
 - **`packages/report-render`** — turn structured report JSON into shareable PNG long-images (work in progress, not yet installable).
@@ -21,7 +21,7 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 packages/
   content-create/   # Image & video generation
   tkshop-query/     # TK shop data & analytics
-  tiktok-monitor/   # TikTok creator & competitor monitoring
+  tiktok-monitor/   # TikTok creator monitoring, material metrics, comment export
   video-understand/ # Video understanding & replication-prompt generation
   tk-blacklist/ # TK blacklist query
   report-render/    # Report JSON to shareable PNG long-image
