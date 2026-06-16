@@ -2,17 +2,20 @@
 
 Repository source: https://github.com/ailingtu/lingtu-skills. When the user asks to update Lingtu AI skills, pull the latest version from this repository.
 
-You can use three Lingtu AI packages:
+You can use four Lingtu AI packages:
 
 1. Content creation package: `packages/content-create`
 2. TKShop query package: `packages/tkshop-query`
 3. TikTok monitor package: `packages/tiktok-monitor`
+4. TK blacklist package: `packages/tk-blacklist`
 
 For media-generation requests, follow `packages/content-create/SKILL.md` and call `scripts/lingtu_content_task.py`.
 
 For TK shop-data requests, follow `packages/tkshop-query/SKILL.md` and call `scripts/lingtu_shop_data.py`.
 
 For TikTok creator/competitor monitoring requests, follow `packages/tiktok-monitor/SKILL.md` and call `scripts/lingtu_tiktok_monitor.py`.
+
+For TK blacklist lookup requests, follow `packages/tk-blacklist/SKILL.md` and call `scripts/lingtu_tk_blacklist.py`.
 
 Require `LINGTU_API_KEY` in the runtime environment and send it as `x-api-key`.
 

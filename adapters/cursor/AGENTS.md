@@ -15,6 +15,10 @@ Use for generated product images, reference images, ecommerce videos, viral rema
 
 Use for shop list lookup, daily reports, merchant/store metrics, and business-operation questions. Start with `packages/tkshop-query/SKILL.md`.
 
+## Use `packages/tk-blacklist`
+
+Use for TK 达人黑名单查询, TikTok influencer blacklist lookup, and batch uniqueId blacklist checks. Start with `packages/tk-blacklist/SKILL.md`.
+
 ## Environment
 
 Set `LINGTU_API_KEY` before running scripts. Send it as `x-api-key`.

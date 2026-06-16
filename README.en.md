@@ -12,6 +12,7 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 - **`packages/tkshop-query`** — query TK shop data: daily reports, shop lists, and AI-powered operations Q&A.
 - **`packages/tiktok-monitor`** — add TikTok creators or competitor accounts to monitoring and generate recent-video intelligence reports.
 - **`packages/video-understand`** — turn a local video file or a TikTok/YouTube URL into a natural-language replication prompt for remixing, tagging, or video breakdown.
+- **`packages/tk-blacklist`** — batch query TK blacklist records by TikTok uniqueId.
 - **`packages/report-render`** — turn structured report JSON into shareable PNG long-images (work in progress, not yet installable).
 
 ## Repository Layout
@@ -22,6 +23,7 @@ packages/
   tkshop-query/     # TK shop data & analytics
   tiktok-monitor/   # TikTok creator & competitor monitoring
   video-understand/ # Video understanding & replication-prompt generation
+  tk-blacklist/ # TK blacklist query
   report-render/    # Report JSON to shareable PNG long-image
 adapters/
   codex/            # Codex skill installation
@@ -60,7 +62,7 @@ Or specify a target and packages explicitly:
 
 ```bash
 ./install.sh codex all
-./install.sh codex content-create tkshop-query tiktok-monitor video-understand
+./install.sh codex content-create tkshop-query tiktok-monitor video-understand tk-blacklist
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
 ./install.sh openclaw /path/to/project all
@@ -142,6 +144,15 @@ python3 scripts/lingtu_video_understand.py replicate --file ./clip.mp4
 
 # Upload only — returns file id and CDN url, no replication
 python3 scripts/lingtu_video_understand.py upload ./clip.mp4
+```
+
+## Quick Start — TK Blacklist
+
+```bash
+cd packages/tk-blacklist
+
+# Batch check whether creators are in the blacklist
+python3 scripts/lingtu_tk_blacklist.py search vexbolts xochitlklepper --format text
 ```
 
 ## Delivery

@@ -1,6 +1,6 @@
 # Lingtu AI Agent Instructions
 
-Use this repository when a user asks for Lingtu AI content generation, TK shop data analysis, or TikTok creator/competitor monitoring.
+Use this repository when a user asks for Lingtu AI content generation, TK shop data analysis, TikTok creator/competitor monitoring, or TK blacklist lookup.
 
 ## Repository Source
 
@@ -13,6 +13,7 @@ Use this repository when a user asks for Lingtu AI content generation, TK shop d
 - `packages/tkshop-query`: TK shop list lookup, daily reports, and shop operations analysis.
 - `packages/tiktok-monitor`: TikTok creator/competitor monitoring with group-level lists, daily subscriptions, and yesterday-vs-today digest reports.
 - `packages/video-understand`: video understanding for local files and TikTok/YouTube URLs — produces a natural-language replication prompt for remixing, tagging, or video breakdown.
+- `packages/tk-blacklist`: TK blacklist lookup by TikTok uniqueId.
 
 ## Shared Rules
 
@@ -31,3 +32,5 @@ Use `packages/tkshop-query` for shop lists, daily reports, merchant/store metric
 Use `packages/tiktok-monitor` for TikTok creator links, usernames, 达人/竞品监控, group-level monitoring lists, daily digest subscriptions, and yesterday-vs-today TikTok content reports.
 
 Use `packages/video-understand` when the user asks to analyze, summarize, tag, break down, or 二创 a single video — local file, uploaded material, or TikTok/YouTube URL — and wants a replication prompt or content readout.
+
+Use `packages/tk-blacklist` when the user asks to query TK 达人黑名单 / influencer blacklist records or check whether TikTok uniqueIds are blacklisted.

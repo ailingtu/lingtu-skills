@@ -1,4 +1,4 @@
 interface:
   display_name: "Lingtu Content Create"
-  short_description: "Create Lingtu AI product images, references, and videos"
+  short_description: "Lingtu AI 商品图、参考图和视频生成"
   default_prompt: "Use $lingtu-content-create to optimize product references or create Lingtu AI images and videos."

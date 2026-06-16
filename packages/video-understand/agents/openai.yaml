@@ -1,4 +1,4 @@
 interface:
-  display_name: "Video Understand"
-  short_description: "把视频或链接解析成自然语言复刻提示词"
+  display_name: "Lingtu Video Understand"
+  short_description: "Lingtu 视频理解与自然语言复刻提示词生成"
   default_prompt: "Use $lingtu-video-understand to turn a video URL or uploaded material into a replication prompt."

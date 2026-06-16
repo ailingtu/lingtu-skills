@@ -1,4 +1,4 @@
 interface:
-  display_name: "TKShop Query"
-  short_description: "查询和分析灵途店铺运营数据"
+  display_name: "Lingtu TKShop Query"
+  short_description: "Lingtu TK 店铺运营数据查询与分析"
   default_prompt: "Use $lingtu-tkshop-query to look up or analyze TK shop data."

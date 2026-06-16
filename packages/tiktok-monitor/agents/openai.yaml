@@ -1,4 +1,4 @@
 interface:
   display_name: "Lingtu TikTok Monitor"
-  short_description: "添加 TikTok 达人/竞品监控并生成 mock 视频情报分析"
+  short_description: "Lingtu TikTok 达人/竞品监控与视频情报分析"
   default_prompt: "Use $lingtu-tiktok-monitor to add TikTok creator or competitor accounts to monitoring and analyze recent mock videos."

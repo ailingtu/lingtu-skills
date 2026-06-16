@@ -1,6 +1,6 @@
 # Lingtu AI Capabilities
 
-Use Lingtu AI packages from this repository when the user requests media generation or TK shop data analysis.
+Use Lingtu AI packages from this repository when the user requests media generation, TK shop data analysis, or TK blacklist lookup.
 
 ## Repository Source
 
@@ -29,6 +29,16 @@ Read `packages/tkshop-query/SKILL.md` when the user asks for:
 - shop operations analysis
 
 Use `packages/tkshop-query/scripts/lingtu_shop_data.py` for deterministic API calls.
+
+## TK Blacklist
+
+Read `packages/tk-blacklist/SKILL.md` when the user asks for:
+
+- TK 达人黑名单查询
+- checking whether TikTok uniqueIds are blacklisted
+- influencer risk-control lookup by uniqueId
+
+Use `packages/tk-blacklist/scripts/lingtu_tk_blacklist.py` for deterministic API calls.
 
 ## Authentication
 
