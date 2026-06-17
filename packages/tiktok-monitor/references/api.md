@@ -183,6 +183,7 @@ Request body:
 | Name | Required | Type | Description |
 |------|----------|------|-------------|
 | `videoUrl` | yes | string | Public TikTok video URL. |
+| `cursor` | no | string/null | Pagination cursor. Omit or pass `null` on the first request; pass back the cursor returned by the previous response for the next page. |
 
 Response envelope: `{ code, message, data, timestamp }`.
 
@@ -193,6 +194,8 @@ Response envelope: `{ code, message, data, timestamp }`.
   "code": 0,
   "message": "success",
   "data": {
+    "cursor": "1779085557000",
+    "hasMore": true,
     "comments": [
       {
         "author_pin": false,
@@ -220,6 +223,8 @@ Response envelope: `{ code, message, data, timestamp }`.
 }
 ```
 
+The script's `comments` command follows `cursor` automatically and aggregates all pages by default. Use `--first-page` to keep the old single-request behavior, `--cursor` to resume from a known cursor, or `--max-pages` to cap a large export.
+
 ### Field semantics
 
 `data.comments[]`:
@@ -236,3 +241,10 @@ Response envelope: `{ code, message, data, timestamp }`.
 | `reply_id` / `reply_comment` | Reply relationship fields from upstream. |
 | `no_show` | Hidden / not shown flag. |
 | `user.uid` / `user.unique_id` / `user.nickname` | Comment author fields. |
+
+Pagination fields:
+
+| Field | Meaning |
+|-------|---------|
+| `cursor` | Cursor for the next request. Return it unchanged as request `cursor`. Empty or missing means there is no known next page. |
+| `hasMore` | Whether more comments are available. Some backend versions may omit it; in that case a non-empty new `cursor` indicates another page. |

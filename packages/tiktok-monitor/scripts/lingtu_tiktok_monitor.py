@@ -252,8 +252,84 @@ def fetch_material(video_url: str) -> dict[str, Any]:
     return post_json(FETCH_MATERIAL_PATH, {"videoUrl": video_url}, "fetchTikTokMaterial")
 
 
-def fetch_material_comments(video_url: str) -> dict[str, Any]:
-    return post_json(FETCH_MATERIAL_COMMENTS_PATH, {"videoUrl": video_url}, "fetchTikTokMaterialComments")
+def fetch_material_comments_page(video_url: str, cursor: str | None = None) -> dict[str, Any]:
+    body: dict[str, Any] = {"videoUrl": video_url}
+    if cursor is not None:
+        body["cursor"] = cursor
+    return post_json(FETCH_MATERIAL_COMMENTS_PATH, body, "fetchTikTokMaterialComments")
+
+
+def extract_comments_cursor(payload: dict[str, Any]) -> str:
+    data = payload.get("data") or {}
+    cursor = data.get("cursor")
+    if cursor is None:
+        cursor = data.get("nextCursor")
+    if cursor is None:
+        cursor = payload.get("cursor")
+    return str(cursor or "")
+
+
+def has_more_comments(payload: dict[str, Any], next_cursor: str) -> bool:
+    data = payload.get("data") or {}
+    for key in ("hasMore", "has_more", "hasNext", "has_next"):
+        if key in data:
+            return bool(data.get(key))
+        if key in payload:
+            return bool(payload.get(key))
+    return bool(next_cursor)
+
+
+def fetch_material_comments(
+    video_url: str,
+    *,
+    cursor: str | None = None,
+    max_pages: int | None = None,
+    fetch_all: bool = True,
+) -> dict[str, Any]:
+    comments: list[dict[str, Any]] = []
+    pages: list[dict[str, Any]] = []
+    next_cursor = cursor
+    last_payload: dict[str, Any] | None = None
+    page_index = 0
+
+    while True:
+        payload = fetch_material_comments_page(video_url, next_cursor)
+        last_payload = payload
+        data = payload.get("data") or {}
+        page_comments = data.get("comments") or []
+        if not isinstance(page_comments, list):
+            page_comments = []
+        comments.extend(page_comments)
+
+        returned_cursor = extract_comments_cursor(payload)
+        pages.append({
+            "cursor": next_cursor,
+            "next_cursor": returned_cursor,
+            "comment_count": len(page_comments),
+        })
+
+        page_index += 1
+        if not fetch_all:
+            break
+        if max_pages is not None and page_index >= max_pages:
+            break
+        if not has_more_comments(payload, returned_cursor):
+            break
+        if not returned_cursor or returned_cursor == (next_cursor or ""):
+            break
+        next_cursor = returned_cursor
+
+    if last_payload is None:
+        return {"code": 0, "message": "success", "data": {"comments": [], "pages": []}, "timestamp": None}
+
+    aggregated = dict(last_payload)
+    data = dict(last_payload.get("data") or {})
+    data["comments"] = comments
+    data["pages"] = pages
+    data["cursor"] = pages[-1]["next_cursor"] if pages else ""
+    data["hasMore"] = bool(pages and has_more_comments(last_payload, pages[-1]["next_cursor"]) and pages[-1]["next_cursor"])
+    aggregated["data"] = data
+    return aggregated
 
 
 def normalize_response(data: dict[str, Any]) -> dict[str, Any]:
@@ -366,10 +442,14 @@ def normalize_comments_response(payload: dict[str, Any]) -> dict[str, Any]:
     data = payload.get("data") or payload
     comments = [normalize_comment(item) for item in data.get("comments") or []]
     language_counts = Counter(c.get("language") or "unknown" for c in comments)
+    pages = data.get("pages") or []
     return {
         "comments": comments,
         "summary": {
             "comment_count": len(comments),
+            "page_count": len(pages) if isinstance(pages, list) else 0,
+            "next_cursor": data.get("cursor") or "",
+            "has_more": bool(data.get("hasMore")),
             "top_languages": language_counts.most_common(5),
             "top_liked_comments": sorted(comments, key=lambda c: c["like_count"], reverse=True)[:5],
         },
@@ -1490,7 +1570,15 @@ def build_comments_text(normalized: dict[str, Any]) -> str:
 
 
 def command_comments(args: argparse.Namespace) -> None:
-    raw = fetch_material_comments(args.video_url)
+    max_pages = args.max_pages
+    if max_pages is not None and max_pages < 1:
+        raise SystemExit("--max-pages 必须大于等于 1")
+    raw = fetch_material_comments(
+        args.video_url,
+        cursor=args.cursor,
+        max_pages=max_pages,
+        fetch_all=not args.first_page,
+    )
     if args.raw:
         print_json(raw)
         return
@@ -1659,6 +1747,9 @@ def main() -> None:
 
     p = subparsers.add_parser("comments", help="获取单条 TikTok 素材评论数据。")
     p.add_argument("--video-url", required=True, help="TikTok 视频 URL。")
+    p.add_argument("--cursor", default=None, help="评论分页游标；首次请求不传，后续请求传接口返回的 cursor。")
+    p.add_argument("--first-page", action="store_true", help="只请求一页评论，不自动翻页。")
+    p.add_argument("--max-pages", type=int, default=None, help="最多请求多少页；默认不限制，直到接口没有下一页。")
     p.add_argument("--raw", action="store_true", help="输出原始 fetchComments 响应而非 normalize 结果。")
     add_format_argument(p, default="json")
     p.set_defaults(func=command_comments)

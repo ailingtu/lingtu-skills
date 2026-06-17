@@ -43,7 +43,7 @@ export LINGTU_TIKTOK_MONITOR_SNAPSHOTS="~/.lingtu/tiktok-monitor/snapshots"
 | `digest` | 生成某群的每日日报 |
 | `videos` | 直接拉视频（`--raw` 输出原始响应） |
 | `material` | 获取单条 TikTok 素材实时数据 |
-| `comments` | 获取单条 TikTok 素材评论数据 |
+| `comments` | 获取单条 TikTok 素材评论数据，默认按 cursor 翻页导出全部 |
 | `analyze` | 分析一份 fetchPosts JSON 文件 |
 
 详细参数与流程见 [`SKILL.md`](./SKILL.md)，接口字段见 [`references/api.md`](./references/api.md)。

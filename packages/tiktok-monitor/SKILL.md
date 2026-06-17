@@ -140,10 +140,14 @@ python3 scripts/lingtu_tiktok_monitor.py comments \
 
 python3 scripts/lingtu_tiktok_monitor.py comments \
   --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
+  --max-pages 3
+
+python3 scripts/lingtu_tiktok_monitor.py comments \
+  --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
   --raw
 ```
 
-`material` 用于更新单条或批量视频实时指标；批量时由编排层循环调用即可。`comments` 默认输出规范化评论 JSON，适合导出；加 `--raw` 可保留接口原始字段。
+`material` 用于更新单条或批量视频实时指标；批量时由编排层循环调用即可。`comments` 默认自动按 `cursor` 翻页并输出规范化评论 JSON，适合全量导出；加 `--raw` 可保留聚合后的原始字段，`--first-page` 可只拉第一页，`--max-pages` 可限制页数。
 
 ## 编排层（bot/cron）建议
 
