@@ -5,19 +5,31 @@
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/content-create/SKILL.md",
-      "computedHash": "f8b57db49bc97339626a8c7d6c9225197dd4d3fee022ebcb66816d776884a22d"
+      "computedHash": "dd37fddbd96b858983dac1f87eea65db80a00aa326243d6779fdfa7cf779c171"
     },
     "lingtu-tkshop-query": {
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/tkshop-query/SKILL.md",
-      "computedHash": "09675e30901b0b515d89368b5fbb0a6f96fff7ff8366f4bce1b6e0939e5a669b"
+      "computedHash": "7ea40730c30e0a6fc7b6215a7a0baf88ec37c388e4b7b5ddecc911e60bcc54f1"
     },
     "lingtu-social-monitor": {
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/social-monitor/SKILL.md",
       "computedHash": "2d25a2dd56f10ecdf60b9619d84fdc65f058f223b640ed7b562b5b3011eb9249"
+    },
+    "lingtu-video-understand": {
+      "source": "ailingtu/lingtu-skills",
+      "sourceType": "github",
+      "skillPath": "packages/video-understand/SKILL.md",
+      "computedHash": "ff957983a955b635768bf3893749133282e24d701cd78aada368e6336453b632"
+    },
+    "lingtu-tk-blacklist": {
+      "source": "ailingtu/lingtu-skills",
+      "sourceType": "github",
+      "skillPath": "packages/tk-blacklist/SKILL.md",
+      "computedHash": "e6b39eb86d5f9750e74ffefa44050299ebcbf39ac5938606e79cf633c485d013"
     }
   }
 }
