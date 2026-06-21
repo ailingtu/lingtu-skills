@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lingtu Social Monitor"
+  short_description: "Lingtu 社媒达人/竞品监控、素材数据与评论导出"
+  default_prompt: "Use $lingtu-social-monitor to monitor TikTok/Instagram creators, fetch account video lists or single-video material metrics, export video comments, and summarize comment feedback."

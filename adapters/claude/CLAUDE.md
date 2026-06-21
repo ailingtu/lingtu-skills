@@ -1,6 +1,6 @@
 # Lingtu AI Capabilities
 
-Use Lingtu AI packages from this repository when the user requests media generation, TK shop data analysis, TikTok creator/competitor monitoring, TikTok single-video metric/comment export, video understanding, or TK blacklist lookup.
+Use Lingtu AI packages from this repository when the user requests media generation, TK shop data analysis, TikTok/Instagram creator or competitor monitoring, single-video metric/comment export, video understanding, or TK blacklist lookup.
 
 ## Repository Source
 
@@ -30,28 +30,28 @@ Read `packages/tkshop-query/SKILL.md` when the user asks for:
 
 Use `packages/tkshop-query/scripts/lingtu_shop_data.py` for deterministic API calls.
 
-## TikTok Monitor
+## Social Monitor
 
-Read `packages/tiktok-monitor/SKILL.md` when the user asks for:
+Read `packages/social-monitor/SKILL.md` when the user asks for:
 
-- TikTok creator or competitor monitoring
-- TikTok creator recent-video lookups
-- single TikTok video material metrics
+- TikTok/Instagram creator or competitor monitoring
+- creator recent-video lookups
+- single-video material metrics
 - video comment exports or downloads
 - comment feedback summaries
-- group-level daily TikTok digest reports
+- group-level daily digest reports
 
-Use `packages/tiktok-monitor/scripts/lingtu_tiktok_monitor.py` for deterministic API calls.
+Use `packages/social-monitor/scripts/lingtu_social_monitor.py` for deterministic API calls.
 
 ## Video Understand
 
 Read `packages/video-understand/SKILL.md` when the user asks for:
 
 - summarizing, tagging, or breaking down a single local video
-- summarizing, tagging, or breaking down a TikTok / YouTube URL
+- summarizing, tagging, or breaking down a TikTok / YouTube / Instagram URL
 - remix planning or replication prompts
 
-If the user also asks for TikTok metrics or comments, fetch them first with `packages/tiktok-monitor`.
+If the user also asks for metrics or comments, fetch them first with `packages/social-monitor`.
 
 ## TK Blacklist
 

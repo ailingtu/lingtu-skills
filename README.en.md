@@ -10,8 +10,8 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 
 - **`packages/content-create`** — generate product images, AI video reference packs, ecommerce/UGC selling videos, and viral-remake media through Lingtu AI.
 - **`packages/tkshop-query`** — query TK shop data: daily reports, shop lists, and AI-powered operations Q&A.
-- **`packages/tiktok-monitor`** — add TikTok creators or competitor accounts to monitoring, fetch single-video material metrics, export video comments, and generate recent-video intelligence reports.
-- **`packages/video-understand`** — turn a local video file or a TikTok/YouTube URL into a natural-language replication prompt for remixing, tagging, or video breakdown.
+- **`packages/social-monitor`** — monitor TikTok/Instagram creators or competitor accounts, fetch account video lists and single-video material metrics, export video comments, and generate recent-video intelligence reports.
+- **`packages/video-understand`** — turn a local video file or a TikTok/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, or video breakdown.
 - **`packages/tk-blacklist`** — batch query TK blacklist records by TikTok uniqueId.
 - **`packages/report-render`** — turn structured report JSON into shareable PNG long-images (work in progress, not yet installable).
 
@@ -21,7 +21,7 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 packages/
   content-create/   # Image & video generation
   tkshop-query/     # TK shop data & analytics
-  tiktok-monitor/   # TikTok creator monitoring, material metrics, comment export
+  social-monitor/   # Social creator monitoring, material metrics, comment export
   video-understand/ # Video understanding & replication-prompt generation
   tk-blacklist/ # TK blacklist query
   report-render/    # Report JSON to shareable PNG long-image
@@ -62,7 +62,7 @@ Or specify a target and packages explicitly:
 
 ```bash
 ./install.sh codex all
-./install.sh codex content-create tkshop-query tiktok-monitor video-understand tk-blacklist
+./install.sh codex content-create tkshop-query social-monitor video-understand tk-blacklist
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
 ./install.sh openclaw /path/to/project all
@@ -115,13 +115,14 @@ python3 scripts/lingtu_shop_data.py daily-report --date 2026-06-09 --shop-name "
 python3 scripts/lingtu_shop_data.py ask "What issues have there been in recent shop operations?"
 ```
 
-## Quick Start — TikTok Monitor
+## Quick Start — Social Monitor
 
 ```bash
-cd packages/tiktok-monitor
+cd packages/social-monitor
 
 # Add a creator or competitor account and generate a 40-video report
-python3 scripts/lingtu_tiktok_monitor.py add \
+python3 scripts/lingtu_social_monitor.py add \
+  --platform tiktok \
   --input "https://www.tiktok.com/@example" \
   --remark "Competitor account, fitness products" \
   --source feishu_group \
@@ -135,7 +136,7 @@ python3 scripts/lingtu_tiktok_monitor.py add \
 ```bash
 cd packages/video-understand
 
-# Parse a TikTok / YouTube URL and stream a replication prompt
+# Parse a TikTok / YouTube / Instagram URL and stream a replication prompt
 python3 scripts/lingtu_video_understand.py replicate \
   --url "https://www.tiktok.com/@user/video/1234567890"
 

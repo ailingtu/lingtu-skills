@@ -14,7 +14,7 @@ This copies:
 
 - `packages/content-create` to `~/.codex/skills/lingtu-content-create`
 - `packages/tkshop-query` to `~/.codex/skills/lingtu-tkshop-query`
-- `packages/tiktok-monitor` to `~/.codex/skills/lingtu-tiktok-monitor`
+- `packages/social-monitor` to `~/.codex/skills/lingtu-social-monitor`
 - `packages/video-understand` to `~/.codex/skills/lingtu-video-understand`
 - `packages/tk-blacklist` to `~/.codex/skills/lingtu-tk-blacklist`
 

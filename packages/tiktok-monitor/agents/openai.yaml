@@ -1,4 +1,0 @@
-interface:
-  display_name: "Lingtu TikTok Monitor"
-  short_description: "Lingtu TikTok 达人/竞品监控、素材数据与评论导出"
-  default_prompt: "Use $lingtu-tiktok-monitor to monitor TikTok creators, fetch single-video material metrics, export video comments, and summarize comment feedback."

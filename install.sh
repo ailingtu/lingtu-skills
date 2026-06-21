@@ -3,10 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PACKAGE_IDS=("content-create" "tkshop-query" "tiktok-monitor" "video-understand" "tk-blacklist")
-PACKAGE_NAMES=("Content Create - 商品图、参考图、电商视频、爆款复刻" "TKShop Query - TK 店铺数据查询和经营分析" "TikTok Monitor - TikTok 达人/竞品监控、素材数据和评论导出" "Video Understand - 视频理解、内容分析与复刻提示词生成" "TK Blacklist - TK 达人黑名单查询")
-PACKAGE_DIRS=("packages/content-create" "packages/tkshop-query" "packages/tiktok-monitor" "packages/video-understand" "packages/tk-blacklist")
-CODEX_NAMES=("lingtu-content-create" "lingtu-tkshop-query" "lingtu-tiktok-monitor" "lingtu-video-understand" "lingtu-tk-blacklist")
+PACKAGE_IDS=("content-create" "tkshop-query" "social-monitor" "video-understand" "tk-blacklist")
+PACKAGE_NAMES=("Content Create - 商品图、参考图、电商视频、爆款复刻" "TKShop Query - TK 店铺数据查询和经营分析" "Social Monitor - TikTok/Instagram 达人竞品监控、素材数据和评论导出" "Video Understand - 视频理解、内容分析与复刻提示词生成" "TK Blacklist - TK 达人黑名单查询")
+PACKAGE_DIRS=("packages/content-create" "packages/tkshop-query" "packages/social-monitor" "packages/video-understand" "packages/tk-blacklist")
+CODEX_NAMES=("lingtu-content-create" "lingtu-tkshop-query" "lingtu-social-monitor" "lingtu-video-understand" "lingtu-tk-blacklist")
 
 usage() {
   cat <<'USAGE'
@@ -23,7 +23,7 @@ Usage:
 Examples:
   ./install.sh
   ./install.sh codex all
-  ./install.sh codex content-create tkshop-query tiktok-monitor
+  ./install.sh codex content-create tkshop-query social-monitor
   ./install.sh claude /path/to/project content-create
   ./install.sh cursor /path/to/project all
   ./install.sh openclaw /path/to/project all
@@ -41,7 +41,7 @@ Packages:
   all
   content-create
   tkshop-query
-  tiktok-monitor
+  social-monitor
   video-understand
   tk-blacklist
 USAGE

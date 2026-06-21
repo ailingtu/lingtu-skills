@@ -1,10 +1,10 @@
 ---
-name: lingtu-tiktok-monitor
-version: 0.5.0
-description: TikTok 达人/竞品监控、单条素材数据与评论抓取/导出/下载、日报。通过灵途 `/v1/influencer/fetchPosts`、`/v1/material/tiktok/fetch`、`/v1/material/tiktok/fetchComments` 接口监控 TikTok 达人或对标账号，支持导出视频评论、下载评论、获取评论区反馈、更新单条或批量视频实时数据、加入群级监控列表、即时分析（综合/发布策略/内容形式 三种分析方向）、每日订阅，并按"昨日 vs 今日"差异生成中文日报。
+name: lingtu-social-monitor
+version: 0.7.3
+description: 社媒达人/竞品监控、单条视频素材数据与评论抓取/导出/下载、日报。当前已接入 TikTok 和 Instagram 的账号视频列表、单条视频数据、视频评论接口；Instagram 使用 `/v1/influencer/ins/fetchPosts`、`/v1/material/ins/fetch`、`/v1/material/ins/fetchComments`。支持视频评论导出、评论区反馈、单条或批量视频实时数据、群级监控列表、即时分析（综合/发布策略/内容形式 三种分析方向）、每日订阅，并按"昨日 vs 今日"差异生成中文日报。
 ---
 
-# TikTok 达人 / 竞品监控与日报
+# 社媒达人 / 竞品监控与日报
 
 ## Repository Source
 
@@ -13,7 +13,7 @@ description: TikTok 达人/竞品监控、单条素材数据与评论抓取/导�
 
 ## 适用场景
 
-当用户要求监控 TikTok 达人 / 竞品 / 对标账号、查看群里的监控列表、订阅每日内容情报日报、导出/下载/获取某条 TikTok 视频评论、总结评论区反馈、更新一批视频实时数据、或基于已抓取的视频数据出报告时，调用本技能。每个群（`group_id`）的监控列表互相独立。
+当用户要求监控 TikTok / Instagram 达人、竞品、对标账号，查看群里的监控列表，订阅每日内容情报日报，导出/下载/获取某条视频评论，总结评论区反馈，更新一批视频实时数据，或基于已抓取的视频数据出报告时，调用本技能。每个群（`group_id`）的监控列表互相独立；同一群下不同平台的同名账号也会分开存储。
 
 如果用户要"分析某个视频内容/讲了什么/复刻/二创"，优先使用 `lingtu-video-understand`；若问题同时要求结合播放、点赞、评论或评论区反馈，先用本技能的 `material` / `comments` 获取数据，再把结果作为分析上下文交给视频理解流程。
 
@@ -54,8 +54,8 @@ setx LINGTU_API_KEY "..."               # Windows
 | 变量 | 含义 | 默认 |
 |------|------|------|
 | `LINGTU_AI_BASE_URL` | API base URL | `https://api.ailingtu.com` |
-| `LINGTU_TIKTOK_MONITOR_STORE` | 监控元数据 JSON 文件路径 | `~/.lingtu/tiktok-monitor/monitors.json` |
-| `LINGTU_TIKTOK_MONITOR_SNAPSHOTS` | 每日快照根目录 | `~/.lingtu/tiktok-monitor/snapshots` |
+| `LINGTU_SOCIAL_MONITOR_STORE` | 监控元数据 JSON 文件路径 | `~/.lingtu/social-monitor/monitors.json` |
+| `LINGTU_SOCIAL_MONITOR_SNAPSHOTS` | 每日快照根目录 | `~/.lingtu/social-monitor/snapshots` |
 
 API Key 通过请求头 `x-api-key` 发送。请勿提交密钥或私有监控数据。
 
@@ -63,16 +63,23 @@ API 字段、`code` 取值参见 `references/api.md`，改接口前先更新该�
 
 ## 子命令
 
-所有命令默认输出文本，便于直接贴回群消息；加 `--format json` 用于编排层。`--input` 接 TikTok 主页 URL、`@username` 或裸名。
+所有命令默认输出文本，便于直接贴回群消息；加 `--format json` 用于编排层。需要平台数据的命令接受 `--platform tiktok|instagram`，当前默认 `tiktok`。`--input` 接主页 URL、`@username` 或裸名。
+
+当前状态：
+
+- `--platform tiktok`：账号视频列表、单条视频素材数据、评论抓取、监控、日报均已接入。
+- `--platform instagram`：账号视频列表、单条视频素材数据、评论抓取、监控、日报均已接入；评论支持 `--sort-order popular|newest`。
+- Instagram 的列表接口（fetchPosts）只返回 `commentCount` / `videoPlayCount`（非视频帖均为 null），没有 `likeCount` 之外的互动指标；爆款 / 互动率分析以 `material` 单条接口为准。
 
 ### 教程
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py tutorial
+python3 scripts/lingtu_social_monitor.py tutorial
 ```
 
 ### 添加监控（即时分析 + 落今日快照）
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py add \
+python3 scripts/lingtu_social_monitor.py add \
+  --platform tiktok \
   --input "https://www.tiktok.com/@mrbeast" \
   --group-id feishu_group_001 \
   --remark "对标账号" \
@@ -92,62 +99,74 @@ python3 scripts/lingtu_tiktok_monitor.py add \
 
 ### 列出群内监控
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py list --group-id feishu_group_001
-python3 scripts/lingtu_tiktok_monitor.py list --group-id feishu_group_001 --daily-only
+python3 scripts/lingtu_social_monitor.py list --group-id feishu_group_001
+python3 scripts/lingtu_social_monitor.py list --platform tiktok --group-id feishu_group_001
+python3 scripts/lingtu_social_monitor.py list --group-id feishu_group_001 --daily-only
 ```
 
 ### 开启 / 关闭每日监控
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py enable-daily  --group-id feishu_group_001 --input mrbeast
-python3 scripts/lingtu_tiktok_monitor.py disable-daily --group-id feishu_group_001 --input mrbeast
+python3 scripts/lingtu_social_monitor.py enable-daily  --platform tiktok --group-id feishu_group_001 --input mrbeast
+python3 scripts/lingtu_social_monitor.py disable-daily --platform tiktok --group-id feishu_group_001 --input mrbeast
 ```
 
 ### 移除监控
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py remove --group-id feishu_group_001 --input mrbeast
+python3 scripts/lingtu_social_monitor.py remove --platform tiktok --group-id feishu_group_001 --input mrbeast
 ```
 
 ### 单条快照（每日 8 点编排循环调用）
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py snapshot \
-  --group-id feishu_group_001 --input mrbeast --count 40
+python3 scripts/lingtu_social_monitor.py snapshot \
+  --platform tiktok --group-id feishu_group_001 --input mrbeast --count 40
 ```
 
 ### 每日日报（昨日 vs 今日）
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py digest --group-id feishu_group_001
-python3 scripts/lingtu_tiktok_monitor.py digest --group-id feishu_group_001 --date 2026-06-11
+python3 scripts/lingtu_social_monitor.py digest --group-id feishu_group_001
+python3 scripts/lingtu_social_monitor.py digest --platform tiktok --group-id feishu_group_001
+python3 scripts/lingtu_social_monitor.py digest --group-id feishu_group_001 --date 2026-06-11
 ```
 
 ### 仅查视频 / 离线分析
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py videos  --input mrbeast --count 40
-python3 scripts/lingtu_tiktok_monitor.py videos  --input mrbeast --count 5 --raw
-python3 scripts/lingtu_tiktok_monitor.py analyze --input-json ./posts.json --format text
+python3 scripts/lingtu_social_monitor.py videos  --platform tiktok --input mrbeast --count 40
+python3 scripts/lingtu_social_monitor.py videos  --platform tiktok --input mrbeast --count 5 --raw
+python3 scripts/lingtu_social_monitor.py analyze --input-json ./posts.json --format text
 ```
 
 ### 单条素材数据 / 评论
 ```bash
-python3 scripts/lingtu_tiktok_monitor.py material \
+python3 scripts/lingtu_social_monitor.py material \
+  --platform tiktok \
   --video-url "https://www.tiktok.com/@user/video/7624922739500993822"
 
-python3 scripts/lingtu_tiktok_monitor.py material \
+python3 scripts/lingtu_social_monitor.py material \
+  --platform tiktok \
   --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
   --format text
 
-python3 scripts/lingtu_tiktok_monitor.py comments \
+python3 scripts/lingtu_social_monitor.py comments \
+  --platform tiktok \
   --video-url "https://www.tiktok.com/@user/video/7624922739500993822"
 
-python3 scripts/lingtu_tiktok_monitor.py comments \
+python3 scripts/lingtu_social_monitor.py comments \
+  --platform tiktok \
   --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
   --max-pages 3
 
-python3 scripts/lingtu_tiktok_monitor.py comments \
+python3 scripts/lingtu_social_monitor.py comments \
+  --platform tiktok \
   --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
   --raw
+
+python3 scripts/lingtu_social_monitor.py comments \
+  --platform instagram \
+  --video-url "https://www.instagram.com/reel/C0Example/" \
+  --sort-order newest
 ```
 
-`material` 用于更新单条或批量视频实时指标；批量时由编排层循环调用即可。`comments` 默认自动按 `cursor` 翻页并输出规范化评论 JSON，适合全量导出；加 `--raw` 可保留聚合后的原始字段，`--first-page` 可只拉第一页，`--max-pages` 可限制页数。
+`material` 用于更新单条或批量视频实时指标；批量时由编排层循环调用即可。`comments` 默认自动按 `cursor` 翻页并输出规范化评论 JSON，适合全量导出；加 `--raw` 可保留聚合后的原始字段，`--first-page` 可只拉第一页，`--max-pages` 可限制页数。Instagram 评论请求会把响应里的 cursor 原样传回下一页，不做解码或改写。
 
 ## 编排层（bot/cron）建议
 

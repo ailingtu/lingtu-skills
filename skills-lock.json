@@ -13,11 +13,11 @@
       "skillPath": "packages/tkshop-query/SKILL.md",
       "computedHash": "09675e30901b0b515d89368b5fbb0a6f96fff7ff8366f4bce1b6e0939e5a669b"
     },
-    "lingtu-tiktok-monitor": {
+    "lingtu-social-monitor": {
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
-      "skillPath": "packages/tiktok-monitor/SKILL.md",
-      "computedHash": "0c91793726dd869327846f32b6807e1686d6fc99d4fc795c9b48871b62924c2a"
+      "skillPath": "packages/social-monitor/SKILL.md",
+      "computedHash": "2d25a2dd56f10ecdf60b9619d84fdc65f058f223b640ed7b562b5b3011eb9249"
     }
   }
 }

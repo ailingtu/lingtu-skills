@@ -52,7 +52,7 @@ interface Request {
   businessId?: string;        // material/file id when parsing an uploaded asset
   businessType?: "FILE" | "MATERIAL"; // pair with businessId
   type: "ANALYSIS" | "REPLICATION";   // this skill only sends "REPLICATION"
-  url?: string;               // public TikTok / YouTube URL when no businessId
+  url?: string;               // public TikTok / YouTube / Instagram URL when no businessId
 }
 ```
 

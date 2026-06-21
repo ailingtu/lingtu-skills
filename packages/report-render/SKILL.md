@@ -32,7 +32,7 @@ Read `references/api.md` before changing endpoint paths or response parsing. Rea
 
 ## When to invoke
 
-Invoke this skill **after** a business skill (tkshop-query, tiktok-monitor, content-create, …) has produced structured JSON, OR when the user just wants to drop a few fields into a card. Pass the JSON via `--data`. The agent picks the matching `--template`.
+Invoke this skill **after** a business skill (tkshop-query, social-monitor, content-create, …) has produced structured JSON, OR when the user just wants to drop a few fields into a card. Pass the JSON via `--data`. The agent picks the matching `--template`.
 
 | Template id        | Use case                                        | fill | ai      |
 |--------------------|-------------------------------------------------|------|---------|

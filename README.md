@@ -23,8 +23,8 @@
 
 - **`packages/content-create`** — 生成商品图、AI 视频参考图、电商卖货视频、爆款复刻视频等。
 - **`packages/tkshop-query`** — 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。
-- **`packages/tiktok-monitor`** — 添加 TikTok 达人/竞品监控，获取单条视频素材数据，导出视频评论，并生成近期视频情报报告。
-- **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/YouTube 链接解析为自然语言的复刻提示词，可用于二创、打标和视频拆解。
+- **`packages/social-monitor`** — TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据、评论导出和近期视频情报报告。
+- **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标和视频拆解。
 - **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询 TK 达人黑名单记录。
 - **`packages/report-render`** — 将结构化报告 JSON 渲染为可分享的 PNG 长图（开发中，暂未支持安装）。
 
@@ -34,7 +34,7 @@
 packages/
   content-create/   # 图片与视频生成
   tkshop-query/     # TK 店铺数据查询
-  tiktok-monitor/   # TikTok 达人/竞品监控、素材数据、评论导出
+  social-monitor/   # 社媒达人/竞品监控、素材数据、评论导出
   video-understand/ # 视频理解与复刻提示词生成
   tk-blacklist/ # TK 达人黑名单查询
   report-render/    # 报告 JSON 转分享长图
@@ -75,7 +75,7 @@ cd lingtu-skills
 
 ```bash
 ./install.sh codex all
-./install.sh codex content-create tkshop-query tiktok-monitor video-understand tk-blacklist
+./install.sh codex content-create tkshop-query social-monitor video-understand tk-blacklist
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
 ./install.sh openclaw /path/to/project all
@@ -130,13 +130,14 @@ python3 scripts/lingtu_shop_data.py daily-report --date 2026-06-09 --shop-name "
 python3 scripts/lingtu_shop_data.py ask "店铺最近经营有什么问题？"
 ```
 
-### TikTok 达人/竞品监控（TikTok Monitor）
+### 社媒达人/竞品监控（Social Monitor）
 
 ```bash
-cd packages/tiktok-monitor
+cd packages/social-monitor
 
 # 添加达人/竞品账号，并生成最近 40 条视频分析
-python3 scripts/lingtu_tiktok_monitor.py add \
+python3 scripts/lingtu_social_monitor.py add \
+  --platform tiktok \
   --input "https://www.tiktok.com/@example" \
   --remark "竞品账号，主卖健身产品" \
   --source feishu_group \
@@ -150,7 +151,7 @@ python3 scripts/lingtu_tiktok_monitor.py add \
 ```bash
 cd packages/video-understand
 
-# 解析 TikTok / YouTube 链接，流式返回复刻提示词
+# 解析 TikTok / YouTube / Instagram 链接，流式返回复刻提示词
 python3 scripts/lingtu_video_understand.py replicate \
   --url "https://www.tiktok.com/@user/video/1234567890"
 

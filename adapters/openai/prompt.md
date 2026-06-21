@@ -6,14 +6,14 @@ You can use four Lingtu AI packages:
 
 1. Content creation package: `packages/content-create`
 2. TKShop query package: `packages/tkshop-query`
-3. TikTok monitor package: `packages/tiktok-monitor`
+3. Social monitor package: `packages/social-monitor`
 4. TK blacklist package: `packages/tk-blacklist`
 
 For media-generation requests, follow `packages/content-create/SKILL.md` and call `scripts/lingtu_content_task.py`.
 
 For TK shop-data requests, follow `packages/tkshop-query/SKILL.md` and call `scripts/lingtu_shop_data.py`.
 
-For TikTok creator/competitor monitoring, single-video metric refresh, TikTok video comment export/download, or comment feedback summary requests, follow `packages/tiktok-monitor/SKILL.md` and call `scripts/lingtu_tiktok_monitor.py`.
+For TikTok/Instagram creator or competitor monitoring, account video lists, single-video metric refresh, video comment export/download, or comment feedback summary requests, follow `packages/social-monitor/SKILL.md` and call `scripts/lingtu_social_monitor.py`.
 
 For TK blacklist lookup requests, follow `packages/tk-blacklist/SKILL.md` and call `scripts/lingtu_tk_blacklist.py`.
 
