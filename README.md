@@ -173,7 +173,7 @@ python3 scripts/lingtu_tk_blacklist.py search vexbolts xochitlklepper --format t
 
 ## 交付方式
 
-- **私有仓库**：GitHub 私有仓库，授予客户只读权限。
+- **公开仓库**：GitHub 公开仓库 [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills)，客户直接 `git clone` / `git pull` 拉取。
 - **版本发布**：以版本号（如 `v1.0.0`）为交付契约，客户可回滚。
 - **Zip 包**：从 Release Tag 导出压缩包分发。
 - **服务部署**：需要隐藏实现细节时，以服务或 Docker 方式交付。

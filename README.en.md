@@ -158,7 +158,7 @@ python3 scripts/lingtu_tk_blacklist.py search vexbolts xochitlklepper --format t
 
 ## Delivery
 
-- Private GitHub repository with read access.
+- Public GitHub repository [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills); customers `git clone` / `git pull` directly.
 - Versioned GitHub Releases (`v1.0.0`) as the contract.
 - Zip archive from a release tag.
 - Service or Docker deployment for private implementations.
