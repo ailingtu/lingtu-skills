@@ -24,7 +24,7 @@ Restart the app or terminal after setting a persistent environment variable.
 
 1. Read `references/api.md` if endpoint fields or response fields are unclear.
 2. Use `scripts/lingtu_content_task.py` to create the schedule and poll it. The default `--create-mode auto` uses schedule creation for both images and videos. Do not submit the same prompt through both direct and schedule APIs for one request.
-3. Preserve reference image order. Pass local reference images with repeated `--reference-image`; local files are encoded as `data:image/...;base64,...`.
+3. Preserve reference image order. Pass references with repeated `--reference-image`; the script auto-uploads local files through `POST /v1/file/upload` and uses the returned CDN URL. Remote http(s) URLs are passed through as-is. The create API only accepts remote URLs — base64 / `data:` URLs are no longer supported.
 4. Return generated URLs or saved output paths from the script JSON. If the script returns `markdown`, include those Markdown embeds first in the final response so image and video results render directly. Then include the returned `output_dir` as a clickable local directory path so the user can open the folder. The script downloads remote images and videos to local absolute paths when possible; for videos, use `![Lingtu video result](/absolute/path/result.mp4)` instead of a plain link.
 5. If the script reports `Task type mismatch`, do not show the returned asset as success; report the expected and actual task types.
 6. The script sends an 8-character `taskId` by default. Use `--client-task-id` only when a caller needs a specific id.

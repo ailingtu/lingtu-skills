@@ -16,6 +16,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ SUCCESS_STATUSES = {"succeeded", "success", "completed", "complete", "done", "fi
 FAILURE_STATUSES = {"failed", "failure", "error", "cancelled", "canceled", "expired"}
 DEVELOPER_CONTACT = "微信 yh8000m"
 DEVELOPER_CONTACT_MESSAGE = "生成失败或遇到未知问题，请联系开发者：微信 yh8000m"
+UPLOAD_PATH = "/v1/file/upload"
 ASSET_KEYS = {
     "url",
     "urls",
@@ -67,12 +69,60 @@ def generate_client_task_id() -> str:
     return "".join(secrets.choice(alphabet) for _ in range(8))
 
 
-def read_reference_image(path: str) -> str:
+def upload_reference_image(path: str, base_url: str, api_key: str) -> str:
     image_path = Path(path)
-    data = image_path.read_bytes()
-    encoded = base64.b64encode(data).decode("ascii")
-    mime_type = mimetypes.guess_type(str(image_path))[0] or "application/octet-stream"
-    return f"data:{mime_type};base64,{encoded}"
+    if not image_path.is_file():
+        raise FileNotFoundError(f"Reference image not found: {path}")
+
+    filename = image_path.name
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    boundary = f"----LingtuFormBoundary{uuid.uuid4().hex}"
+    file_bytes = image_path.read_bytes()
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        f"Content-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8") + file_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+    upload_url = build_url(base_url, UPLOAD_PATH)
+    request = urllib.request.Request(
+        upload_url,
+        data=body,
+        headers={
+            "Accept": "application/json",
+            "x-api-key": api_key,
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=600) as response:
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code} from {upload_url}: {raw}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Reference upload failed for {path}: {exc}") from exc
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Upload returned non-JSON body: {raw[:500]}") from exc
+    if not isinstance(payload, dict) or payload.get("code") not in (0, None):
+        raise RuntimeError(f"Upload failed: {raw[:500]}")
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, dict):
+        raise RuntimeError(f"Upload response missing data: {raw[:500]}")
+    url = data.get("url")
+    if not isinstance(url, str) or not url:
+        raise RuntimeError(f"Upload response missing data.url: {raw[:500]}")
+    return url
+
+
+def resolve_reference_image(path_or_url: str, base_url: str, api_key: str) -> str:
+    if path_or_url.startswith(("http://", "https://")):
+        return path_or_url
+    return upload_reference_image(path_or_url, base_url, api_key)
 
 
 def http_json(method: str, url: str, api_key: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -385,8 +435,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--aspect-ratio", default="1:1", help="Image aspect ratio, such as 1:1 or 9:16.")
     parser.add_argument("--nums", type=int, default=1, help="Number of outputs to create.")
     parser.add_argument("--watermark", action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--reference-image", action="append", default=[], help="Local reference image path. Repeat for multiple images.")
-    parser.add_argument("--reference-image-base64", action="append", default=[], help="Reference image already encoded as base64.")
+    parser.add_argument(
+        "--reference-image",
+        action="append",
+        default=[],
+        help="Reference image as a remote http(s) url, or a local path that will be uploaded to /v1/file/upload first. Repeat for multiple images; order is preserved.",
+    )
     parser.add_argument("--payload-json", default="{}", help="Additional top-level JSON fields merged into the create request.")
     parser.add_argument(
         "--client-task-id",
@@ -641,10 +695,12 @@ def main() -> int:
         print_error({"error": "Missing LINGTU_API_KEY."}, stderr=True)
         return 2
     try:
-        reference_images = [read_reference_image(path) for path in args.reference_image]
-        reference_images.extend(args.reference_image_base64)
+        reference_images = [
+            resolve_reference_image(path_or_url, args.base_url, api_key)
+            for path_or_url in args.reference_image
+        ]
         payload = build_create_payload(args, reference_images)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, RuntimeError) as exc:
         print_error({"error": str(exc)}, stderr=True)
         return 2
 

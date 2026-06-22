@@ -9,7 +9,7 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 - Shared key config: read `LINGTU_API_KEY` from the process environment.
 - Creation model: create a schedule, receive a schedule id and optional task ids, poll until completion.
 - The script sends a caller-generated 8-character `taskId` by default. In schedule mode, query task lists with `scheduleId`; if the create response returns `taskIds`, use them as an additional precise match.
-- Reference images from local files are sent as data URLs such as `data:image/jpeg;base64,...`. Image generation uses `params.inputReferences` as an array; video generation uses `params.inputReference` for one reference or `params.inputReferences` for multiple references.
+- Reference images must be remote CDN URLs. Local files must be uploaded through `POST /v1/file/upload` first; use the returned `data.url` as the reference. Base64 / `data:` URLs are no longer accepted by the create API. Image generation uses `params.inputReferences` as an array; video generation uses `params.inputReference` for one reference or `params.inputReferences` for multiple references.
 - Intended media types: image and video now; music or other content types may use the same pattern later.
 - Video duration defaults: confirmed model `gemini-omni-video` uses 10 seconds when the user does not specify duration; other video models default to 8 seconds. User-specified duration always wins.
 - Polling expectation: poll for about 5 minutes before reporting timeout.
@@ -54,6 +54,30 @@ Restart Codex or the terminal after setting it.
 
 ## Endpoints
 
+### File Upload
+
+Upload a local image to obtain a remote CDN URL before creating an image/video task. The create API only accepts http(s) URLs for `params.inputReference` / `params.inputReferences`; base64 / data URLs are no longer supported.
+
+- Method: `POST`
+- Path: `/v1/file/upload`
+- Auth: `x-api-key: <key>`
+- Body: `multipart/form-data` with form field `file` (binary file content)
+- Success response shape:
+
+```json
+{
+  "code": 0,
+  "data": {
+    "id": "file id",
+    "url": "https://static.ailingtu.com/...",
+    "isNew": true
+  }
+}
+```
+
+- Use `data.url` as the reference image URL when calling schedule/task create.
+- `data.isNew` is `false` when the same file content was already uploaded; the API returns the previously stored id/url.
+
 ### Direct Task Create
 
 Use this when Codex needs to create one task and poll it immediately.
@@ -73,8 +97,8 @@ Video request:
     "model": "gemini-omni-video",
     "seconds": 10,
     "size": "720x1280",
-    "inputReference": "data:image/jpeg;base64,...",
-    "inputReferences": ["data:image/jpeg;base64,..."],
+    "inputReference": "https://static.ailingtu.com/ai-images/<id>.jpg",
+    "inputReferences": ["https://static.ailingtu.com/ai-images/<id>.jpg"],
     "watermark": false
   },
   "nums": 1
@@ -93,7 +117,7 @@ Image request:
     "prompt": "text prompt",
     "model": "gpt-image-2",
     "aspectRatio": "1:1",
-    "inputReferences": ["data:image/jpeg;base64,..."]
+    "inputReferences": ["https://static.ailingtu.com/ai-images/<id>.jpg"]
   },
   "nums": 3
 }
@@ -172,7 +196,7 @@ Schedule payload wraps the same `params` shape:
     "model": "gemini-omni-video",
     "seconds": 10,
     "size": "720x1280",
-    "inputReferences": ["data:image/jpeg;base64,..."],
+    "inputReferences": ["https://static.ailingtu.com/ai-images/<id>.jpg"],
     "watermark": false
   },
   "nums": 1,
