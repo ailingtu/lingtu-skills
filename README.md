@@ -4,6 +4,8 @@
 
 将灵途 AI 的能力封装为可复用的技能包，适配 Codex、Claude Code、Cursor、OpenClaw、Dify、OpenAI 等不同智能体和平台。核心包与模型无关，适配器仅做薄层翻译。
 
+灵途 AI 官网：[www.ailingtu.com](https://www.ailingtu.com)。
+
 仓库地址：[ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills)。需要更新时，从该 GitHub 仓库拉取最新版本。
 
 ## 简介

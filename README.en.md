@@ -4,6 +4,8 @@
 
 Packages reusable Lingtu AI capabilities for different AI agents and platforms, including Codex, Claude Code, Cursor, OpenClaw, Dify, and OpenAI. Core packages are model-agnostic; adapters provide thin translation layers.
 
+Lingtu AI website: [www.ailingtu.com](https://www.ailingtu.com).
+
 Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills). When users ask to update, pull the latest version from this GitHub repository.
 
 ## What's Inside
