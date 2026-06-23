@@ -37,6 +37,7 @@ export LINGTU_SOCIAL_MONITOR_SNAPSHOTS="~/.lingtu/social-monitor/snapshots"
 |------|------|
 | `tutorial` | 输出添加监控的中文教程 |
 | `add` | 加入监控列表 + 即时分析 + 落今日快照 |
+| `batch-add` | 批量加入监控列表（支持超时/临时失败重试和过程进度提示） |
 | `list` | 列出群内监控（`--daily-only` 仅每日订阅） |
 | `enable-daily` / `disable-daily` | 开启/关闭某达人的每日订阅 |
 | `remove` | 从监控列表中移除 |

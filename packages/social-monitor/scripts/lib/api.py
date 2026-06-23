@@ -26,7 +26,12 @@ from .utils import (
 )
 
 
-def fetch_posts(unique_id: str, count: int, platform: str = DEFAULT_PLATFORM) -> dict[str, Any]:
+def fetch_posts(
+    unique_id: str,
+    count: int,
+    platform: str = DEFAULT_PLATFORM,
+    timeout: int = 30,
+) -> dict[str, Any]:
     platform = normalize_platform(platform)
     api_key = require_api_key()
     query = urllib_parse.urlencode({"uniqueId": unique_id, "count": max(1, count)})
@@ -36,7 +41,7 @@ def fetch_posts(unique_id: str, count: int, platform: str = DEFAULT_PLATFORM) ->
     req.add_header("x-api-key", api_key)
     req.add_header("Accept", "application/json")
     try:
-        with urllib_request.urlopen(req, timeout=30) as response:
+        with urllib_request.urlopen(req, timeout=timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib_error.HTTPError as exc:
         raise SystemExit(f"fetchPosts({platform}) HTTP 错误：{exc.code} {exc.reason}")

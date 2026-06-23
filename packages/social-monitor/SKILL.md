@@ -115,10 +115,14 @@ python3 scripts/lingtu_social_monitor.py batch-add \
   --group-id feishu_group_001 \
   --tags "top-tier" \
   --enable-daily \
-  --sleep-ms 600
+  --sleep-ms 600 \
+  --retries 2 \
+  --retry-sleep-ms 1500 \
+  --request-timeout 30 \
+  --progress-every 10
 ```
 
-JSON 输出包含 `success[] / failed[] / total / succeeded / failed_count`，失败项保留原始 `input` 与中文错误描述，便于编排层重试或汇总。`--sleep-ms` 控制相邻请求间隔（默认 600ms），用于规避上游限速。
+JSON 输出包含 `success[] / failed[] / total / succeeded / failed_count`，失败项保留原始 `input` 与中文错误描述，便于编排层重试或汇总；成功项与失败项都会带 `attempts`。`--sleep-ms` 控制相邻请求间隔（默认 600ms），用于规避上游限速。`batch-add` 默认对单个达人失败重试 2 次；`--retries` / `--retry-sleep-ms` / `--request-timeout` 可在 Instagram 接口偶发慢请求或 500 时调大。`uniqueId` 不存在会直接失败，不做重试。批量过程中默认向 stderr 输出进度（开始、成功数 1/2/4/8... 里程碑、每处理 10 条、结束），不影响 stdout 的 JSON；可用 `--progress-every` 调整频率，或 `--no-progress` 关闭。
 
 `--focus` 控制分析方向（默认 `overall`）：
 

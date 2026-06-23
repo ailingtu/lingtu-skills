@@ -75,7 +75,7 @@ def platform_label(platform: str) -> str:
 
 
 def slugify_handle(value: str) -> str:
-    normalized = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip()).strip("._-")
+    normalized = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip()).lstrip("._-")
     return normalized.lower() or "unknown_creator"
 
 

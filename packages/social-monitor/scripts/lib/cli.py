@@ -73,6 +73,7 @@ def add_one(
     date: str = "",
     focus: str | None = None,
     enable_daily: bool = False,
+    request_timeout: int = 30,
 ) -> dict[str, Any]:
     """添加单个达人到监控（抓取 + upsert + 快照 + 可选分析 + 可选每日订阅）。
 
@@ -80,7 +81,7 @@ def add_one(
     """
     platform = normalize_platform(platform)
     unique_id = parse_creator_handle(raw_input, platform=platform)
-    raw = fetch_posts(unique_id, count, platform=platform)
+    raw = fetch_posts(unique_id, count, platform=platform, timeout=request_timeout)
     normalized = normalize_response(raw, platform=platform)
     monitor = upsert_monitor(
         normalized["creator"],
@@ -124,6 +125,7 @@ def command_add(args: argparse.Namespace) -> None:
         date=args.date,
         focus=args.focus,
         enable_daily=args.enable_daily,
+        request_timeout=max(1, args.request_timeout),
     )
     monitor = result["monitor"]
     normalized = result["normalized"]
@@ -177,6 +179,29 @@ def _read_inputs_file(path: str) -> list[str]:
     return items
 
 
+def _is_non_retryable_batch_error(message: str) -> bool:
+    return (
+        "未获取到该达人数据" in message
+        or "缺少环境变量 LINGTU_API_KEY" in message
+        or "不支持的平台" in message
+    )
+
+
+def _batch_success_milestones(total: int) -> set[int]:
+    milestones: set[int] = set()
+    value = 1
+    while value <= total:
+        milestones.add(value)
+        value *= 2
+    if total:
+        milestones.add(total)
+    return milestones
+
+
+def _print_batch_progress(message: str) -> None:
+    print(message, file=sys.stderr, flush=True)
+
+
 def command_batch_add(args: argparse.Namespace) -> None:
     if bool(args.inputs) == bool(args.inputs_file):
         raise SystemExit("--inputs 和 --inputs-file 必须二选一。")
@@ -192,35 +217,65 @@ def command_batch_add(args: argparse.Namespace) -> None:
 
     success: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
+    max_attempts = max(1, args.retries + 1)
+    retry_sleep_seconds = max(0, args.retry_sleep_ms) / 1000.0
+    request_timeout = max(1, args.request_timeout)
+    progress_enabled = not args.no_progress
+    progress_every = max(1, args.progress_every)
+    success_milestones = _batch_success_milestones(len(items))
+    announced_success_counts: set[int] = set()
+    if progress_enabled:
+        _print_batch_progress(f"批量添加开始：共 {len(items)} 个达人。")
+
     for idx, item in enumerate(items):
         if idx > 0 and sleep_seconds > 0:
             time.sleep(sleep_seconds)
-        try:
-            result = add_one(
-                raw_input=item,
-                platform=args.platform,
-                group_id=args.group_id,
-                source=args.source,
-                team_id=args.team_id,
-                operator_id=args.operator_id,
-                remark=args.remark,
-                tags=tags,
-                count=args.count,
-                date=args.date,
-                focus=None,
-                enable_daily=args.enable_daily,
-            )
-            creator = result["normalized"]["creator"]
-            success.append({
-                "input": item,
-                "username": creator.get("username"),
-                "nickname": creator.get("nickname"),
-                "monitor_id": result["monitor"]["monitor_id"],
-                "snapshot_path": str(result["snapshot_path"]),
-                "daily_enabled": result["monitor"].get("daily_enabled", False),
-            })
-        except SystemExit as exc:
-            failed.append({"input": item, "reason": str(exc) or "未知错误"})
+        last_error = "未知错误"
+        succeeded = False
+        for attempt in range(1, max_attempts + 1):
+            try:
+                result = add_one(
+                    raw_input=item,
+                    platform=args.platform,
+                    group_id=args.group_id,
+                    source=args.source,
+                    team_id=args.team_id,
+                    operator_id=args.operator_id,
+                    remark=args.remark,
+                    tags=tags,
+                    count=args.count,
+                    date=args.date,
+                    focus=None,
+                    enable_daily=args.enable_daily,
+                    request_timeout=request_timeout,
+                )
+                creator = result["normalized"]["creator"]
+                success.append({
+                    "input": item,
+                    "username": creator.get("username"),
+                    "nickname": creator.get("nickname"),
+                    "monitor_id": result["monitor"]["monitor_id"],
+                    "snapshot_path": str(result["snapshot_path"]),
+                    "daily_enabled": result["monitor"].get("daily_enabled", False),
+                    "attempts": attempt,
+                })
+                succeeded = True
+                break
+            except SystemExit as exc:
+                last_error = str(exc) or "未知错误"
+                if _is_non_retryable_batch_error(last_error):
+                    break
+                if attempt < max_attempts and retry_sleep_seconds > 0:
+                    time.sleep(retry_sleep_seconds)
+        if not succeeded:
+            failed.append({"input": item, "reason": last_error, "attempts": attempt})
+        processed = idx + 1
+        succeeded_count = len(success)
+        if progress_enabled and succeeded_count in success_milestones and succeeded_count not in announced_success_counts:
+            announced_success_counts.add(succeeded_count)
+            _print_batch_progress(f"批量添加进度：已成功 {succeeded_count} 个，已处理 {processed}/{len(items)}，失败 {len(failed)}。")
+        elif progress_enabled and (processed % progress_every == 0 or processed == len(items)):
+            _print_batch_progress(f"批量添加进度：已处理 {processed}/{len(items)}，成功 {succeeded_count}，失败 {len(failed)}。")
 
     summary = {
         "total": len(items),
@@ -229,6 +284,8 @@ def command_batch_add(args: argparse.Namespace) -> None:
         "success": success,
         "failed": failed,
     }
+    if progress_enabled:
+        _print_batch_progress(f"批量添加结束：共 {summary['total']} 条，成功 {summary['succeeded']}，失败 {summary['failed_count']}。")
 
     if args.format == "json":
         print_json(summary)
@@ -642,6 +699,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", default="", help="快照日期，默认今天 (YYYY-MM-DD)。")
     add_focus_argument(p)
     p.add_argument("--enable-daily", action="store_true", help="添加成功后立即开启每日监控。")
+    p.add_argument("--request-timeout", type=int, default=30, help="单次 fetchPosts 请求超时秒数，默认 30。")
     p.add_argument("--include-videos", action="store_true", help="JSON 输出附带 normalize 后的视频列表。")
     p.add_argument("--include-raw", action="store_true", help="JSON 输出附带原始 fetchPosts 响应。")
     add_format_argument(p, default="json")
@@ -661,6 +719,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", default="", help="快照日期，默认今天 (YYYY-MM-DD)。")
     p.add_argument("--enable-daily", action="store_true", help="对每个新增达人开启每日监控。")
     p.add_argument("--sleep-ms", type=int, default=600, help="相邻达人请求间隔（毫秒），默认 600。")
+    p.add_argument("--request-timeout", type=int, default=30, help="单次 fetchPosts 请求超时秒数，默认 30。")
+    p.add_argument("--retries", type=int, default=2, help="单个达人失败后的重试次数，默认 2。")
+    p.add_argument("--retry-sleep-ms", type=int, default=1500, help="同一达人重试间隔（毫秒），默认 1500。")
+    p.add_argument("--progress-every", type=int, default=10, help="每处理多少个达人输出一次进度到 stderr，默认 10。")
+    p.add_argument("--no-progress", action="store_true", help="关闭批量添加过程中的 stderr 进度提示。")
     add_format_argument(p, default="json")
     p.set_defaults(func=command_batch_add)
 
