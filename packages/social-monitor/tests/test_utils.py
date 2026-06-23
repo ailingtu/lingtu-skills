@@ -25,15 +25,22 @@ class HandleParsingTests(unittest.TestCase):
 
     def test_slugify_handles_mentions_and_leading_noise(self) -> None:
         self.assertEqual(slugify_handle("@mrbeast"), "mrbeast")
-        self.assertEqual(slugify_handle("_leading_dash"), "leading_dash")
+        self.assertEqual(slugify_handle("_leading_dash"), "_leading_dash")
 
-    def test_instagram_url_preserves_trailing_underscores(self) -> None:
+    def test_instagram_url_preserves_leading_and_trailing_underscores(self) -> None:
         self.assertEqual(
             parse_creator_handle(
                 "https://www.instagram.com/arianaguerrero__/",
                 platform="instagram",
             ),
             "arianaguerrero__",
+        )
+        self.assertEqual(
+            parse_creator_handle(
+                "https://www.instagram.com/_sophia.wellness_/",
+                platform="instagram",
+            ),
+            "_sophia.wellness_",
         )
 
 
