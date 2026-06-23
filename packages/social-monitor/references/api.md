@@ -56,6 +56,123 @@ interface NormalizedCreatorVideos {
 
 Single-video material commands should normalize to the same metric field names under `video`.
 
+## Local Output Shapes (Digest / Alerts)
+
+These are produced locally by the script (no remote API). Document them here so consumers do not have to read source.
+
+`digest --format json` (and `build_digest()` return value):
+
+```ts
+interface DigestOutput {
+  group_id: string;
+  platform: "tiktok" | "instagram" | null;
+  date: string;            // YYYY-MM-DD
+  previous_date: string;   // YYYY-MM-DD (date - 1)
+  summary: {
+    monitors_total: number;
+    fetched: number;
+    missing: number;
+    new_videos_total: number;
+    with_yesterday: number;
+  };
+  highlights: {
+    follower_gainers: Array<{ username, nickname, follower_delta, follower_today }>;
+    new_viral: Array<{
+      username; nickname; video_id; video_url; caption;
+      views; likes; comments; cover_url; publish_time;
+    }>;
+    biggest_view_jumps: Array<{
+      username; nickname; video_id; video_url; caption;
+      views_today; views_yesterday; views_delta;
+    }>;
+    stalled: Array<{ username, nickname, days_since_last_post }>;
+    surged: Array<{ username, nickname, last_7_days_posts }>;
+  };
+  creators: Array<{
+    username; nickname; remark;
+    follower_today; follower_delta; new_videos;
+    top_today: { video_id, video_url, caption, views } | null;
+    biggest_view_jump; status: "ok" | "stall" | "surge"; has_yesterday;
+  }>;
+  alerts: Alert[];
+  missing: Array<{ username, nickname, remark }>;
+  reply_text: string;      // localized digest body for chat reply
+}
+
+type Alert =
+  | {
+      type: "new_viral";
+      severity: "high" | "medium";
+      username: string;
+      platform: string;
+      video_id: string;
+      video_url: string;
+      caption: string;
+      views: number;
+      likes: number;
+      cover_url: string;
+      publish_time: string | null;
+      triggered_at: number;          // unix ms
+    }
+  | {
+      type: "stopped_posting";
+      severity: "medium";
+      username: string;
+      platform: string;
+      days_since_last_post: number;
+      last_post_date: string;        // YYYY-MM-DD
+      triggered_at: number;
+    }
+  | {
+      type: "high_frequency";
+      severity: "low";
+      username: string;
+      platform: string;
+      posts_last_7_days: number;
+      triggered_at: number;
+    }
+  | {
+      type: "follower_drop";
+      severity: "high" | "medium";
+      username: string;
+      platform: string;
+      follower_delta: number;        // negative
+      follower_today: number;
+      triggered_at: number;
+    };
+```
+
+Threshold constants live in `lib/config.py`: `VIRAL_VIEWS_HIGH=1_000_000` / `VIRAL_VIEWS_MEDIUM=100_000` / `FOLLOWER_DROP_HIGH=10_000` / `FOLLOWER_DROP_MEDIUM=1_000` / `STALL_DAYS=7` / `SURGE_WEEK_THRESHOLD=3`.
+
+`alerts check` output:
+
+```ts
+interface AlertsCheckOutput {
+  group_id: string;
+  platform: string | null;
+  date: string;
+  username: string | null;       // null when scanning whole group
+  alerts: Alert[];
+}
+```
+
+`snapshot-get` output:
+
+- Single day (`--date` or default today) → returns the snapshot JSON directly:
+  ```ts
+  interface CreatorSnapshot {
+    captured_at: string;           // ISO UTC
+    date: string;                  // YYYY-MM-DD
+    group_id: string;
+    creator: { ... };              // same shape as NormalizedCreatorVideos.creator
+    videos: Array<{ ... }>;        // same shape as NormalizedCreatorVideos.videos
+  }
+  ```
+- Range (`--from` / `--to`) → `{ group_id, platform, username, creator_id, from, to, snapshots: CreatorSnapshot[] }`.
+- `--latest-only` → `{ group_id, platform, latest_only: true, creators: Array<{ platform, creator_id, latest_date, snapshot_count }> }`.
+
+`monitors.json` entry shape (see `SKILL.md` § Monitor Metadata Schema for the full TypeScript definition).
+
 ## TikTok Fetch Recent Posts
 
 Endpoint: `GET /v1/influencer/fetchPosts`

@@ -5,7 +5,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from .config import DEFAULT_PLATFORM, STALL_DAYS, SURGE_WEEK_THRESHOLD
+from .config import (
+    DEFAULT_PLATFORM,
+    FOLLOWER_DROP_HIGH,
+    FOLLOWER_DROP_MEDIUM,
+    STALL_DAYS,
+    SURGE_WEEK_THRESHOLD,
+    VIRAL_VIEWS_HIGH,
+    VIRAL_VIEWS_MEDIUM,
+)
 from .store import list_monitors, load_snapshot
 from .utils import (
     format_delta,
@@ -20,6 +28,101 @@ from .utils import (
 def previous_day(day: str) -> str:
     parsed = datetime.strptime(day, "%Y-%m-%d").date()
     return (parsed - timedelta(days=1)).strftime("%Y-%m-%d")
+
+
+def check_alerts(today: dict[str, Any], yesterday: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """对比昨日/今日两份快照，产出该达人的告警事件列表。
+
+    阈值取自 config.py 全局值；monitors.json 中的 alert_config 暂存而不参与判定。
+    """
+    today_creator = today.get("creator") or {}
+    today_videos = today.get("videos") or []
+    yesterday_videos = (yesterday or {}).get("videos") or []
+    yesterday_creator = (yesterday or {}).get("creator") or {}
+
+    username = today_creator.get("username") or ""
+    platform = normalize_platform(today_creator.get("platform") or DEFAULT_PLATFORM)
+    triggered_at = int(now_utc().timestamp() * 1000)
+    alerts: list[dict[str, Any]] = []
+
+    yesterday_video_ids = {v.get("video_id") for v in yesterday_videos if v.get("video_id")}
+    for v in today_videos:
+        vid = v.get("video_id")
+        if not vid or vid in yesterday_video_ids:
+            continue
+        views = int(v.get("views") or 0)
+        if views >= VIRAL_VIEWS_HIGH:
+            severity = "high"
+        elif views >= VIRAL_VIEWS_MEDIUM:
+            severity = "medium"
+        else:
+            continue
+        alerts.append({
+            "type": "new_viral",
+            "severity": severity,
+            "username": username,
+            "platform": platform,
+            "video_id": vid,
+            "video_url": v.get("video_url"),
+            "caption": v.get("caption"),
+            "views": views,
+            "likes": int(v.get("likes") or 0),
+            "cover_url": v.get("cover_url") or "",
+            "publish_time": v.get("publish_time"),
+            "triggered_at": triggered_at,
+        })
+
+    publish_times = [pt for pt in (parse_time(v.get("publish_time")) for v in today_videos) if pt]
+    current = now_utc()
+    if publish_times:
+        last_publish = max(publish_times)
+        days_since_last = (current - last_publish).days
+        if days_since_last >= STALL_DAYS:
+            alerts.append({
+                "type": "stopped_posting",
+                "severity": "medium",
+                "username": username,
+                "platform": platform,
+                "days_since_last_post": days_since_last,
+                "last_post_date": last_publish.strftime("%Y-%m-%d"),
+                "triggered_at": triggered_at,
+            })
+
+    last_7 = sum(1 for t in publish_times if current - t <= timedelta(days=7))
+    if last_7 >= SURGE_WEEK_THRESHOLD:
+        alerts.append({
+            "type": "high_frequency",
+            "severity": "low",
+            "username": username,
+            "platform": platform,
+            "posts_last_7_days": last_7,
+            "triggered_at": triggered_at,
+        })
+
+    follower_today = today_creator.get("follower_count")
+    follower_yesterday = yesterday_creator.get("follower_count") if yesterday else None
+    if isinstance(follower_today, int) and isinstance(follower_yesterday, int):
+        delta = follower_today - follower_yesterday
+        if delta < 0:
+            loss = abs(delta)
+            if loss >= FOLLOWER_DROP_HIGH:
+                severity = "high"
+            elif loss >= FOLLOWER_DROP_MEDIUM:
+                severity = "medium"
+            else:
+                severity = None
+            if severity:
+                alerts.append({
+                    "type": "follower_drop",
+                    "severity": severity,
+                    "username": username,
+                    "platform": platform,
+                    "follower_delta": delta,
+                    "follower_today": follower_today,
+                    "triggered_at": triggered_at,
+                })
+
+    return alerts
 
 
 def diff_creator(today: dict[str, Any], yesterday: dict[str, Any] | None) -> dict[str, Any]:
@@ -121,6 +224,7 @@ def build_digest(group_id: str, day: str, platform: str | None = None) -> dict[s
     yday = previous_day(day)
     creator_diffs: list[dict[str, Any]] = []
     missing: list[dict[str, Any]] = []
+    alerts: list[dict[str, Any]] = []
 
     for monitor in monitors:
         creator = monitor.get("creator") or {}
@@ -138,6 +242,7 @@ def build_digest(group_id: str, day: str, platform: str | None = None) -> dict[s
         diff = diff_creator(today_snap, yesterday_snap)
         diff["remark"] = monitor.get("remark", "")
         creator_diffs.append(diff)
+        alerts.extend(check_alerts(today_snap, yesterday_snap))
 
     follower_gainers = sorted(
         [c for c in creator_diffs if isinstance(c.get("follower_delta"), int)],
@@ -154,6 +259,10 @@ def build_digest(group_id: str, day: str, platform: str | None = None) -> dict[s
                 "video_url": v.get("video_url"),
                 "caption": v.get("caption"),
                 "views": int(v.get("views") or 0),
+                "likes": int(v.get("likes") or 0),
+                "comments": int(v.get("comments") or 0),
+                "cover_url": v.get("cover_url") or "",
+                "publish_time": v.get("publish_time"),
             })
     new_viral.sort(key=lambda item: item["views"], reverse=True)
     new_viral_top = new_viral[:5]
@@ -232,6 +341,7 @@ def build_digest(group_id: str, day: str, platform: str | None = None) -> dict[s
             }
             for c in creator_diffs
         ],
+        "alerts": alerts,
         "missing": missing,
     }
     digest["reply_text"] = build_digest_text(digest)

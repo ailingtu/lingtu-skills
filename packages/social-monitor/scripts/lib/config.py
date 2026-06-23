@@ -28,6 +28,11 @@ HASHTAG_PATTERN = re.compile(r"[#＃]([\w一-鿿]+)")
 STALL_DAYS = 7
 SURGE_WEEK_THRESHOLD = 3
 
+VIRAL_VIEWS_HIGH = 1_000_000
+VIRAL_VIEWS_MEDIUM = 100_000
+FOLLOWER_DROP_HIGH = 10_000
+FOLLOWER_DROP_MEDIUM = 1_000
+
 INSTAGRAM_RESERVED_PATHS = frozenset({
     "p", "reel", "reels", "tv", "stories", "explore", "accounts",
     "directory", "developer", "about", "legal", "web", "ajax", "api",

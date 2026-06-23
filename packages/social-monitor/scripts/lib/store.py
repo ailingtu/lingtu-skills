@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 from pathlib import Path
 from typing import Any
@@ -51,34 +50,55 @@ def find_monitor(monitors: list[dict[str, Any]], group_id: str, username: str, p
     )
 
 
-def upsert_monitor(creator: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+def upsert_monitor(
+    creator: dict[str, Any],
+    *,
+    group_id: str,
+    source: str = "feishu_group",
+    team_id: str = "",
+    operator_id: str = "default_user",
+    remark: str = "",
+    tags: list[str] | None = None,
+    platform: str | None = None,
+) -> dict[str, Any]:
     path = store_path()
     data = load_store(path)
     monitors = data["monitors"]
     username = creator.get("username") or ""
-    platform = normalize_platform(creator.get("platform") or getattr(args, "platform", DEFAULT_PLATFORM))
+    platform = normalize_platform(platform or creator.get("platform") or DEFAULT_PLATFORM)
     creator_id = creator.get("creator_id") or stable_id("creator", username)
     timestamp = now_utc().replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
-    existing = find_monitor(monitors, args.group_id, username, platform=platform)
+    existing = find_monitor(monitors, group_id, username, platform=platform)
     if existing:
-        existing["remark"] = args.remark or existing.get("remark", "")
+        if remark:
+            existing["remark"] = remark
+        elif "remark" not in existing:
+            existing["remark"] = ""
+        if tags is not None:
+            existing["tags"] = tags
+        elif "tags" not in existing:
+            existing["tags"] = []
         existing["updated_at"] = timestamp
         existing["creator"] = creator
         if "daily_enabled" not in existing:
             existing["daily_enabled"] = False
+        if "alert_config" not in existing:
+            existing["alert_config"] = {}
         monitor = existing
     else:
         monitor = {
-            "monitor_id": stable_id("monitor", f"{args.group_id}:{platform}:{creator_id or username}"),
-            "source": args.source,
-            "group_id": args.group_id,
-            "team_id": args.team_id,
-            "operator_id": args.operator_id,
-            "remark": args.remark,
+            "monitor_id": stable_id("monitor", f"{group_id}:{platform}:{creator_id or username}"),
+            "source": source,
+            "group_id": group_id,
+            "team_id": team_id,
+            "operator_id": operator_id,
+            "remark": remark,
+            "tags": tags or [],
             "added_at": timestamp,
             "updated_at": timestamp,
             "daily_enabled": False,
+            "alert_config": {},
             "creator": creator,
         }
         monitors.append(monitor)
@@ -94,6 +114,30 @@ def update_monitor(group_id: str, username: str, platform: str = DEFAULT_PLATFOR
     if not monitor:
         raise SystemExit(f"未找到监控记录（platform={platform}, group_id={group_id}, username={username}）。")
     monitor.update(changes)
+    monitor["updated_at"] = now_utc().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    save_store(path, data)
+    return monitor
+
+
+def patch_alert_config(
+    group_id: str,
+    username: str,
+    platform: str,
+    updates: dict[str, Any],
+) -> dict[str, Any]:
+    platform = normalize_platform(platform)
+    path = store_path()
+    data = load_store(path)
+    monitor = find_monitor(data["monitors"], group_id, username, platform=platform)
+    if not monitor:
+        raise SystemExit(f"未找到监控记录（platform={platform}, group_id={group_id}, username={username}）。")
+    cfg = dict(monitor.get("alert_config") or {})
+    for key, value in updates.items():
+        if value is None:
+            cfg.pop(key, None)
+        else:
+            cfg[key] = value
+    monitor["alert_config"] = cfg
     monitor["updated_at"] = now_utc().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     save_store(path, data)
     return monitor
@@ -158,3 +202,41 @@ def load_snapshot(group_id: str, platform: str, creator_id: str, day: str) -> di
         return None
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def list_snapshot_dates(group_id: str, platform: str, creator_id: str) -> list[str]:
+    safe_group = slugify_handle(group_id) or "default"
+    safe_platform = slugify_handle(normalize_platform(platform)) or DEFAULT_PLATFORM
+    safe_creator = slugify_handle(creator_id) or "unknown"
+    folder = snapshots_dir() / safe_group / safe_platform / safe_creator
+    if not folder.exists():
+        return []
+    dates: list[str] = []
+    for child in folder.iterdir():
+        if child.is_file() and child.suffix == ".json":
+            stem = child.stem
+            if len(stem) == 10 and stem[4] == "-" and stem[7] == "-":
+                dates.append(stem)
+    dates.sort()
+    return dates
+
+
+def list_snapshot_creators(group_id: str, platform: str | None = None) -> list[dict[str, str]]:
+    """枚举某 group 下所有有快照的（platform, creator_id）。"""
+    safe_group = slugify_handle(group_id) or "default"
+    root = snapshots_dir() / safe_group
+    if not root.exists():
+        return []
+    items: list[dict[str, str]] = []
+    target_platform = normalize_platform(platform) if platform else None
+    for platform_dir in root.iterdir():
+        if not platform_dir.is_dir():
+            continue
+        plat = platform_dir.name
+        if target_platform and plat != target_platform:
+            continue
+        for creator_dir in platform_dir.iterdir():
+            if creator_dir.is_dir():
+                items.append({"platform": plat, "creator_id": creator_dir.name})
+    items.sort(key=lambda x: (x["platform"], x["creator_id"]))
+    return items

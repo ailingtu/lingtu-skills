@@ -1,7 +1,7 @@
 ---
 name: lingtu-social-monitor
-version: 0.7.3
-description: 社媒达人/竞品监控、单条视频素材数据与评论抓取/导出/下载、日报。当前已接入 TikTok 和 Instagram 的账号视频列表、单条视频数据、视频评论接口；Instagram 使用 `/v1/influencer/ins/fetchPosts`、`/v1/material/ins/fetch`、`/v1/material/ins/fetchComments`。支持视频评论导出、评论区反馈、单条或批量视频实时数据、群级监控列表、即时分析（综合/发布策略/内容形式 三种分析方向）、每日订阅，并按"昨日 vs 今日"差异生成中文日报。
+version: 0.8.0
+description: 社媒达人/竞品监控、单条视频素材数据与评论抓取/导出/下载、日报、告警。当前已接入 TikTok 和 Instagram 的账号视频列表、单条视频数据、视频评论接口；Instagram 使用 `/v1/influencer/ins/fetchPosts`、`/v1/material/ins/fetch`、`/v1/material/ins/fetchComments`。支持单条/批量添加监控（可一键开启每日订阅）、视频评论导出、评论区反馈、单条视频实时数据、群级监控列表、即时分析（综合/发布策略/内容形式）、每日订阅、按"昨日 vs 今日"差异生成中文日报和结构化告警事件、本地快照单天/范围/最新查询、标签/备注/告警阈值（暂存）等监控元数据维护。
 ---
 
 # 社媒达人 / 竞品监控与日报
@@ -22,14 +22,18 @@ description: 社媒达人/竞品监控、单条视频素材数据与评论抓取
 ```text
 用户在群里 @机器人 ──▶
   ├─ "如何添加监控" / "怎么用" ── tutorial
-  ├─ "添加监控 <链接|@用户名>" ── add（即时分析 + 落今日快照）
+  ├─ "添加监控 <链接|@用户名>" ── add（即时分析 + 落今日快照；可加 --enable-daily 一步到位）
+  ├─ "批量添加 ..." ── batch-add（不做即时分析，可 --enable-daily / --tags / --remark）
   ├─ 答复"加入每日监控 @xxx" ── enable-daily（订阅）
   ├─ "查看监控列表" / "看一下都监控了谁" ── list
+  ├─ "查这个达人详情" ── monitor get
+  ├─ "打个标签 / 改备注 / 改告警阈值" ── tag / remark / alert-config
   ├─ "取消每日监控 @xxx" ── disable-daily
   └─ "移除监控 @xxx" ── remove
 
 每天早 8 点（编排层 cron 触发）─▶
   for 群: for 达人: snapshot；最后一步 digest 输出当日中文日报到群里。
+  digest JSON 中已内嵌 alerts；如需"刚抓完立刻看"可调 alerts check。
 ```
 
 第一天添加的达人，次日才会出现"昨日 vs 今日"对比；当日无对照时，速览行会标注"首日无对比"。
@@ -83,9 +87,38 @@ python3 scripts/lingtu_social_monitor.py add \
   --input "https://www.tiktok.com/@mrbeast" \
   --group-id feishu_group_001 \
   --remark "对标账号" \
+  --tags "top-tier,NBA" \
   --focus overall \
   --format text
+
+# 一键添加并开启每日监控
+python3 scripts/lingtu_social_monitor.py add \
+  --platform tiktok \
+  --input "@mrbeast" \
+  --group-id feishu_group_001 \
+  --enable-daily
 ```
+
+### 批量添加监控（不做即时分析）
+```bash
+# 逗号分隔
+python3 scripts/lingtu_social_monitor.py batch-add \
+  --platform tiktok \
+  --inputs "@mrbeast,@tommy,@jane" \
+  --group-id feishu_group_001 \
+  --enable-daily
+
+# 文件读取（每行一个；# 开头注释；空行忽略）
+python3 scripts/lingtu_social_monitor.py batch-add \
+  --platform tiktok \
+  --inputs-file ./kols.txt \
+  --group-id feishu_group_001 \
+  --tags "top-tier" \
+  --enable-daily \
+  --sleep-ms 600
+```
+
+JSON 输出包含 `success[] / failed[] / total / succeeded / failed_count`，失败项保留原始 `input` 与中文错误描述，便于编排层重试或汇总。`--sleep-ms` 控制相邻请求间隔（默认 600ms），用于规避上游限速。
 
 `--focus` 控制分析方向（默认 `overall`）：
 
@@ -119,6 +152,61 @@ python3 scripts/lingtu_social_monitor.py remove --platform tiktok --group-id fei
 ```bash
 python3 scripts/lingtu_social_monitor.py snapshot \
   --platform tiktok --group-id feishu_group_001 --input mrbeast --count 40
+```
+
+### 读取本地快照
+`snapshot-get` 不发起请求，直接读 `~/.lingtu/social-monitor/snapshots/{group}/{platform}/{creator_id}/{YYYY-MM-DD}.json`：
+
+```bash
+# 单天（默认今天）
+python3 scripts/lingtu_social_monitor.py snapshot-get \
+  --platform tiktok --group-id feishu_group_001 --input mrbeast
+
+# 指定日期
+python3 scripts/lingtu_social_monitor.py snapshot-get \
+  --platform tiktok --group-id feishu_group_001 --input mrbeast --date 2026-06-22
+
+# 时间范围（用于周报趋势）
+python3 scripts/lingtu_social_monitor.py snapshot-get \
+  --platform tiktok --group-id feishu_group_001 --input mrbeast \
+  --from 2026-06-16 --to 2026-06-23
+
+# 整 group 所有达人 + 各自最新快照日期（编排层做调度时用）
+python3 scripts/lingtu_social_monitor.py snapshot-get \
+  --group-id feishu_group_001 --latest-only
+```
+
+### 按需检查告警事件
+`alerts check` 复用日报内部的 `check_alerts(prev, curr)` 函数，对比昨日/今日快照产出告警，无需等到 digest：
+
+```bash
+# 单达人
+python3 scripts/lingtu_social_monitor.py alerts check \
+  --platform tiktok --group-id feishu_group_001 --input mrbeast
+
+# 整 group 的 daily 监控达人（不传 --input）
+python3 scripts/lingtu_social_monitor.py alerts check \
+  --group-id feishu_group_001
+```
+
+输出 `{ group_id, platform, date, username, alerts: [...] }`；`alerts` 与 digest JSON 的 `alerts` 结构一致，包含 `new_viral / stopped_posting / high_frequency / follower_drop` 四种类型。
+
+### 标签 / 备注 / 告警阈值
+```bash
+python3 scripts/lingtu_social_monitor.py tag \
+  --group-id feishu_group_001 --input mrbeast --tags "top-tier,NBA"
+
+python3 scripts/lingtu_social_monitor.py remark \
+  --group-id feishu_group_001 --input mrbeast --remark "主要对标账号"
+
+# v1.0 暂存不参与判定，等编排层有产品入口再接判定逻辑
+python3 scripts/lingtu_social_monitor.py alert-config \
+  --group-id feishu_group_001 --input mrbeast \
+  --viral-threshold 500000 --max-silent-days 14
+
+# 查询完整 monitor 元数据
+python3 scripts/lingtu_social_monitor.py monitor get \
+  --group-id feishu_group_001 --input mrbeast
 ```
 
 ### 每日日报（昨日 vs 今日）
@@ -194,6 +282,62 @@ python3 scripts/lingtu_social_monitor.py comments \
 - 四、异常信号：停更（≥7 天未发布）/ 高频发布（最近 7 天 ≥3 条）。
 - 五、逐账号速览：每个达人 1 行（粉丝箭头、新增条数、今日最高播放、状态标记）。
 - 六、未抓取到数据（如有）。
+
+`digest --format json` 输出结构（保持现有命名，编排层据此对接）：
+
+| 字段 | 含义 |
+|------|------|
+| `summary.{monitors_total, fetched, missing, new_videos_total, with_yesterday}` | 概览统计 |
+| `highlights.follower_gainers[]` | 涨粉 Top（`follower_delta` / `follower_today`） |
+| `highlights.new_viral[]` | 新爆款（含 `views / likes / comments / cover_url / publish_time / video_url`） |
+| `highlights.biggest_view_jumps[]` | 同一视频的播放增长 Top |
+| `highlights.stalled[]` | 停更（`days_since_last_post`） |
+| `highlights.surged[]` | 高频发布（`last_7_days_posts`） |
+| `creators[].status` | `ok` / `stall` / `surge` |
+| `alerts[]` | 同 `alerts check` 输出，见下 |
+| `missing[]` | 当日未抓到数据的达人 |
+
+`alerts[]` schema：
+
+| 字段 | 适用类型 | 说明 |
+|------|----------|------|
+| `type` | 全部 | `new_viral` / `stopped_posting` / `high_frequency` / `follower_drop` |
+| `severity` | 全部 | `high` / `medium` / `low` |
+| `username` / `platform` / `triggered_at` | 全部 | 触发时间为 unix ms |
+| `video_id / video_url / caption / views / likes / cover_url / publish_time` | `new_viral` | 昨日快照中不存在 + 今日播放越过阈值 |
+| `days_since_last_post / last_post_date` | `stopped_posting` | 最新视频距今 ≥ `STALL_DAYS`（默认 7） |
+| `posts_last_7_days` | `high_frequency` | 最近 7 天发布数 ≥ `SURGE_WEEK_THRESHOLD`（默认 3） |
+| `follower_delta / follower_today` | `follower_drop` | 粉丝下降，按 `FOLLOWER_DROP_HIGH/MEDIUM` 分级 |
+
+阈值常量在 `lib/config.py` 中定义：`VIRAL_VIEWS_HIGH=1_000_000` / `VIRAL_VIEWS_MEDIUM=100_000` / `FOLLOWER_DROP_HIGH=10_000` / `FOLLOWER_DROP_MEDIUM=1_000` / `STALL_DAYS=7` / `SURGE_WEEK_THRESHOLD=3`。`monitors.json` 中每条记录的 `alert_config` 字段（`viral_threshold` / `follower_drop_threshold` / `max_silent_days`）v1.0 仅落盘，**不参与计算**，等编排层产品入口成熟后再接逐人阈值判定。
+
+## 监控元数据 schema
+
+`monitors.json` 单条记录：
+
+```ts
+interface MonitorEntry {
+  monitor_id: string;
+  source: string;
+  group_id: string;
+  team_id: string;
+  operator_id: string;
+  remark: string;
+  tags: string[];
+  added_at: string;        // ISO UTC
+  updated_at: string;
+  daily_enabled: boolean;
+  alert_config: {
+    viral_threshold?: number;
+    follower_drop_threshold?: number;
+    max_silent_days?: number;
+  };
+  creator: {
+    platform, creator_id, username, nickname, profile_url,
+    signature, follower_count, following_count, aweme_count, total_favorited
+  };
+}
+```
 
 ## 错误处理约定
 
