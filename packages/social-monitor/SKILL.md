@@ -200,6 +200,19 @@ python3 scripts/lingtu_social_monitor.py alerts check \
 python3 scripts/lingtu_social_monitor.py tag \
   --group-id feishu_group_001 --input mrbeast --tags "top-tier,NBA"
 
+# CSV 批量打标签：表头 input,tags；tags 内多个标签用逗号分隔
+python3 scripts/lingtu_social_monitor.py batch-tag \
+  --platform instagram \
+  --group-id feishu_group_001 \
+  --input-file ./creator-tags.csv
+
+# 在原标签基础上追加并去重
+python3 scripts/lingtu_social_monitor.py batch-tag \
+  --platform instagram \
+  --group-id feishu_group_001 \
+  --input-file ./creator-tags.csv \
+  --append
+
 python3 scripts/lingtu_social_monitor.py remark \
   --group-id feishu_group_001 --input mrbeast --remark "主要对标账号"
 

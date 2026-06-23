@@ -81,6 +81,15 @@ def instagram_edge_count(value: Any) -> int | None:
     return None
 
 
+def instagram_author_count(author: dict[str, Any], *keys: str) -> int | None:
+    for key in keys:
+        if key in author and author[key] is not None:
+            count = instagram_edge_count(author[key])
+            if count is not None:
+                return count
+    return None
+
+
 def normalize_instagram_post(item: dict[str, Any]) -> dict[str, Any]:
     short_code = str(item.get("shortCode") or "")
     video_id = str(item.get("postId") or short_code or "")
@@ -125,9 +134,31 @@ def normalize_instagram_response(data: dict[str, Any]) -> dict[str, Any]:
         "nickname": nickname,
         "profile_url": f"https://www.instagram.com/{unique_id}/" if unique_id else "",
         "signature": str(author.get("biography") or ""),
-        "follower_count": instagram_edge_count(author.get("edgeFollowedBy")),
-        "following_count": instagram_edge_count(author.get("edgeFollow")),
-        "aweme_count": instagram_edge_count(author.get("edgeOwnerToTimelineMedia")),
+        "follower_count": instagram_author_count(
+            author,
+            "edgeFollowedBy",
+            "followerCount",
+            "followersCount",
+            "followers",
+            "follower_count",
+        ),
+        "following_count": instagram_author_count(
+            author,
+            "edgeFollow",
+            "followingCount",
+            "followCount",
+            "following",
+            "following_count",
+        ),
+        "aweme_count": instagram_author_count(
+            author,
+            "edgeOwnerToTimelineMedia",
+            "postCount",
+            "postsCount",
+            "mediaCount",
+            "awemeCount",
+            "aweme_count",
+        ),
         "total_favorited": None,
     }
     videos = [normalize_instagram_post(item) for item in posts if isinstance(item, dict)]

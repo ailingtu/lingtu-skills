@@ -481,7 +481,10 @@ Response envelope: `{ code, message, data, timestamp }`.
 | `username` | `creator.username` | Profile handle. |
 | `fullName` | `creator.nickname` | May be `null`; falls back to `username`. |
 | `biography` | `creator.signature` | |
-| `edgeFollowedBy` / `edgeFollow` / `edgeOwnerToTimelineMedia` | `follower_count` / `following_count` / `aweme_count` | Each is either `null` or an object with a `count` field. |
+| `edgeFollowedBy` / `edgeFollow` / `edgeOwnerToTimelineMedia` | `follower_count` / `following_count` / `aweme_count` | Legacy edge counters; each is either `null`, a number/string, or an object with a `count` field. |
+| `followerCount` / `followersCount` / `followers` / `follower_count` | `follower_count` | Direct follower counter variants. Prefer the first non-null value. |
+| `followingCount` / `followCount` / `following` / `following_count` | `following_count` | Direct following counter variants. Prefer the first non-null value. |
+| `postCount` / `postsCount` / `mediaCount` / `awemeCount` / `aweme_count` | `aweme_count` | Direct post/media counter variants. Prefer the first non-null value. |
 
 `posts[]`:
 

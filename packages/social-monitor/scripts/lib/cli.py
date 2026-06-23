@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 import time
@@ -166,6 +167,18 @@ def _split_tags(value: str | None) -> list[str] | None:
     return [t for t in parts if t]
 
 
+def _merge_tags(existing: list[Any], incoming: list[str]) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for value in [*existing, *incoming]:
+        tag = str(value).strip()
+        if not tag or tag in seen:
+            continue
+        seen.add(tag)
+        merged.append(tag)
+    return merged
+
+
 def _read_inputs_file(path: str) -> list[str]:
     p = Path(path).expanduser()
     if not p.exists():
@@ -177,6 +190,34 @@ def _read_inputs_file(path: str) -> list[str]:
             continue
         items.append(line)
     return items
+
+
+def _read_tag_rows(path: str) -> list[dict[str, str]]:
+    p = Path(path).expanduser()
+    if not p.exists():
+        raise SystemExit(f"--input-file 文件不存在：{p}")
+    with p.open("r", encoding="utf-8-sig", newline="") as file:
+        reader = csv.DictReader(file)
+        if not reader.fieldnames:
+            raise SystemExit("--input-file 不能为空，且必须包含表头 input,tags。")
+        fieldnames = {name.strip() for name in reader.fieldnames if name}
+        if "input" not in fieldnames or "tags" not in fieldnames:
+            raise SystemExit("--input-file 必须包含表头 input,tags。")
+        rows: list[dict[str, str]] = []
+        for row in reader:
+            normalized_row = {
+                key.strip() if isinstance(key, str) else key: value
+                for key, value in row.items()
+            }
+            raw_input = (normalized_row.get("input") or "").strip()
+            if not raw_input or raw_input.startswith("#"):
+                continue
+            tag_parts = [normalized_row.get("tags") or ""]
+            extra_tags = normalized_row.get(None) or []
+            if isinstance(extra_tags, list):
+                tag_parts.extend(extra_tags)
+            rows.append({"input": raw_input, "tags": ",".join(tag_parts)})
+    return rows
 
 
 def _is_non_retryable_batch_error(message: str) -> bool:
@@ -604,6 +645,61 @@ def command_tag(args: argparse.Namespace) -> None:
         print_json({"monitor_id": monitor["monitor_id"], "tags": monitor.get("tags", [])})
 
 
+def command_batch_tag(args: argparse.Namespace) -> None:
+    platform = normalize_platform(args.platform)
+    rows = _read_tag_rows(args.input_file)
+    if not rows:
+        raise SystemExit("--input-file 未提供任何标签记录。")
+
+    success: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    for row in rows:
+        raw_input = row["input"]
+        try:
+            unique_id = parse_creator_handle(raw_input, platform=platform)
+            incoming_tags = _split_tags(row["tags"]) or []
+            if args.append:
+                existing = find_monitor(load_store(store_path())["monitors"], args.group_id, unique_id, platform=platform)
+                if not existing:
+                    raise SystemExit(f"未找到监控记录（platform={platform}, group_id={args.group_id}, username={unique_id}）。")
+                tags = _merge_tags(existing.get("tags") or [], incoming_tags)
+            else:
+                tags = incoming_tags
+            monitor = update_monitor(args.group_id, unique_id, platform=platform, tags=tags)
+            creator = monitor.get("creator") or {}
+            success.append({
+                "input": raw_input,
+                "username": creator.get("username") or unique_id,
+                "monitor_id": monitor["monitor_id"],
+                "tags": monitor.get("tags", []),
+            })
+        except SystemExit as exc:
+            failed.append({"input": raw_input, "reason": str(exc) or "未知错误"})
+
+    summary = {
+        "total": len(rows),
+        "succeeded": len(success),
+        "failed_count": len(failed),
+        "mode": "append" if args.append else "replace",
+        "success": success,
+        "failed": failed,
+    }
+    if args.format == "json":
+        print_json(summary)
+        return
+
+    print(f"批量标签完成：共 {summary['total']} 条，成功 {summary['succeeded']}，失败 {summary['failed_count']}。")
+    if success:
+        print("成功：")
+        for item in success:
+            joined = ", ".join(item.get("tags") or []) or "（已清空）"
+            print(f"  - @{item['username']} → {joined}")
+    if failed:
+        print("失败：")
+        for item in failed:
+            print(f"  - {item['input']}：{item['reason']}")
+
+
 def command_remark(args: argparse.Namespace) -> None:
     platform = normalize_platform(args.platform)
     unique_id = parse_creator_handle(args.input, platform=platform)
@@ -813,6 +909,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tags", required=True, help="逗号分隔的标签；传空字符串可清空。")
     add_format_argument(p, default="text")
     p.set_defaults(func=command_tag)
+
+    p = subparsers.add_parser("batch-tag", help="从 CSV 批量设置/追加达人标签。")
+    add_platform_argument(p)
+    p.add_argument("--group-id", required=True)
+    p.add_argument("--input-file", required=True, help="CSV 文件，表头必须包含 input,tags。")
+    p.add_argument("--append", action="store_true", help="追加标签并去重；默认覆盖原标签。")
+    add_format_argument(p, default="json")
+    p.set_defaults(func=command_batch_tag)
 
     p = subparsers.add_parser("remark", help="为某达人设置/覆盖备注。")
     add_platform_argument(p)
