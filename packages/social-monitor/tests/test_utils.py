@@ -7,12 +7,14 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from typing import Optional
 
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from lib import cli as cli_module  # noqa: E402
 from lib.normalize import normalize_instagram_response  # noqa: E402
 from lib.cli import command_batch_tag  # noqa: E402
 from lib.utils import parse_creator_handle, slugify_handle  # noqa: E402
@@ -77,6 +79,51 @@ class InstagramNormalizeTests(unittest.TestCase):
         self.assertEqual(normalized["creator"]["follower_count"], 24680)
         self.assertEqual(normalized["creator"]["following_count"], 135)
         self.assertEqual(normalized["creator"]["aweme_count"], 42)
+
+
+class FetchPostsRetryTests(unittest.TestCase):
+    def test_fetch_posts_retries_transient_errors(self) -> None:
+        calls: list[int] = []
+
+        def fake_fetch_posts(unique_id: str, count: int, *, platform: str, timeout: int):
+            calls.append(timeout)
+            if len(calls) == 1:
+                raise SystemExit("fetchPosts(instagram) HTTP 错误：500 Internal Server Error")
+            return {"author": {"username": unique_id}, "posts": []}
+
+        with mock.patch.object(cli_module, "fetch_posts", side_effect=fake_fetch_posts), \
+                mock.patch.object(cli_module.time, "sleep") as sleep:
+            raw, attempts = cli_module.fetch_posts_with_retries(
+                "creator",
+                40,
+                platform="instagram",
+                request_timeout=45,
+                retries=2,
+                retry_sleep_ms=1500,
+            )
+
+        self.assertEqual(raw["author"]["username"], "creator")
+        self.assertEqual(attempts, 2)
+        self.assertEqual(calls, [45, 45])
+        sleep.assert_called_once_with(1.5)
+
+    def test_fetch_posts_does_not_retry_missing_unique_id(self) -> None:
+        with mock.patch.object(
+            cli_module,
+            "fetch_posts",
+            side_effect=SystemExit("未获取到该达人数据：not found（uniqueId=missing）"),
+        ) as fetch_posts:
+            with self.assertRaises(SystemExit):
+                cli_module.fetch_posts_with_retries(
+                    "missing",
+                    40,
+                    platform="instagram",
+                    request_timeout=30,
+                    retries=2,
+                    retry_sleep_ms=1500,
+                )
+
+        self.assertEqual(fetch_posts.call_count, 1)
 
 
 class BatchTagTests(unittest.TestCase):

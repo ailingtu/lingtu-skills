@@ -53,6 +53,38 @@ def print_json(data: Any) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2))
 
 
+def _is_non_retryable_fetch_posts_error(message: str) -> bool:
+    return (
+        "未获取到该达人数据" in message
+        or "缺少环境变量 LINGTU_API_KEY" in message
+        or "不支持的平台" in message
+    )
+
+
+def fetch_posts_with_retries(
+    unique_id: str,
+    count: int,
+    *,
+    platform: str,
+    request_timeout: int,
+    retries: int,
+    retry_sleep_ms: int,
+) -> tuple[dict[str, Any], int]:
+    max_attempts = max(1, retries + 1)
+    retry_sleep_seconds = max(0, retry_sleep_ms) / 1000.0
+    last_error = "未知错误"
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return fetch_posts(unique_id, count, platform=platform, timeout=request_timeout), attempt
+        except SystemExit as exc:
+            last_error = str(exc) or "未知错误"
+            if _is_non_retryable_fetch_posts_error(last_error):
+                break
+            if attempt < max_attempts and retry_sleep_seconds > 0:
+                time.sleep(retry_sleep_seconds)
+    raise SystemExit(last_error)
+
+
 def command_tutorial(args: argparse.Namespace) -> None:
     if args.format == "text":
         print(TUTORIAL_TEXT)
@@ -220,14 +252,6 @@ def _read_tag_rows(path: str) -> list[dict[str, str]]:
     return rows
 
 
-def _is_non_retryable_batch_error(message: str) -> bool:
-    return (
-        "未获取到该达人数据" in message
-        or "缺少环境变量 LINGTU_API_KEY" in message
-        or "不支持的平台" in message
-    )
-
-
 def _batch_success_milestones(total: int) -> set[int]:
     milestones: set[int] = set()
     value = 1
@@ -304,7 +328,7 @@ def command_batch_add(args: argparse.Namespace) -> None:
                 break
             except SystemExit as exc:
                 last_error = str(exc) or "未知错误"
-                if _is_non_retryable_batch_error(last_error):
+                if _is_non_retryable_fetch_posts_error(last_error):
                     break
                 if attempt < max_attempts and retry_sleep_seconds > 0:
                     time.sleep(retry_sleep_seconds)
@@ -480,14 +504,22 @@ def command_remove(args: argparse.Namespace) -> None:
 def command_snapshot(args: argparse.Namespace) -> None:
     platform = normalize_platform(args.platform)
     unique_id = parse_creator_handle(args.input, platform=platform)
-    raw = fetch_posts(unique_id, args.count, platform=platform)
+    raw, attempts = fetch_posts_with_retries(
+        unique_id,
+        args.count,
+        platform=platform,
+        request_timeout=max(1, args.request_timeout),
+        retries=max(0, args.retries),
+        retry_sleep_ms=args.retry_sleep_ms,
+    )
     normalized = normalize_response(raw, platform=platform)
     monitor = find_monitor(load_store(store_path())["monitors"], args.group_id, unique_id, platform=platform)
     if monitor:
         update_monitor(args.group_id, unique_id, platform=platform, creator=normalized["creator"])
     path = save_snapshot(args.group_id, normalized, today_str(args.date))
     if args.format == "text":
-        print(f"已写入快照：{path}")
+        suffix = f"（尝试 {attempts} 次）" if attempts > 1 else ""
+        print(f"已写入快照：{path}{suffix}")
     else:
         print_json({
             "group_id": args.group_id,
@@ -496,6 +528,7 @@ def command_snapshot(args: argparse.Namespace) -> None:
             "date": today_str(args.date),
             "snapshot_path": str(path),
             "video_count": len(normalized.get("videos") or []),
+            "attempts": attempts,
         })
 
 
@@ -890,6 +923,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--input", required=True, help="主页 URL、@username 或裸名。")
     add_count_argument(p)
     p.add_argument("--date", default="", help="快照日期，默认今天 (YYYY-MM-DD)。")
+    p.add_argument("--request-timeout", type=int, default=30, help="单次 fetchPosts 请求超时秒数，默认 30。")
+    p.add_argument("--retries", type=int, default=2, help="fetchPosts 失败后的重试次数，默认 2。")
+    p.add_argument("--retry-sleep-ms", type=int, default=1500, help="fetchPosts 重试间隔（毫秒），默认 1500。")
     add_format_argument(p, default="text")
     p.set_defaults(func=command_snapshot)
 

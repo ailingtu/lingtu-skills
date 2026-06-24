@@ -155,8 +155,16 @@ python3 scripts/lingtu_social_monitor.py remove --platform tiktok --group-id fei
 ### 单条快照（每日 8 点编排循环调用）
 ```bash
 python3 scripts/lingtu_social_monitor.py snapshot \
-  --platform tiktok --group-id feishu_group_001 --input mrbeast --count 40
+  --platform tiktok \
+  --group-id feishu_group_001 \
+  --input mrbeast \
+  --count 40 \
+  --request-timeout 30 \
+  --retries 2 \
+  --retry-sleep-ms 1500
 ```
+
+`snapshot` 默认对临时 HTTP/网络/API 错误重试 2 次，适合每日 cron 抓 Instagram 时规避偶发 500 或限速抖动；`uniqueId` 不存在、缺少 API key、平台不支持会直接失败，不做重试。
 
 ### 读取本地快照
 `snapshot-get` 不发起请求，直接读 `~/.lingtu/social-monitor/snapshots/{group}/{platform}/{creator_id}/{YYYY-MM-DD}.json`：
@@ -279,7 +287,7 @@ python3 scripts/lingtu_social_monitor.py comments \
 2. 用户给出 URL/`@xxx` → `add`，把 `reply_text` 贴回群。文本末尾会主动询问"是否加入每日监控"。
 3. 用户消息里出现"方向：发布策略 / 方向：内容形式"等关键词时，把对应值映射到 `--focus`（`posting` / `content`），不识别则用默认 `overall`。
 4. 用户回复"加入每日监控 @xxx" → `enable-daily`。
-5. 每天早 8 点：枚举所有 `group_id`；对每个群 `list --daily-only` → 串行 `snapshot`（建议达人间留 0.5–1s 限速）→ `digest` → 把 `reply_text` 发到群。
+5. 每天早 8 点：枚举所有 `group_id`；对每个群 `list --daily-only` → 串行 `snapshot`（建议达人间留 0.5–1s 限速，Instagram 可调大 `--retries` / `--retry-sleep-ms`）→ `digest` → 把 `reply_text` 发到群。
 6. 失败的达人在 `digest` 的"未抓取到数据"段会自动列出，不会阻塞整体出图。
 
 ## 输出报告结构
@@ -360,5 +368,5 @@ interface MonitorEntry {
 
 - `code:-1`（uniqueId 不存在）→ 抛中文提示："未获取到该达人数据：…（uniqueId=xxx）"，原样回显给用户。
 - 缺 `LINGTU_API_KEY` → 中文提示。
-- 网络/HTTP 错误 → 中文提示。
+- 网络/HTTP 错误 → 中文提示；`snapshot` / `batch-add` 会先按参数重试。
 - `digest` 中单个达人的 snapshot 缺失不会中断流程，会进入"未抓取到数据"段。

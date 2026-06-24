@@ -41,7 +41,7 @@ export LINGTU_SOCIAL_MONITOR_SNAPSHOTS="~/.lingtu/social-monitor/snapshots"
 | `list` | 列出群内监控（`--daily-only` 仅每日订阅） |
 | `enable-daily` / `disable-daily` | 开启/关闭某达人的每日订阅 |
 | `remove` | 从监控列表中移除 |
-| `snapshot` | 拉取并落盘当日快照（每日 8 点编排循环用） |
+| `snapshot` | 拉取并落盘当日快照（每日 8 点编排循环用，支持超时/临时失败重试） |
 | `digest` | 生成某群的每日日报 |
 | `videos` | 直接拉视频（`--raw` 输出原始响应） |
 | `material` | 获取单条视频素材实时数据 |
