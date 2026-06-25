@@ -11,31 +11,25 @@ from lingtu_auth import (
     build_bind_url,
     delete_user_api_key,
     get_auth_mode,
-    get_bind_token,
     get_saved_user_api_key,
     list_user_bindings,
     resolve_user_api_key,
     set_auth_mode,
-    set_bind_token,
 )
 
 
 def command_mode(args: argparse.Namespace) -> None:
     if args.mode_command == "set":
-        print(set_auth_mode(args.mode))
+        mode = set_auth_mode(args.mode)
+        response = {"authMode": mode}
+        if mode == "multi":
+            response["notice"] = (
+                "Multi-user mode ignores LINGTU_API_KEY. "
+                "The environment variable is not cleared automatically; remove it manually if needed."
+            )
+        print(json.dumps(response, ensure_ascii=False, indent=2))
     elif args.mode_command == "get":
         print(get_auth_mode())
-
-
-def command_token(args: argparse.Namespace) -> None:
-    if args.token_command == "set":
-        set_bind_token(args.token)
-        print(json.dumps({"saved": True}, ensure_ascii=False, indent=2))
-    elif args.token_command == "clear":
-        set_bind_token(None)
-        print(json.dumps({"saved": False}, ensure_ascii=False, indent=2))
-    elif args.token_command == "status":
-        print(json.dumps({"saved": bool(get_bind_token())}, ensure_ascii=False, indent=2))
 
 
 def command_bind(args: argparse.Namespace) -> None:
@@ -73,22 +67,12 @@ def build_parser() -> argparse.ArgumentParser:
     mode_get = mode_sub.add_parser("get", help="Print auth mode.")
     mode_get.set_defaults(func=command_mode)
 
-    token = subparsers.add_parser("token", help="Manage optional backend binding-check token.")
-    token_sub = token.add_subparsers(dest="token_command", required=True)
-    token_set = token_sub.add_parser("set", help="Save the optional binding-check token.")
-    token_set.add_argument("--token", required=True)
-    token_set.set_defaults(func=command_token)
-    token_clear = token_sub.add_parser("clear", help="Delete the saved binding-check token.")
-    token_clear.set_defaults(func=command_token)
-    token_status = token_sub.add_parser("status", help="Show whether a binding-check token is configured.")
-    token_status.set_defaults(func=command_token)
-
     bind = subparsers.add_parser("bind", help="Generate a /binduser URL for a bot user.")
     bind.add_argument("--channel", choices=("feishu", "wechat"), required=True)
     bind.add_argument("--user-id", required=True)
     bind.add_argument("--remark", default="")
     bind.add_argument("--message", default="", help="Accepted for bot command compatibility; not used.")
-    bind.add_argument("--token", help="Override the configured binding token for this generated URL.")
+    bind.add_argument("--token", help="Use this binding session token instead of auto-generating one.")
     bind.set_defaults(func=command_bind)
 
     get = subparsers.add_parser("get", help="Get the locally saved key or check the backend binding endpoint.")

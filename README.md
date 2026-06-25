@@ -65,26 +65,23 @@ export LINGTU_API_KEY="你的密钥"
 
 设置后重启对应的应用或终端。请求通过请求头 `x-api-key` 传递密钥。切勿将密钥或业务数据提交到 Git。
 
-多用户 bot 模式不要让用户在聊天里发送 API Key。绑定页固定使用 `https://app.ailingtu.com/binduser`；先配置绑定密钥，再为用户生成绑定链接：
+多用户 bot 模式不要让用户在聊天里发送 API Key。绑定页固定使用 `https://app.ailingtu.com/binduser`。部署 bot 时由管理员设置一次多用户模式；业务请求执行过程中不要自动切换认证模式。每次生成绑定链接时，skills 都会自动生成一个唯一 session `token`，主站据此保存/校验用户绑定关系。
 
 ```bash
-python3 shared/scripts/user_keys.py token set --token "..."
 python3 shared/scripts/user_keys.py mode set multi
 python3 shared/scripts/user_keys.py bind --channel feishu --user-id ou_xxx --remark "机器人备注"
 ```
 
-默认认证模式是 `single`，业务脚本使用 `LINGTU_API_KEY`。切到 `multi` 后，业务脚本传入 `--channel` 和 `--user-id` 即会从 `~/.lingtu-skills/config.json` 读取该用户的 key；本地没有时会调用固定后端绑定查询接口 `https://api.ailingtu.com/v1/apiKeyBind/check` 取回并保存。配置文件权限写入为 `0600`。
+默认认证模式是 `single`，业务脚本使用 `LINGTU_API_KEY`。部署切到 `multi` 后，业务脚本必须传入 `--channel` 和 `--user-id`，并始终走多用户认证；此时会忽略 `LINGTU_API_KEY`，但不会自动清理该环境变量，如需清理由管理员手动处理。如果用户未绑定，返回 `/binduser` 链接让用户绑定，不要临时切回单用户模式。本地没有该用户 key 时，会调用固定后端绑定查询接口 `https://api.ailingtu.com/v1/apiKeyBind/check` 取回并保存。配置文件权限写入为 `0600`。
 
 ```bash
 python3 packages/tkshop-query/scripts/lingtu_shop_data.py list-shops --channel feishu --user-id ou_xxx
 python3 shared/scripts/user_keys.py unbind --channel feishu --user-id ou_xxx
-python3 shared/scripts/user_keys.py mode set single
 ```
 
-如后端要求 `token` 参数，可保存到本地配置或用环境变量 `LINGTU_SKILLS_BIND_TOKEN` 注入。生成 `/binduser` 链接和调用 `/v1/apiKeyBind/check` 时都会自动带上该 token；也可以在生成单个链接时临时传 `--token`：
+用户级 session `token` 是必需绑定凭证，但默认由 `bind` 命令自动生成并保存到本地配置。同一用户重复生成绑定链接也会得到新的 token，并覆盖本地保存的旧 token；旧链接自然失效。调用 `/v1/apiKeyBind/check` 取回 key 时只使用最新 token，成功后清理该 token。需要调试或复用外部 token 时，也可以在生成单个链接时临时传 `--token`：
 
 ```bash
-python3 shared/scripts/user_keys.py token set --token "..."
 python3 shared/scripts/user_keys.py bind --channel feishu --user-id ou_xxx --token "..."
 ```
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import stat
 import urllib.error
 import urllib.request
@@ -28,7 +29,6 @@ DEFAULT_SITE_URL = "https://app.ailingtu.com"
 DEFAULT_BIND_API_URL = "https://api.ailingtu.com"
 DEFAULT_AUTH_MODE = "single"
 CONFIG_ENV = "LINGTU_SKILLS_CONFIG"
-BIND_TOKEN_ENV = "LINGTU_SKILLS_BIND_TOKEN"
 AUTH_MODE_ENV = "LINGTU_SKILLS_AUTH_MODE"
 CHANNEL_ENV = "LINGTU_SKILL_CHANNEL"
 USER_ID_ENV = "LINGTU_SKILL_USER_ID"
@@ -161,23 +161,100 @@ def update_config(mutator: Any) -> dict[str, Any]:
         return config
 
 
-def get_bind_token() -> str | None:
-    env_token = os.environ.get(BIND_TOKEN_ENV)
-    if env_token:
-        return env_token
-    token = load_config().get("bindToken")
-    return token if isinstance(token, str) and token else None
+def generate_bind_token() -> str:
+    return secrets.token_urlsafe(32)
 
 
-def set_bind_token(token: str | None) -> bool:
+def generate_unique_bind_token(config: dict[str, Any]) -> str:
+    users = config.get("users", {})
+    existing: set[str] = set()
+    for value in users.values():
+        if not isinstance(value, dict):
+            continue
+        if isinstance(value.get("bindToken"), str):
+            existing.add(value["bindToken"])
+    while True:
+        token = generate_bind_token()
+        if token not in existing:
+            return token
+
+
+def get_saved_user_record(channel: str, user_id: str) -> dict[str, Any] | None:
+    users = load_config().get("users", {})
+    record = users.get(user_key_id(channel, user_id))
+    return record if isinstance(record, dict) else None
+
+
+def get_saved_user_bind_token(channel: str, user_id: str) -> str | None:
+    record = get_saved_user_record(channel, user_id)
+    if record and isinstance(record.get("bindToken"), str) and record["bindToken"]:
+        return record["bindToken"]
+    return None
+
+
+def save_user_bind_token(channel: str, user_id: str, bind_token: str) -> str:
+    if not bind_token:
+        raise SystemExit("Cannot save an empty binding token.")
+    key = user_key_id(channel, user_id)
+
     def mutate(config: dict[str, Any]) -> None:
-        if token:
-            config["bindToken"] = token
-        else:
-            config.pop("bindToken", None)
+        users = config.setdefault("users", {})
+        record = users.setdefault(key, {})
+        if not isinstance(record, dict):
+            record = {}
+            users[key] = record
+        created_at = datetime.now(timezone.utc).isoformat()
+        record["bindToken"] = bind_token
+        record["tokenCreatedAt"] = created_at
 
     update_config(mutate)
-    return bool(token)
+    return bind_token
+
+
+def create_user_bind_token(channel: str, user_id: str, token: str | None = None) -> str:
+    if token:
+        return save_user_bind_token(channel, user_id, token)
+    key = user_key_id(channel, user_id)
+    generated = ""
+
+    def mutate(config: dict[str, Any]) -> None:
+        nonlocal generated
+        generated = generate_unique_bind_token(config)
+        users = config.setdefault("users", {})
+        record = users.setdefault(key, {})
+        if not isinstance(record, dict):
+            record = {}
+            users[key] = record
+        created_at = datetime.now(timezone.utc).isoformat()
+        record["bindToken"] = generated
+        record["tokenCreatedAt"] = created_at
+
+    update_config(mutate)
+    return generated
+
+
+def require_user_bind_token(channel: str, user_id: str) -> str:
+    saved = get_saved_user_bind_token(channel, user_id)
+    if not saved:
+        raise SystemExit(
+            "Missing binding session token for this user. Generate a bind URL first with "
+            "`python3 shared/scripts/user_keys.py bind --channel <channel> --user-id <user_id>`."
+        )
+    return saved
+
+
+def clear_user_bind_token(channel: str, user_id: str) -> None:
+    key = user_key_id(channel, user_id)
+
+    def mutate(config: dict[str, Any]) -> None:
+        users = config.setdefault("users", {})
+        record = users.get(key)
+        if isinstance(record, dict):
+            record.pop("bindToken", None)
+            record.pop("tokenCreatedAt", None)
+            record["tokenUsedAt"] = datetime.now(timezone.utc).isoformat()
+
+    update_config(mutate)
 
 
 def normalize_auth_mode(mode: str | None) -> str:
@@ -226,15 +303,12 @@ def build_bind_url(
         raise SystemExit("Missing user id.")
     if remark:
         query["remark"] = remark
-    bind_token = token or get_bind_token()
-    if bind_token:
-        query["token"] = bind_token
+    query["token"] = create_user_bind_token(platform, query["userid"], token)
     return f"{DEFAULT_SITE_URL}/binduser?{urllib.parse.urlencode(query)}"
 
 
 def get_saved_user_api_key(channel: str, user_id: str) -> str | None:
-    users = load_config().get("users", {})
-    record = users.get(user_key_id(channel, user_id))
+    record = get_saved_user_record(channel, user_id)
     if isinstance(record, dict) and isinstance(record.get("apiKey"), str) and record["apiKey"]:
         return record["apiKey"]
     return None
@@ -247,10 +321,12 @@ def save_user_api_key(channel: str, user_id: str, api_key: str) -> None:
 
     def mutate(config: dict[str, Any]) -> None:
         users = config.setdefault("users", {})
-        users[key] = {
-            "apiKey": api_key,
-            "boundAt": datetime.now(timezone.utc).isoformat(),
-        }
+        record = users.setdefault(key, {})
+        if not isinstance(record, dict):
+            record = {}
+            users[key] = record
+        record["apiKey"] = api_key
+        record["boundAt"] = datetime.now(timezone.utc).isoformat()
 
     update_config(mutate)
 
@@ -274,9 +350,12 @@ def list_user_bindings() -> dict[str, Any]:
     users = config.get("users", {})
     return {
         "authMode": normalize_auth_mode(config.get("authMode")),
-        "hasBindToken": bool(get_bind_token()),
         "users": {
-            key: {"boundAt": value.get("boundAt")}
+            key: {
+                "boundAt": value.get("boundAt"),
+                "hasBindToken": bool(value.get("bindToken")),
+                "tokenCreatedAt": value.get("tokenCreatedAt"),
+            }
             for key, value in users.items()
             if isinstance(value, dict)
         },
@@ -314,9 +393,7 @@ def fetch_bound_api_key(channel: str, user_id: str) -> str:
         "externUid": user_id,
         "platform": bind_check_platform(platform),
     }
-    token = get_bind_token()
-    if token:
-        query_params["token"] = token
+    query_params["token"] = require_user_bind_token(platform, user_id)
     query = urllib.parse.urlencode(query_params)
     url = f"{DEFAULT_BIND_API_URL}/v1/apiKeyBind/check?{query}"
     req = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
@@ -338,6 +415,7 @@ def fetch_bound_api_key(channel: str, user_id: str) -> str:
         api_key = _extract_bind_check_api_key(payload)
         if api_key:
             save_user_api_key(platform, user_id, api_key)
+            clear_user_bind_token(platform, user_id)
             return api_key
         code = payload.get("code") or payload.get("error") or payload.get("message")
         if code:
@@ -374,13 +452,13 @@ def require_api_key(channel: str | None = None, user_id: str | None = None) -> s
     if not key:
         raise SystemExit(
             "Missing LINGTU_API_KEY in single-user mode. "
-            "Set LINGTU_API_KEY, or run `python3 shared/scripts/user_keys.py mode set multi` "
-            "and pass --channel with --user-id for bot users."
+            "Set LINGTU_API_KEY for single-user use. For bot users, ask an administrator "
+            "to deploy multi-user mode and pass --channel with --user-id."
         )
     if channel or user_id:
         raise SystemExit(
             "Current auth mode is single, so --channel/--user-id will not be used. "
-            "Run `python3 shared/scripts/user_keys.py mode set multi` for bot users, "
+            "Ask an administrator to deploy multi-user mode for bot users, "
             "or omit --channel/--user-id and keep using LINGTU_API_KEY."
         )
     return key

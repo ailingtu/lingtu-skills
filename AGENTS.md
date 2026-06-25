@@ -18,8 +18,11 @@ Use this repository when a user asks for Lingtu AI content generation, TK shop d
 ## Shared Rules
 
 - Single-user mode is the default and requires `LINGTU_API_KEY` in the process environment.
-- Switch auth modes with `python3 shared/scripts/user_keys.py mode set single|multi`.
+- Do not change auth mode to satisfy a business request. If current mode is `multi`, business scripts must use multi-user authentication with `--channel feishu|wechat --user-id <external-user-id>`; if the user is unbound, return the `/binduser` link and ask them to bind.
+- Multi-user mode ignores `LINGTU_API_KEY` but does not clear it automatically. Do not remove environment variables unless an administrator explicitly asks for cleanup.
+- Only run `python3 shared/scripts/user_keys.py mode set single|multi` when the operator explicitly asks to administer the global auth mode, not during content generation, shop queries, social monitoring, video understanding, or blacklist lookups.
 - Multi-user bot mode passes `--channel feishu|wechat --user-id <external-user-id>` to business scripts. Resolve the per-user key through `shared/scripts/lingtu_auth.py`, which reads `~/.lingtu-skills/config.json` or calls `GET https://api.ailingtu.com/v1/apiKeyBind/check?externUid=<id>&platform=FEISHU|WEIXIN`.
+- Binding token is required and session-scoped. Generate `/binduser` URLs with `python3 shared/scripts/user_keys.py bind --channel <channel> --user-id <user_id>`; each call creates a new unique session token for that user and overwrites the previous token, so old links expire. The binding-check endpoint uses only the latest token, and the token is cleared after a key is retrieved.
 - Send the resolved key as `x-api-key`.
 - Read the package `references/api.md` before changing endpoint paths, request fields, response fields, or status handling.
 - Prefer the package scripts over ad hoc API calls.
@@ -27,10 +30,10 @@ Use this repository when a user asks for Lingtu AI content generation, TK shop d
 
 ## Auth Mode Triggers
 
-When the user sends one of these exact intent phrases in a bot or agent chat, run the mapped local command and reply with the resulting mode:
+These are administrative commands only. Run mode-switch commands only when the user's message exactly matches one of the listed Chinese phrases. Do not treat similar phrases, explanations, or business requests as permission to switch modes:
 
-- `切换成多用户模式` / `启用多用户模式` / `开启多用户模式`: `python3 shared/scripts/user_keys.py mode set multi`
-- `切换成单用户模式` / `关闭多用户模式` / `退出多用户模式`: `python3 shared/scripts/user_keys.py mode set single`
+- `切换到多用户模式`: `python3 shared/scripts/user_keys.py mode set multi`
+- `切换到单用户模式`: `python3 shared/scripts/user_keys.py mode set single`
 - `查看认证模式` / `当前认证模式`: `python3 shared/scripts/user_keys.py mode get`
 
 ## Routing
