@@ -17,11 +17,21 @@ Use this repository when a user asks for Lingtu AI content generation, TK shop d
 
 ## Shared Rules
 
-- Require `LINGTU_API_KEY` in the process environment.
-- Send the key as `x-api-key`.
+- Single-user mode is the default and requires `LINGTU_API_KEY` in the process environment.
+- Switch auth modes with `python3 shared/scripts/user_keys.py mode set single|multi`.
+- Multi-user bot mode passes `--channel feishu|wechat --user-id <external-user-id>` to business scripts. Resolve the per-user key through `shared/scripts/lingtu_auth.py`, which reads `~/.lingtu-skills/config.json` or calls `GET https://api.ailingtu.com/v1/apiKeyBind/check?externUid=<id>&platform=FEISHU|WEIXIN`.
+- Send the resolved key as `x-api-key`.
 - Read the package `references/api.md` before changing endpoint paths, request fields, response fields, or status handling.
 - Prefer the package scripts over ad hoc API calls.
 - Do not store customer API keys in this repository.
+
+## Auth Mode Triggers
+
+When the user sends one of these exact intent phrases in a bot or agent chat, run the mapped local command and reply with the resulting mode:
+
+- `切换成多用户模式` / `启用多用户模式` / `开启多用户模式`: `python3 shared/scripts/user_keys.py mode set multi`
+- `切换成单用户模式` / `关闭多用户模式` / `退出多用户模式`: `python3 shared/scripts/user_keys.py mode set single`
+- `查看认证模式` / `当前认证模式`: `python3 shared/scripts/user_keys.py mode get`
 
 ## Routing
 

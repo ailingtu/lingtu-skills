@@ -9,6 +9,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
+
+from lingtu_auth import add_identity_arguments, configure_identity, require_api_key
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -18,16 +25,7 @@ PROGRESS_MIN_BYTES = 1024 * 1024
 
 
 def api_key():
-    key = os.environ.get("LINGTU_API_KEY")
-    if not key:
-        raise SystemExit(
-            "Missing LINGTU_API_KEY.\n"
-            "Get a key at https://app.ailingtu.com/api-key-management, then set it before retrying:\n"
-            "  export LINGTU_API_KEY=\"<your key>\"\n"
-            "On macOS apps launched outside your shell: launchctl setenv LINGTU_API_KEY \"<your key>\"\n"
-            "On Windows: setx LINGTU_API_KEY \"<your key>\""
-        )
-    return key
+    return require_api_key()
 
 
 def base_url():
@@ -220,11 +218,14 @@ def main():
     rep_parser.add_argument("--business-id", help="Uploaded material/file id (skip upload).")
     rep_parser.add_argument("--business-type", choices=["FILE", "MATERIAL"], help="Business type when using --business-id.")
     rep_parser.add_argument("--raw", action="store_true", help="Print raw SSE lines instead of the assembled prompt text.")
+    add_identity_arguments(rep_parser)
 
     upload_parser = subparsers.add_parser("upload", help="Upload a local file to /v1/file/upload and print the file id.")
     upload_parser.add_argument("path", help="Local file path to upload.")
+    add_identity_arguments(upload_parser)
 
     args = parser.parse_args()
+    configure_identity(getattr(args, "channel", None), getattr(args, "user_id", None))
     if args.command == "replicate":
         replicate(args)
     elif args.command == "upload":

@@ -48,6 +48,8 @@ setx LINGTU_API_KEY "..."
 
 Send the key as the request header `x-api-key: <key>`. Do not store user API keys in this skill directory or commit them to source control.
 
+For multi-user bot mode, pass `--channel feishu|wechat --user-id <external-user-id>` to `scripts/lingtu_shop_data.py` subcommands. The script resolves the user's key from `~/.lingtu-skills/config.json`, or calls the backend binding check endpoint if the local key is missing. Use `shared/scripts/user_keys.py bind` to generate the `/binduser` URL.
+
 Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
 
 ## Workflow

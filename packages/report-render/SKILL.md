@@ -102,6 +102,8 @@ For Windows:
 setx LINGTU_API_KEY "..."
 ```
 
+For multi-user bot mode, pass `--channel feishu|wechat --user-id <external-user-id>` when using `--mode ai`. The script resolves the user's key from `~/.lingtu-skills/config.json`, or calls the backend binding check endpoint if the local key is missing. Use `shared/scripts/user_keys.py bind` to generate the `/binduser` URL.
+
 ## Install (one-time)
 
 The renderer needs Playwright with the bundled Chromium:

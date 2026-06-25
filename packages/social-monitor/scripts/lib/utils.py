@@ -5,10 +5,17 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
+
+from lingtu_auth import require_api_key as shared_require_api_key
 
 from .config import (
     DEFAULT_BASE_URL,
@@ -23,10 +30,10 @@ from .config import (
 
 
 def require_api_key() -> str:
-    key = os.environ.get("LINGTU_API_KEY")
-    if not key:
-        raise SystemExit("缺少环境变量 LINGTU_API_KEY，请先配置后再使用本技能。")
-    return key
+    try:
+        return shared_require_api_key()
+    except SystemExit as exc:
+        raise SystemExit(f"{exc}\n缺少环境变量 LINGTU_API_KEY，请先配置后再使用本技能，或传入 --channel 和 --user-id。") from exc
 
 
 def base_url() -> str:

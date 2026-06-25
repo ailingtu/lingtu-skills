@@ -63,6 +63,8 @@ setx LINGTU_API_KEY "..."               # Windows
 
 API Key 通过请求头 `x-api-key` 发送。请勿提交密钥或私有监控数据。
 
+多用户 bot 模式下，在业务子命令传入 `--channel feishu|wechat --user-id <external-user-id>`。脚本会从 `~/.lingtu-skills/config.json` 读取用户 key；本地没有时调用后端绑定查询接口取回。使用 `shared/scripts/user_keys.py bind` 生成 `/binduser` 链接。
+
 API 字段、`code` 取值参见 `references/api.md`，改接口前先更新该文档。
 
 ## 子命令

@@ -41,16 +41,18 @@ PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PACKAGE_ROOT / "templates"
 OUTPUT_DIR = PACKAGE_ROOT / "output"
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
+
+from lingtu_auth import add_identity_arguments, configure_identity, require_api_key
+
 
 # ---------------------------------------------------------------------------
 # Config helpers
 # ---------------------------------------------------------------------------
 
 def api_key():
-    key = os.environ.get("LINGTU_API_KEY")
-    if not key:
-        raise SystemExit("Missing LINGTU_API_KEY. Set it before using this skill.")
-    return key
+    return require_api_key()
 
 
 def base_url():
@@ -548,8 +550,10 @@ def main():
         help="Fall back if any numeric value from data is missing from HTML.",
     )
     parser.add_argument("--debug-html", help="Write the final HTML to this path before screenshotting.")
+    add_identity_arguments(parser)
 
     args = parser.parse_args()
+    configure_identity(args.channel, args.user_id)
     data = load_data(args.data)
     out = Path(args.out) if args.out else default_output_path(args.template)
 
