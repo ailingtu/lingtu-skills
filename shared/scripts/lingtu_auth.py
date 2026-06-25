@@ -12,7 +12,6 @@ import json
 import os
 import stat
 import urllib.error
-import urllib.parse
 import urllib.request
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -29,9 +28,6 @@ DEFAULT_SITE_URL = "https://app.ailingtu.com"
 DEFAULT_BIND_API_URL = "https://api.ailingtu.com"
 DEFAULT_AUTH_MODE = "single"
 CONFIG_ENV = "LINGTU_SKILLS_CONFIG"
-SITE_ENV = "LINGTU_SKILLS_SITE_URL"
-LEGACY_SITE_ENV = "LINGTU_SITE_URL"
-BIND_API_URL_ENV = "LINGTU_SKILLS_BIND_API_URL"
 BIND_TOKEN_ENV = "LINGTU_SKILLS_BIND_TOKEN"
 AUTH_MODE_ENV = "LINGTU_SKILLS_AUTH_MODE"
 CHANNEL_ENV = "LINGTU_SKILL_CHANNEL"
@@ -82,17 +78,9 @@ def user_key_id(channel: str, user_id: str) -> str:
     return f"{normalize_channel(channel)}:{user_id}"
 
 
-def normalize_site_url(site_url: str | None) -> str:
-    raw = (site_url or "").strip() or DEFAULT_SITE_URL
-    if "://" not in raw:
-        raw = f"https://{raw}"
-    parsed = urllib.parse.urlparse(raw)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise SystemExit(f"Invalid site URL: {site_url!r}")
-    return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
-
-
 def redact_url_token(url: str) -> str:
+    import urllib.parse
+
     parsed = urllib.parse.urlparse(url)
     pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
     redacted = [
@@ -119,8 +107,6 @@ def redact_sensitive_payload(value: Any) -> Any:
 
 def default_config() -> dict[str, Any]:
     return {
-        "siteUrl": DEFAULT_SITE_URL,
-        "bindApiUrl": DEFAULT_BIND_API_URL,
         "authMode": DEFAULT_AUTH_MODE,
         "users": {},
     }
@@ -132,10 +118,6 @@ def normalize_config(data: dict[str, Any]) -> dict[str, Any]:
         data["users"] = {}
     if data.get("authMode") not in {"single", "multi"}:
         data["authMode"] = DEFAULT_AUTH_MODE
-    if not isinstance(data.get("siteUrl"), str) or not data.get("siteUrl"):
-        data["siteUrl"] = DEFAULT_SITE_URL
-    if not isinstance(data.get("bindApiUrl"), str) or not data.get("bindApiUrl"):
-        data["bindApiUrl"] = DEFAULT_BIND_API_URL
     return data
 
 
@@ -179,30 +161,6 @@ def update_config(mutator: Any) -> dict[str, Any]:
         return config
 
 
-def get_site_url(explicit_site_url: str | None = None) -> str:
-    if explicit_site_url:
-        return normalize_site_url(explicit_site_url)
-    env_site_url = os.environ.get(SITE_ENV) or os.environ.get(LEGACY_SITE_ENV)
-    if env_site_url:
-        return normalize_site_url(env_site_url)
-    return normalize_site_url(load_config().get("siteUrl") or DEFAULT_SITE_URL)
-
-
-def get_bind_api_url(explicit_bind_api_url: str | None = None) -> str:
-    if explicit_bind_api_url:
-        return normalize_site_url(explicit_bind_api_url)
-    env_bind_api_url = os.environ.get(BIND_API_URL_ENV)
-    if env_bind_api_url:
-        return normalize_site_url(env_bind_api_url)
-    return normalize_site_url(load_config().get("bindApiUrl") or DEFAULT_BIND_API_URL)
-
-
-def set_bind_api_url(bind_api_url: str) -> str:
-    normalized = normalize_site_url(bind_api_url)
-    update_config(lambda config: config.update({"bindApiUrl": normalized}))
-    return normalized
-
-
 def get_bind_token() -> str | None:
     env_token = os.environ.get(BIND_TOKEN_ENV)
     if env_token:
@@ -220,12 +178,6 @@ def set_bind_token(token: str | None) -> bool:
 
     update_config(mutate)
     return bool(token)
-
-
-def set_site_url(site_url: str) -> str:
-    normalized = normalize_site_url(site_url)
-    update_config(lambda config: config.update({"siteUrl": normalized}))
-    return normalized
 
 
 def normalize_auth_mode(mode: str | None) -> str:
@@ -257,7 +209,14 @@ def set_auth_mode(mode: str) -> str:
     return normalized
 
 
-def build_bind_url(channel: str, user_id: str, remark: str = "", site_url: str | None = None) -> str:
+def build_bind_url(
+    channel: str,
+    user_id: str,
+    remark: str = "",
+    token: str | None = None,
+) -> str:
+    import urllib.parse
+
     platform = normalize_channel(channel)
     query = {
         "platform": platform,
@@ -267,7 +226,10 @@ def build_bind_url(channel: str, user_id: str, remark: str = "", site_url: str |
         raise SystemExit("Missing user id.")
     if remark:
         query["remark"] = remark
-    return f"{get_site_url(site_url)}/binduser?{urllib.parse.urlencode(query)}"
+    bind_token = token or get_bind_token()
+    if bind_token:
+        query["token"] = bind_token
+    return f"{DEFAULT_SITE_URL}/binduser?{urllib.parse.urlencode(query)}"
 
 
 def get_saved_user_api_key(channel: str, user_id: str) -> str | None:
@@ -312,8 +274,6 @@ def list_user_bindings() -> dict[str, Any]:
     users = config.get("users", {})
     return {
         "authMode": normalize_auth_mode(config.get("authMode")),
-        "siteUrl": get_site_url(config.get("siteUrl")),
-        "bindApiUrl": get_bind_api_url(config.get("bindApiUrl")),
         "hasBindToken": bool(get_bind_token()),
         "users": {
             key: {"boundAt": value.get("boundAt")}
@@ -346,7 +306,9 @@ def bind_check_platform(channel: str) -> str:
     raise SystemExit(f"Unsupported channel for bind check: {channel}")
 
 
-def fetch_bound_api_key(channel: str, user_id: str, bind_api_url: str | None = None) -> str:
+def fetch_bound_api_key(channel: str, user_id: str) -> str:
+    import urllib.parse
+
     platform = normalize_channel(channel)
     query_params = {
         "externUid": user_id,
@@ -356,7 +318,7 @@ def fetch_bound_api_key(channel: str, user_id: str, bind_api_url: str | None = N
     if token:
         query_params["token"] = token
     query = urllib.parse.urlencode(query_params)
-    url = f"{get_bind_api_url(bind_api_url)}/v1/apiKeyBind/check?{query}"
+    url = f"{DEFAULT_BIND_API_URL}/v1/apiKeyBind/check?{query}"
     req = urllib.request.Request(url, headers={"Accept": "application/json"}, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
@@ -384,11 +346,11 @@ def fetch_bound_api_key(channel: str, user_id: str, bind_api_url: str | None = N
     raise SystemExit(f"Lingtu API key binding response did not include data.key: {json.dumps(redacted, ensure_ascii=False)}")
 
 
-def resolve_user_api_key(channel: str, user_id: str, bind_api_url: str | None = None) -> str:
+def resolve_user_api_key(channel: str, user_id: str) -> str:
     saved = get_saved_user_api_key(channel, user_id)
     if saved:
         return saved
-    return fetch_bound_api_key(channel, user_id, bind_api_url=bind_api_url)
+    return fetch_bound_api_key(channel, user_id)
 
 
 def configure_identity(channel: str | None, user_id: str | None) -> None:
@@ -400,13 +362,13 @@ def configure_identity(channel: str | None, user_id: str | None) -> None:
     os.environ[USER_ID_ENV] = (user_id or "").strip()
 
 
-def require_api_key(channel: str | None = None, user_id: str | None = None, bind_api_url: str | None = None) -> str:
+def require_api_key(channel: str | None = None, user_id: str | None = None) -> str:
     channel = channel or os.environ.get(CHANNEL_ENV)
     user_id = user_id or os.environ.get(USER_ID_ENV)
     if get_auth_mode() == "multi":
         if not channel or not user_id:
             raise SystemExit("Both channel and user id are required for multi-user mode.")
-        return resolve_user_api_key(channel, user_id, bind_api_url=bind_api_url)
+        return resolve_user_api_key(channel, user_id)
 
     key = os.environ.get("LINGTU_API_KEY")
     if not key:
