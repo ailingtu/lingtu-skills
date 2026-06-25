@@ -179,7 +179,7 @@ def update_config(mutator: Any) -> dict[str, Any]:
 
 
 def generate_bind_token() -> str:
-    return secrets.token_urlsafe(32)
+    return secrets.token_urlsafe(16)
 
 
 def generate_local_user_id() -> str:
@@ -462,15 +462,15 @@ def build_bind_url(
     import urllib.parse
 
     platform = normalize_channel(channel)
-    query = {
-        "platform": platform,
-        "userid": (user_id or "").strip(),
-    }
-    if not query["userid"]:
+    user_id = (user_id or "").strip()
+    if not user_id:
         raise SystemExit("Missing user id.")
+    query: dict[str, str] = {}
+    query["token"] = create_user_bind_token(platform, user_id, token)
+    query["platform"] = platform
+    query["userid"] = user_id
     if remark:
         query["remark"] = remark
-    query["token"] = create_user_bind_token(platform, query["userid"], token)
     return f"{DEFAULT_SITE_URL}/binduser?{urllib.parse.urlencode(query)}"
 
 
