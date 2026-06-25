@@ -30,7 +30,7 @@
 - **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询 TK 达人黑名单记录。
 - **`packages/report-render`** — 将结构化报告 JSON 渲染为可分享的 PNG 长图（开发中，暂未支持安装）。
 
-## 目录结构
+## 目录结构 
 
 ```text
 packages/
