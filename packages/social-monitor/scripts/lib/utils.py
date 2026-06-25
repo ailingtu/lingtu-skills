@@ -33,7 +33,7 @@ def require_api_key() -> str:
     try:
         return shared_require_api_key()
     except SystemExit as exc:
-        raise SystemExit(f"{exc}\n缺少环境变量 LINGTU_API_KEY，请先配置后再使用本技能，或传入 --channel 和 --user-id。") from exc
+        raise SystemExit(f"{exc}\n请先绑定单用户管理员，或在多用户模式下传入 --channel 和 --user-id。") from exc
 
 
 def base_url() -> str:

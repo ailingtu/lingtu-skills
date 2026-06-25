@@ -3,7 +3,7 @@
 ## Shared Configuration
 
 - Base URL: `https://api.ailingtu.com`
-- Authentication header: `x-api-key: <LINGTU_API_KEY>`
+- Authentication header: `x-api-key: <api-key>`
 - Content type: `application/json`
 - Do not commit API keys.
 

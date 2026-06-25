@@ -39,18 +39,13 @@ install.sh          # One-command installer
 
 ## Prerequisites
 
-Set `LINGTU_API_KEY` before using any package:
+Bind an administrator before using single-user mode. Single-user mode still lets multiple people share one payer, but the local config remembers which administrator owns that key and resolves it through the same `/binduser` flow:
 
 ```bash
-export LINGTU_API_KEY="..."
+python3 shared/scripts/user_keys.py single bind
 ```
 
-| Platform | Command |
-|----------|---------|
-| macOS (app) | `launchctl setenv LINGTU_API_KEY "..."` |
-| Windows (app) | `setx LINGTU_API_KEY "..."` |
-
-Restart the app or terminal after setting. Requests send the key as header `x-api-key`. Never commit API keys or generated business data.
+When no channel or user id is provided, the command generates and saves a stable local user id with platform `LOCAL`. Open the returned `/binduser` URL to finish binding. Business scripts do not need `--channel` or `--user-id` in `single` mode. Requests send the key as header `x-api-key`. Never commit API keys or generated business data.
 
 ## Install
 

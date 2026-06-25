@@ -3,7 +3,7 @@
 ## Shared Configuration
 
 - Base URL: `https://api.ailingtu.com`
-- Authentication header: `x-api-key: <LINGTU_API_KEY>`
+- Authentication header: `x-api-key: <api-key>`
 - Do not commit API keys.
 
 ## Shop List
@@ -65,4 +65,3 @@ The endpoint returns a streaming response. The script sends JSON with a `message
 - Server-sent events lines prefixed with `data:`
 - JSON chunks containing `content`, `text`, `message`, `delta.content`, or `choices[].delta.content`
 - Plain text chunks
-

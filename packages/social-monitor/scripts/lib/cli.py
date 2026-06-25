@@ -62,7 +62,7 @@ def print_json(data: Any) -> None:
 def _is_non_retryable_fetch_posts_error(message: str) -> bool:
     return (
         "未获取到该达人数据" in message
-        or "缺少环境变量 LINGTU_API_KEY" in message
+        or "请先绑定单用户管理员" in message
         or "不支持的平台" in message
     )
 

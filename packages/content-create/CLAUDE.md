@@ -4,21 +4,13 @@ Use this directory when the user asks Claude Code or OpenClaw to create images, 
 
 ## Requirements
 
-Get your API key at https://app.ailingtu.com/api-key-management. Require `LINGTU_API_KEY` in the process environment. Send it as the request header `x-api-key`.
-
-macOS app environment:
+Single-user mode uses a configured administrator binding. Generate the administrator `/binduser` URL before running business scripts:
 
 ```bash
-launchctl setenv LINGTU_API_KEY "..."
+python3 shared/scripts/user_keys.py single bind
 ```
 
-Windows user environment:
-
-```powershell
-setx LINGTU_API_KEY "..."
-```
-
-Restart the app or terminal after setting a persistent environment variable.
+Open the returned link to bind the administrator's key. Send the resolved key as the request header `x-api-key`.
 
 ## Workflow
 

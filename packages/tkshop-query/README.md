@@ -14,13 +14,13 @@ Current package version: `0.2.0`. Remote installers can compare the `version` fi
 
 ## Requirements
 
-Set `LINGTU_API_KEY` before running API calls:
+Bind the single-user administrator before running API calls:
 
 ```bash
-export LINGTU_API_KEY="..."
+python3 ../../shared/scripts/user_keys.py single bind
 ```
 
-The package sends the key as:
+Open the returned link to finish binding. The package sends the resolved key as:
 
 ```text
 x-api-key: <key>

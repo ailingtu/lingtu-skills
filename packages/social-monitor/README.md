@@ -19,8 +19,10 @@
 ## 环境
 
 ```bash
-export LINGTU_API_KEY="..."
+python3 ../../shared/scripts/user_keys.py single bind
 ```
+
+打开返回的链接完成单用户管理员绑定。
 
 可选：
 

@@ -9,8 +9,12 @@ import sys
 
 from lingtu_auth import (
     build_bind_url,
+    build_single_user_bind_url,
+    clear_single_user_identity,
+    clear_single_user_api_key,
     delete_user_api_key,
     get_auth_mode,
+    get_single_user_identity,
     get_saved_user_api_key,
     list_user_bindings,
     resolve_user_api_key,
@@ -23,10 +27,7 @@ def command_mode(args: argparse.Namespace) -> None:
         mode = set_auth_mode(args.mode)
         response = {"authMode": mode}
         if mode == "multi":
-            response["notice"] = (
-                "Multi-user mode ignores LINGTU_API_KEY. "
-                "The environment variable is not cleared automatically; remove it manually if needed."
-            )
+            response["clearedSingleUserKey"] = clear_single_user_api_key()
         print(json.dumps(response, ensure_ascii=False, indent=2))
     elif args.mode_command == "get":
         print(get_auth_mode())
@@ -34,6 +35,16 @@ def command_mode(args: argparse.Namespace) -> None:
 
 def command_bind(args: argparse.Namespace) -> None:
     print(build_bind_url(args.channel, args.user_id, remark=args.remark or "", token=args.token))
+
+
+def command_single(args: argparse.Namespace) -> None:
+    if args.single_command == "bind":
+        print(build_single_user_bind_url(args.channel, args.user_id, remark=args.remark or "", token=args.token))
+    elif args.single_command == "status":
+        identity = get_single_user_identity()
+        print(json.dumps({"singleUser": identity}, ensure_ascii=False, indent=2))
+    elif args.single_command == "clear":
+        print(json.dumps(clear_single_user_identity(), ensure_ascii=False, indent=2))
 
 
 def command_get(args: argparse.Namespace) -> None:
@@ -74,6 +85,20 @@ def build_parser() -> argparse.ArgumentParser:
     bind.add_argument("--message", default="", help="Accepted for bot command compatibility; not used.")
     bind.add_argument("--token", help="Use this binding session token instead of auto-generating one.")
     bind.set_defaults(func=command_bind)
+
+    single = subparsers.add_parser("single", help="Manage the single-user administrator binding.")
+    single_sub = single.add_subparsers(dest="single_command", required=True)
+    single_bind = single_sub.add_parser("bind", help="Generate a /binduser URL and mark that user as the single-user administrator.")
+    single_bind.add_argument("--channel", default="local", help="Administrator source channel. Unknown values are treated as local.")
+    single_bind.add_argument("--user-id", help="Administrator user id. If omitted for local, a stable local id is generated.")
+    single_bind.add_argument("--remark", default="")
+    single_bind.add_argument("--message", default="", help="Accepted for bot command compatibility; not used.")
+    single_bind.add_argument("--token", help="Use this binding session token instead of auto-generating one.")
+    single_bind.set_defaults(func=command_single)
+    single_status = single_sub.add_parser("status", help="Show the configured single-user administrator without printing API keys.")
+    single_status.set_defaults(func=command_single)
+    single_clear = single_sub.add_parser("clear", help="Clear the single-user administrator binding and its local API key.")
+    single_clear.set_defaults(func=command_single)
 
     get = subparsers.add_parser("get", help="Get the locally saved key or check the backend binding endpoint.")
     get.add_argument("--channel", choices=("feishu", "wechat"), required=True)

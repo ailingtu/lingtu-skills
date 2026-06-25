@@ -84,23 +84,13 @@ All fields are optional — sensible defaults fill in. Any section without data 
 
 Same authentication pattern as the other Lingtu skills. Only `ai` mode needs the key — `fill` mode runs offline.
 
-Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_API_KEY`:
+Single-user mode uses a configured administrator binding. Generate the administrator `/binduser` URL before using `ai` mode:
 
 ```bash
-export LINGTU_API_KEY="..."
+python3 shared/scripts/user_keys.py single bind
 ```
 
-For macOS apps launched outside your shell:
-
-```bash
-launchctl setenv LINGTU_API_KEY "..."
-```
-
-For Windows:
-
-```powershell
-setx LINGTU_API_KEY "..."
-```
+Open the returned link to bind the administrator's key.
 
 For multi-user bot mode, pass `--channel feishu|wechat --user-id <external-user-id>` when using `--mode ai`. The script resolves the user's key from `~/.lingtu-skills/config.json`, or calls the backend binding check endpoint if the local key is missing. Use `shared/scripts/user_keys.py bind` to generate the `/binduser` URL.
 

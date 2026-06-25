@@ -40,17 +40,10 @@ description: 社媒达人/竞品监控、单条视频素材数据与评论抓取
 
 ## 配置
 
-获取 API Key：https://app.ailingtu.com/api-key-management。设置环境变量：
+单用户模式先绑定管理员：
 
 ```bash
-export LINGTU_API_KEY="..."
-```
-
-桌面应用使用：
-
-```bash
-launchctl setenv LINGTU_API_KEY "..."   # macOS
-setx LINGTU_API_KEY "..."               # Windows
+python3 shared/scripts/user_keys.py single bind
 ```
 
 可选环境变量：
@@ -61,7 +54,7 @@ setx LINGTU_API_KEY "..."               # Windows
 | `LINGTU_SOCIAL_MONITOR_STORE` | 监控元数据 JSON 文件路径 | `~/.lingtu/social-monitor/monitors.json` |
 | `LINGTU_SOCIAL_MONITOR_SNAPSHOTS` | 每日快照根目录 | `~/.lingtu/social-monitor/snapshots` |
 
-API Key 通过请求头 `x-api-key` 发送。请勿提交密钥或私有监控数据。
+打开返回的链接完成管理员 key 绑定。API Key 通过请求头 `x-api-key` 发送。请勿提交密钥或私有监控数据。
 
 多用户 bot 模式下，在业务子命令传入 `--channel feishu|wechat --user-id <external-user-id>`。脚本会从 `~/.lingtu-skills/config.json` 读取用户 key；本地没有时调用后端绑定查询接口取回。使用 `shared/scripts/user_keys.py bind` 生成 `/binduser` 链接。
 
@@ -369,6 +362,6 @@ interface MonitorEntry {
 ## 错误处理约定
 
 - `code:-1`（uniqueId 不存在）→ 抛中文提示："未获取到该达人数据：…（uniqueId=xxx）"，原样回显给用户。
-- 缺 `LINGTU_API_KEY` → 中文提示。
+- 缺少单用户管理员绑定或多用户身份参数 → 中文提示。
 - 网络/HTTP 错误 → 中文提示；`snapshot` / `batch-add` 会先按参数重试。
 - `digest` 中单个达人的 snapshot 缺失不会中断流程，会进入"未抓取到数据"段。

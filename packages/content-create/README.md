@@ -23,13 +23,13 @@ The main package instruction file is [`SKILL.md`](./SKILL.md). Codex can read it
 
 ## Requirements
 
-Set `LINGTU_API_KEY` before running task creation:
+Bind the single-user administrator before running task creation:
 
 ```bash
-export LINGTU_API_KEY="..."
+python3 ../../shared/scripts/user_keys.py single bind
 ```
 
-The skill sends the key as:
+Open the returned link to finish binding. The skill sends the resolved key as:
 
 ```text
 x-api-key: <key>

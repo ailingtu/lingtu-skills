@@ -32,13 +32,13 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 Use the same authentication pattern as the other Lingtu skills.
 
-Get your API key at https://app.ailingtu.com/api-key-management. Set `LINGTU_API_KEY` before making requests:
+Single-user mode uses a configured administrator binding. Generate the administrator `/binduser` URL before making requests:
 
 ```bash
-export LINGTU_API_KEY="..."
+python3 shared/scripts/user_keys.py single bind
 ```
 
-Send the key as the request header `x-api-key: <key>`. Do not store user API keys in this skill directory or commit them to source control.
+Open the returned link to bind the administrator's key. Send the resolved key as the request header `x-api-key: <key>`. Do not store user API keys in this skill directory or commit them to source control.
 
 For multi-user bot mode, pass `--channel feishu|wechat --user-id <external-user-id>` to `scripts/lingtu_video_understand.py` subcommands. The script resolves the user's key from `~/.lingtu-skills/config.json`, or calls the backend binding check endpoint if the local key is missing. Use `shared/scripts/user_keys.py bind` to generate the `/binduser` URL.
 
