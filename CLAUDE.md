@@ -16,9 +16,22 @@ Use this repository as a reusable Lingtu AI capability kit.
 - For TK blacklist lookup — batch query whether TikTok creator uniqueIds are in the blacklist, returning region, nickname, feedback count, latest feedback time, and reasons — read `packages/tk-blacklist/SKILL.md`.
 - (WIP, do not advertise to end users) For turning structured report JSON into a shareable PNG long-image, read `packages/report-render/SKILL.md`. Still under development — only invoke when explicitly asked.
 
-## Environment
+## Environment & Authentication
 
-Require `LINGTU_API_KEY` in the process environment. Get your key at https://app.ailingtu.com/api-key-management. Send it as the request header `x-api-key`.
+### Single-user mode (default)
+When the user explicitly asks to bind, configure, or set up their Lingtu / 灵途 API key — e.g. "绑定灵途密钥"、"配置灵途 API Key"、"bind lingtu key"、"帮我绑定一下灵途" — run:
+```
+python3 shared/scripts/user_keys.py single bind
+```
+This generates a `/binduser` authorization link. Return the link to the user and instruct them to open it in a browser. After binding, keys are stored locally (0600 permissions) and sent via the `x-api-key` header. Never commit keys or business data to Git.
+
+### Multi-user (bot) mode
+When deploying a bot, first switch mode then bind per user:
+```
+python3 shared/scripts/user_keys.py mode set multi
+python3 shared/scripts/user_keys.py bind --channel feishu --user-id ou_xxx --remark "备注"
+```
+After switching to multi mode, every request must include `--channel` and `--user-id`.
 
 ## Execution
 
