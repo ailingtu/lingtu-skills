@@ -17,6 +17,6 @@ For TikTok/Instagram creator or competitor monitoring, account video lists, sing
 
 For TK blacklist lookup requests, follow `packages/tk-blacklist/SKILL.md` and call `scripts/lingtu_tk_blacklist.py`.
 
-Require `LINGTU_API_KEY` in the runtime environment and send it as `x-api-key`.
+Before first use, run `python3 shared/scripts/user_keys.py single bind` to bind the administrator key. Scripts resolve the API key automatically and send it as `x-api-key`. Do not set `LINGTU_API_KEY` in the environment.
 
 Before changing endpoint paths or response parsing, read the package `references/api.md`.

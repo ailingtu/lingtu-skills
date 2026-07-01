@@ -15,10 +15,14 @@ Use Lingtu AI packages from this repository when the user requests media generat
 - `packages/video-understand`: single local videos, TikTok URLs, or YouTube URLs that need summarization, tagging, breakdown, remix planning, or a replication prompt.
 - `packages/tk-blacklist`: TK blacklist lookup and batch uniqueId checks.
 
+## Authentication (single-user mode)
+
+- Before first use, run `python3 shared/scripts/user_keys.py single bind` to bind the administrator key.
+- Scripts resolve the API key automatically and send it as the `x-api-key` header.
+- Do not set `LINGTU_API_KEY` in the environment — prefer the package scripts which handle auth internally.
+
 ## Shared Rules
 
-- Require `LINGTU_API_KEY` in the process environment.
-- Send the key as request header `x-api-key`.
 - Start from each package's `SKILL.md` instruction file.
 - Read the package `references/api.md` before changing endpoint paths, request fields, response fields, or status handling.
 - Prefer package scripts over ad hoc API calls.

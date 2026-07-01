@@ -18,4 +18,4 @@ This copies:
 - `packages/video-understand` to `~/.codex/skills/lingtu-video-understand`
 - `packages/tk-blacklist` to `~/.codex/skills/lingtu-tk-blacklist`
 
-Set `LINGTU_API_KEY` before launching Codex.
+Before first use, run `python3 shared/scripts/user_keys.py single bind` to bind the administrator key. Scripts resolve the API key automatically — do not set `LINGTU_API_KEY`.

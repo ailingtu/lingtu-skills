@@ -63,6 +63,6 @@ Read `packages/tk-blacklist/SKILL.md` when the user asks for:
 
 Use `packages/tk-blacklist/scripts/lingtu_tk_blacklist.py` for deterministic API calls.
 
-## Authentication
+## Authentication (single-user mode)
 
-Require `LINGTU_API_KEY` in the process environment. Send it as `x-api-key`. Never write customer API keys into source files.
+Before first use, run `python3 shared/scripts/user_keys.py single bind` to bind the administrator key. Scripts resolve the API key automatically and send it as the `x-api-key` header. Do not set `LINGTU_API_KEY` in the environment. Never write customer API keys into source files.

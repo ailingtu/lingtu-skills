@@ -214,10 +214,14 @@ generate_agent_doc() {
       echo "- \`.lingtu-agent-kit/packages/$id\`: ${PACKAGE_NAMES[$idx]}"
     done
     echo
+    echo "## Authentication (single-user mode)"
+    echo
+    echo "- Before first use, run \`python3 .lingtu-agent-kit/shared/scripts/user_keys.py single bind\` to bind the administrator key."
+    echo "- Scripts resolve the API key automatically and send it as the \`x-api-key\` header."
+    echo "- Do not set \`LINGTU_API_KEY\` in the environment — prefer the package scripts which handle auth internally."
+    echo
     echo "## Shared Rules"
     echo
-    echo "- Require \`LINGTU_API_KEY\` in the process environment."
-    echo "- Send the key as request header \`x-api-key\`."
     echo "- Start from each package's \`SKILL.md\` instruction file."
     echo "- Read the package \`references/api.md\` before changing endpoint paths, request fields, response fields, or status handling."
     echo "- Prefer package scripts over ad hoc API calls."
@@ -233,6 +237,8 @@ install_codex() {
     copy_dir "$ROOT_DIR/${PACKAGE_DIRS[$idx]}" "$skills_dir/${CODEX_NAMES[$idx]}"
     echo "Installed Codex skill ${CODEX_NAMES[$idx]} to $skills_dir/${CODEX_NAMES[$idx]}"
   done
+  copy_dir "$ROOT_DIR/shared" "$skills_dir/shared"
+  echo "Installed shared auth scripts to $skills_dir/shared"
 }
 
 install_project_adapter() {
@@ -240,22 +246,31 @@ install_project_adapter() {
   local dest="$2"
   shift 2
 
+  copy_shared() {
+    mkdir -p "$dest/.lingtu-agent-kit/shared"
+    copy_dir "$ROOT_DIR/shared" "$dest/.lingtu-agent-kit/shared"
+    echo "Installed shared auth scripts to $dest/.lingtu-agent-kit/shared"
+  }
+
   case "$target" in
     claude)
       mkdir -p "$dest/.lingtu-agent-kit/packages"
       install_selected_packages_to_dir "$dest/.lingtu-agent-kit/packages" "$@"
+      copy_shared
       generate_agent_doc claude "$dest/CLAUDE.md" "$@"
       echo "Installed Claude adapter to $dest/CLAUDE.md"
       ;;
     cursor)
       mkdir -p "$dest/.lingtu-agent-kit/packages"
       install_selected_packages_to_dir "$dest/.lingtu-agent-kit/packages" "$@"
+      copy_shared
       generate_agent_doc cursor "$dest/AGENTS.md" "$@"
       echo "Installed Cursor adapter to $dest/AGENTS.md"
       ;;
     openclaw)
       mkdir -p "$dest/.lingtu-agent-kit/packages"
       install_selected_packages_to_dir "$dest/.lingtu-agent-kit/packages" "$@"
+      copy_shared
       generate_agent_doc openclaw "$dest/AGENTS.md" "$@"
       echo "Installed OpenClaw adapter to $dest/AGENTS.md"
       ;;
@@ -263,12 +278,16 @@ install_project_adapter() {
       mkdir -p "$dest/lingtu-openai-adapter"
       copy_dir "$ROOT_DIR/adapters/openai" "$dest/lingtu-openai-adapter"
       install_selected_packages_to_dir "$dest/lingtu-openai-adapter/packages" "$@"
+      copy_dir "$ROOT_DIR/shared" "$dest/lingtu-openai-adapter/shared"
+      echo "Installed shared auth scripts to $dest/lingtu-openai-adapter/shared"
       echo "Installed OpenAI adapter to $dest/lingtu-openai-adapter"
       ;;
     dify)
       mkdir -p "$dest/lingtu-dify-adapter"
       copy_dir "$ROOT_DIR/adapters/dify" "$dest/lingtu-dify-adapter"
       install_selected_packages_to_dir "$dest/lingtu-dify-adapter/packages" "$@"
+      copy_dir "$ROOT_DIR/shared" "$dest/lingtu-dify-adapter/shared"
+      echo "Installed shared auth scripts to $dest/lingtu-dify-adapter/shared"
       echo "Exported Dify adapter to $dest/lingtu-dify-adapter"
       ;;
   esac
