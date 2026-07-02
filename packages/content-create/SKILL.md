@@ -40,7 +40,7 @@ Use `https://api.ailingtu.com` as the default base URL. The current API contract
 ## Workflow
 
 1. Collect the generation intent: media kind (`image`, `video`, or another supported type), prompt, output requirements, and optional reference images.
-   - For video model `gemini-omni-video`, default to 10 seconds when the user does not specify duration. If the user specifies duration, use the user's value.
+   - Video duration defaults by model: `gemini-omni-video`=10s, `veo3.1-extend`/`veo3.1-lite-extend`=8s, `grok-imagine-1`=15s, `seedance2.0-fast`=10s. If the user specifies duration, use the user's value.
    - For AI video prompts, strictly use this field format in this exact order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`. Do not add other top-level fields or prose outside the format.
 2. Upload local reference image files to Lingtu first via `POST /v1/file/upload` (multipart `file` field) and use the returned `data.url`. The create API only accepts remote http(s) URLs — base64 / `data:` URLs are no longer supported. Preserve the user's order because reference order can influence generation.
 3. Create a Lingtu AI schedule using `scripts/lingtu_content_task.py`. The script auto-uploads any local path passed via `--reference-image` and accepts http(s) URLs as-is. Image generation sends references as `params.inputReferences`; video generation sends one reference as `params.inputReference` and multiple references as `params.inputReferences`. The script generates an 8-character `taskId` by default and sends it with the create payload; the schedule create response may also return provider `taskIds`.
@@ -84,7 +84,7 @@ export LINGTU_AI_TASK_LIST_PATH="/v1/ai/task/listByScheduleId?scheduleId={schedu
 
 Use `--create-mode schedule` when you want to force schedule behavior explicitly. Use `--client-task-id abc12345` only when the caller needs a specific 8-character task id; otherwise let the script generate one.
 
-For `--kind video --model gemini-omni-video`, use 10 seconds for short ecommerce/UGC videos unless the user asks for another duration. If a requested model returns "未知模型", do not keep retrying that model; report the provider response and ask for the supported model name or use a confirmed model.
+For `--kind video`, supported models: `gemini-omni-video` (default), `veo3.1-lite-extend`, `veo3.1-extend`, `grok-imagine-1`, `seedance2.0-fast`. Each model has different allowed durations (see `references/api.md`). If a requested model returns "未知模型", do not keep retrying that model; report the provider response and ask for the supported model name or use a confirmed model.
 
 Use `--payload-json` for provider-specific fields that are not yet formalized in the script:
 

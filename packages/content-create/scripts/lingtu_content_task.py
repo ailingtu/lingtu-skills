@@ -430,12 +430,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prompt", required=True, help="Generation prompt.")
     parser.add_argument(
         "--model",
-        help="Lingtu AI model name. Defaults to gpt-image-2 for image and gemini-omni-video for video.",
+        help="Lingtu AI model name. Video: gemini-omni-video (default), veo3.1-lite-extend, veo3.1-extend, grok-imagine-1, seedance2.0-fast, seedance-2.0. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k.",
     )
     parser.add_argument(
         "--seconds",
         type=int,
-        help="Video duration in seconds. Defaults to 10 for gemini-omni-video and 8 for other video models.",
+        help="Video duration in seconds. Defaults: gemini-omni-video=10, veo3.1-*=8, grok-imagine-1=15, seedance2.0-fast=10.",
     )
     parser.add_argument("--size", default="720x1280", help="Video size, such as 720x1280 or 1280x720.")
     parser.add_argument("--aspect-ratio", default="1:1", help="Image aspect ratio, such as 1:1 or 9:16.")
@@ -480,7 +480,17 @@ def parse_args() -> argparse.Namespace:
 
 
 def default_video_seconds(model: str) -> int:
-    return 10 if model.lower() == "gemini-omni-video" else 8
+    """Return the default duration for a given video model."""
+    m = model.lower()
+    if m == "gemini-omni-video":
+        return 10
+    if m in ("veo3.1-lite-extend", "veo3.1-extend"):
+        return 8
+    if m == "grok-imagine-1":
+        return 15
+    if m in ("seedance2.0-fast", "seedance-2.0"):
+        return 10
+    return 8  # conservative fallback
 
 
 def resolve_create_mode(args: argparse.Namespace) -> str:

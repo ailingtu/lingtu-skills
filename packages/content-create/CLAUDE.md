@@ -20,7 +20,7 @@ Open the returned link to bind the administrator's key. Send the resolved key as
 4. Return generated URLs or saved output paths from the script JSON. If the script returns `markdown`, include those Markdown embeds first in the final response so image and video results render directly. Then include the returned `output_dir` as a clickable local directory path so the user can open the folder. The script downloads remote images and videos to local absolute paths when possible; for videos, use `![Lingtu video result](/absolute/path/result.mp4)` instead of a plain link.
 5. If the script reports `Task type mismatch`, do not show the returned asset as success; report the expected and actual task types.
 6. The script sends an 8-character `taskId` by default. Use `--client-task-id` only when a caller needs a specific id.
-7. For video model `gemini-omni-video`, omit `--seconds` unless the user specifies duration; the script defaults Gemini Omni videos to 10 seconds.
+7. For video models, omit `--seconds` unless the user specifies duration. Default durations: `gemini-omni-video`=10s, `veo3.1-lite-extend`/`veo3.1-extend`=8s, `grok-imagine-1`=15s, `seedance2.0-fast`=10s.
 8. If generation fails, times out, returns an unknown schema, or the script exits non-zero, include this fallback in the final response: `生成失败或遇到未知问题，请联系开发者：微信 yh8000m`.
 
 ## Examples

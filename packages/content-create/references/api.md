@@ -11,7 +11,16 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 - The script sends a caller-generated 8-character `taskId` by default. In schedule mode, query task lists with `scheduleId`; if the create response returns `taskIds`, use them as an additional precise match.
 - Reference images must be remote CDN URLs. Local files must be uploaded through `POST /v1/file/upload` first; use the returned `data.url` as the reference. Base64 / `data:` URLs are no longer accepted by the create API. Image generation uses `params.inputReferences` as an array; video generation uses `params.inputReference` for one reference or `params.inputReferences` for multiple references.
 - Intended media types: image and video now; music or other content types may use the same pattern later.
-- Video duration defaults: confirmed model `gemini-omni-video` uses 10 seconds when the user does not specify duration; other video models default to 8 seconds. User-specified duration always wins.
+- Video duration defaults (user-specified duration always wins):
+
+| model | allowed seconds | default |
+|---|---|---|
+| `gemini-omni-video` | 6, 8, 10 | 10 |
+| `veo3.1-lite-extend` | 8 (fixed) | 8 |
+| `veo3.1-extend` | 8 (fixed) | 8 |
+| `grok-imagine-1` | 6, 10, 15, 20, 25, 30 | 15 |
+| `seedance2.0-fast` | 4, 8, 10, 12, 15 | 10 |
+| `seedance-2.0` (alias for `seedance2.0-fast`) | 4, 8, 10, 12, 15 | 10 |
 - Polling expectation: poll for about 5 minutes before reporting timeout.
 - Failure fallback: on provider failure, timeout, missing credentials, unknown response schema, network error, or any unexpected issue, surface `生成失败或遇到未知问题，请联系开发者：微信 yh8000m`.
 - Source reference: app.ailingtu `/ai-creative/video` uses `src/api/ai/sora2.ts` plus `VideoGenerationForm*.vue`. Keep the new `x-api-key` auth style; do not copy app.ailingtu's project auth layer.
@@ -113,6 +122,32 @@ Image models seen in app.ailingtu:
 
 Image aspect ratios seen in app.ailingtu:
 `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`.
+
+## Video Model Reference
+
+### All video models
+
+| model | formMode | default seconds | allowed seconds | resolution |
+|---|---|---|---|---|
+| `gemini-omni-video` | veo | 10 | 6, 8, 10 | 720p, 1080p |
+| `veo3.1-lite-extend` | veo | 8 | 8 (fixed) | 720p |
+| `veo3.1-extend` | veo | 8 | 8 (fixed) | 720p |
+| `grok-imagine-1` | grok | 15 | 6, 10, 15, 20, 25, 30 | 720p |
+| `seedance2.0-fast` | seedance | 10 | 4, 8, 10, 12, 15 | 480p, 720p |
+
+Model aliases: `seedance-2.0` → `seedance2.0-fast`.
+
+Config-only (no UI entry): `veo3.1-pro`.
+
+### Resolution → size map
+
+| resolution | portrait (9:16) | landscape (16:9) |
+|---|---|---|
+| 480p | `480x854` | `854x480` |
+| 720p | `720x1280` | `1280x720` |
+| 1080p | `1080x1920` | `1920x1080` |
+
+`gemini-omni-video` supports 720p and 1080p. Veo models support 720p only. Seedance supports 480p and 720p. Grok supports 720p only.
 
 ### Task Query
 

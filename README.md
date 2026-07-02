@@ -67,7 +67,7 @@ python3 shared/scripts/user_keys.py single bind --channel feishu --user-id ou_ad
 打开命令返回的 `/binduser` 链接完成绑定后，业务脚本在 `single` 模式下无需传 `--channel` 和 `--user-id`。请求通过请求头 `x-api-key` 传递密钥。切勿将密钥或业务数据提交到 Git。
 
 多用户 bot 模式不要让用户在聊天里发送 API Key。绑定页固定使用 `https://app.ailingtu.com/binduser`。部署 bot 时由管理员设置一次多用户模式；业务请求执行过程中不要自动切换认证模式。每次生成绑定链接时，skills 都会自动生成一个唯一 session `token`，主站据此保存/校验用户绑定关系。
-
+ 
 ```bash
 python3 shared/scripts/user_keys.py mode set multi
 python3 shared/scripts/user_keys.py bind --channel feishu --user-id ou_xxx --remark "机器人备注"
