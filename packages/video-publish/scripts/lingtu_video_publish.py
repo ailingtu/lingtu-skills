@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """灵途批量视频发布 — TikTok Shop 带货 / TikTok 养号视频批量排期发布。
 
-CLI 驱动：gen-csv → 用户编辑 Excel → publish --confirm
+CLI 驱动：gen-csv → 用户编辑 CSV → publish --confirm
 """
 
 from __future__ import annotations

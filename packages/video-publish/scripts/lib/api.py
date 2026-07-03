@@ -11,8 +11,16 @@ from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
+def _shared_scripts_dir() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "shared" / "scripts"
+        if candidate.exists():
+            return candidate
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+
+
+sys.path.insert(0, str(_shared_scripts_dir()))
 from lingtu_auth import require_api_key as shared_require_api_key
 
 from .config import (
@@ -122,16 +130,16 @@ def upload_file(file_path: str) -> dict[str, Any]:
     data = result.get("data") or {}
     file_id = data.get("fileId") or data.get("id") or ""
     upload_url = data.get("uploadUrl") or ""
-    is_new = data.get("isNew")
-    is_new = is_new is True or is_new == "true" or is_new == "1" or is_new == 1
+    raw_is_new = data.get("isNew")
+    is_new = raw_is_new is True or raw_is_new == "true" or raw_is_new == "1" or raw_is_new == 1
     final_url = data.get("url") or ""
 
-    # Step 2: PUT to presigned URL (only if new file)
-    if is_new and upload_url:
+    # Step 2/3: only newly uploaded files need PUT + confirm.
+    # When isNew=false the backend has already matched an existing file by hash.
+    should_upload = is_new or (raw_is_new is None and bool(upload_url))
+    if should_upload and upload_url:
         _put_file(upload_url, p.read_bytes(), content_type)
-
-    # Step 3: confirm
-    _request_json("POST", FILE_CONFIRM_PATH, body={"fileId": file_id}, timeout=API_TIMEOUT)
+        _request_json("POST", FILE_CONFIRM_PATH, body={"fileId": file_id}, timeout=API_TIMEOUT)
 
     return {"id": str(file_id), "url": final_url}
 
@@ -166,6 +174,7 @@ def list_creator_accounts(
     valid: bool = True,
     usernames: list[str] | None = None,
     platform: str | None = None,
+    selection_region: str | None = None,
 ) -> dict[str, Any]:
     """获取已授权达人列表。"""
     params: dict[str, Any] = {
@@ -180,6 +189,8 @@ def list_creator_accounts(
         auth_source = AUTH_SOURCE_MAP.get(platform)
         if auth_source:
             params["authSource"] = auth_source
+    if selection_region:
+        params["selectionRegion"] = selection_region
 
     return _request_json("GET", CREATOR_PAGE_LIST_PATH, query_params=params)
 
@@ -195,7 +206,13 @@ def resolve_creator_id(username: str, platform: str | None = None) -> dict[str, 
             return {
                 "creatorId": item.get("creatorId") or "",
                 "username": item.get("username") or raw_username,
+                "targetRegion": item.get("targetRegion") or "",
+                "targetMarket": item.get("targetMarket") or "",
+                "marketRegion": item.get("marketRegion") or "",
+                "shopRegion": item.get("shopRegion") or "",
+                "selectionRegion": item.get("selectionRegion") or "",
                 "oauthRegion": item.get("oauthRegion") or "",
+                "registerRegion": item.get("registerRegion") or "",
             }
     return None
 
@@ -218,7 +235,13 @@ def resolve_creator_batch(
         found[uname] = {
             "creatorId": item.get("creatorId") or "",
             "username": item.get("username") or uname,
+            "targetRegion": item.get("targetRegion") or "",
+            "targetMarket": item.get("targetMarket") or "",
+            "marketRegion": item.get("marketRegion") or "",
+            "shopRegion": item.get("shopRegion") or "",
+            "selectionRegion": item.get("selectionRegion") or "",
             "oauthRegion": item.get("oauthRegion") or "",
+            "registerRegion": item.get("registerRegion") or "",
         }
 
     not_found = [u for u in cleaned if u.lower() not in found]

@@ -32,6 +32,9 @@
 | valid | boolean | 否 | 是否有效，默认 true |
 | authSource | string | 否 | TIKTOK_SHOP / TIKTOK_LOGIN_KIT |
 | usernames | string[] | 否 | 批量按用户名筛选 |
+| selectionRegion | string | 否 | 带货达人目标/选择地区筛选，如 US。仅用于 TikTok Shop 带货达人列表；普通 TikTok 列表不按国家筛选 |
+
+区域字段随后端版本可能不同。生成默认排期时，优先使用更贴近目标市场/店铺市场的字段：`targetRegion`、`targetMarket`、`marketRegion`、`shopRegion`、`selectionRegion`；没有这些字段时再回退到 `oauthRegion` / `registerRegion`。
 
 **Response:**
 
@@ -42,7 +45,8 @@
     "list": [{
       "id": 1, "creatorId": "gid_xxx", "username": "shop_creator",
       "authSource": "TIKTOK_SHOP", "oauthRegion": "USA",
-      "registerRegion": "US", "valid": true, "tagNames": ["top-tier"]
+      "registerRegion": "US", "selectionRegion": "US",
+      "targetMarket": "US", "valid": true, "tagNames": ["top-tier"]
     }],
     "total": 1, "pageNumber": 1, "pageSize": 200, "totalPages": 1
   }

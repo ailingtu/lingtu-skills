@@ -1,18 +1,18 @@
 # 灵途批量视频发布
 
-从 Excel 排期表批量向 TikTok Shop / TikTok 养号账号发布视频。
+从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频。
 
 ## 快速开始
 
 ```bash
-# 1. 生成排期模板（在桌面创建文件夹）
+# 1. 生成 CSV 排期模板（在桌面创建文件夹）
 python3 scripts/lingtu_video_publish.py gen-csv \
   --platform tiktok_shop \
+  --region US \
   --date 2026-07-05 \
-  --timezone EST \
   --product-id pid_001234
 
-# 2. 编辑 schedule.xlsx（填 title + video_file），视频拖入文件夹
+# 2. 编辑 schedule.csv（填 title + video_file），视频拖入文件夹
 
 # 3. dry-run 预览
 python3 scripts/lingtu_video_publish.py publish \
@@ -24,11 +24,13 @@ python3 scripts/lingtu_video_publish.py publish \
   --confirm
 ```
 
+不传 `--timezone` 时会按达人授权区域自动推断时区；美国达人默认美西。需要美东等指定时区时再传 `--timezone EST`。`--region US` 对带货达人列表生效；普通 TikTok / 养号视频不按国家筛选列表，且不需要产品 ID。
+
 ## 命令
 
 | 命令 | 说明 |
 |------|------|
-| gen-csv | 生成 Excel 排期模板 |
+| gen-csv | 生成 CSV 排期模板 |
 | creators | 列出已授权达人 |
 | publish | 执行发布 |
 | products search | 搜索商品 |
@@ -36,7 +38,8 @@ python3 scripts/lingtu_video_publish.py publish \
 ## 依赖
 
 - Python 3.9+
-- openpyxl
+
+默认 CSV 流程不需要第三方依赖；只有读取或编辑旧版 `schedule.xlsx` 时才需要 `openpyxl`。
 
 ## 配置
 

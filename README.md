@@ -27,6 +27,7 @@
 - **`packages/tkshop-query`** — 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。
 - **`packages/social-monitor`** — TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据、评论导出和近期视频情报报告。
 - **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标和视频拆解。
+- **`packages/video-publish`** — TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。
 - **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询 TK 达人黑名单记录。
 - **`packages/report-render`** — 将结构化报告 JSON 渲染为可分享的 PNG 长图（开发中，暂未支持安装）。
 
@@ -38,6 +39,7 @@ packages/
   tkshop-query/     # TK 店铺数据查询
   social-monitor/   # 社媒达人/竞品监控、素材数据、评论导出
   video-understand/ # 视频理解与复刻提示词生成
+  video-publish/    # 批量视频发布和排期
   tk-blacklist/ # TK 达人黑名单查询
   report-render/    # 报告 JSON 转分享长图
 adapters/
@@ -98,7 +100,7 @@ cd lingtu-skills
 
 ```bash
 ./install.sh codex all
-./install.sh codex content-create tkshop-query social-monitor video-understand tk-blacklist
+./install.sh codex content-create tkshop-query social-monitor video-understand video-publish tk-blacklist
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
 ./install.sh openclaw /path/to/project all

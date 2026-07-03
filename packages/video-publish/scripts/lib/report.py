@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .config import PLATFORM_LABELS
+from .config import PLATFORM_LABELS, PUBLISH_RECORDS_URL
 
 
 def format_creators(creators: list[dict[str, Any]]) -> str:
@@ -47,17 +47,33 @@ def format_publish_results(results: dict[str, Any]) -> str:
 
     if mode == "dry-run":
         title = f"[DRY-RUN] 排期校验完成：共 {total} 条"
-        if results.get("dry_run_invalid", 0) > 0:
-            title += f"，{results['dry_run_invalid']} 条校验失败"
+        if results.get("needs_edit_count", 0) > 0:
+            title += f"，{results['needs_edit_count']} 条需修改"
         title += "\n加 --confirm 执行实际发布。"
+    elif mode == "needs-edit":
+        title = (
+            f"排期表需要修改：共 {total} 条，"
+            f"{results.get('needs_edit_count', 0)} 条需修改，{results.get('dry_run_valid', 0)} 条可发布。\n"
+            "这通常是用户编辑 CSV 时新增或删减行导致的，不算发布失败。请按提示修改后再确认发布。"
+        )
     else:
-        title = f"发布完成：共 {total} 条，成功 {succeeded}，失败 {failed}"
+        video_type = results.get("video_type") or _video_type_from_rows(rows)
+        lines = [
+            f"发布完成，发布 {succeeded} 条 {video_type} 视频。",
+            f"发布结果：共 {total} 条，成功 {succeeded}，失败 {failed}。",
+        ]
+        basics = _format_publish_basics(results, rows)
+        if basics:
+            lines.append(f"发布基本信息：{basics}")
+        lines.append(f"请前往发布记录确认发布内容：{PUBLISH_RECORDS_URL}")
+        title = "\n".join(lines)
 
     lines = [title, ""]
 
     success_rows = [r for r in rows if r.get("status") == "success"]
     failed_rows = [r for r in rows if r.get("status") == "failed"]
     dry_rows = [r for r in rows if r.get("status") == "dry-run"]
+    needs_edit_rows = [r for r in rows if r.get("status") == "needs-edit"]
 
     if success_rows:
         lines.append("成功：")
@@ -79,6 +95,14 @@ def format_publish_results(results: dict[str, Any]) -> str:
             lines.append(f"  - 第 {r.get('index', '?')} 行 (@{r.get('creator_username', '?')})：{err_text}")
         lines.append("")
 
+    if needs_edit_rows:
+        lines.append("需修改：")
+        for r in needs_edit_rows:
+            errors = r.get("errors", [])
+            err_text = "; ".join(errors) if errors else "请检查该行内容"
+            lines.append(f"  - 第 {r.get('index', '?')} 行 (@{r.get('creator_username', '?') or '-'})：{err_text}")
+        lines.append("")
+
     if dry_rows:
         lines.append("待发布（dry-run）：")
         for r in dry_rows:
@@ -90,6 +114,33 @@ def format_publish_results(results: dict[str, Any]) -> str:
             )
 
     return "\n".join(lines)
+
+
+def _video_type_from_rows(rows: list[dict[str, Any]]) -> str:
+    platforms = {row.get("platform") for row in rows if row.get("platform")}
+    if platforms == {"tiktok_shop"}:
+        return "带货"
+    if platforms == {"tiktok"}:
+        return "普通/养号"
+    return "混合"
+
+
+def _format_publish_basics(results: dict[str, Any], rows: list[dict[str, Any]]) -> str:
+    creators = sorted({str(row.get("creator_username") or "").strip() for row in rows if row.get("creator_username")})
+    platforms = sorted({PLATFORM_LABELS.get(str(row.get("platform") or ""), str(row.get("platform") or "")) for row in rows if row.get("platform")})
+    scheduled = [str(row.get("scheduled_at") or "").strip() for row in rows if row.get("scheduled_at")]
+    parts: list[str] = []
+    if platforms:
+        parts.append(f"类型 {'、'.join(platforms)}")
+    if creators:
+        sample = "、".join(f"@{creator}" for creator in creators[:5])
+        suffix = f" 等 {len(creators)} 个达人" if len(creators) > 5 else ""
+        parts.append(f"达人 {sample}{suffix}")
+    if scheduled:
+        parts.append(f"时间 {min(scheduled)} 至 {max(scheduled)}")
+    if results.get("records_url"):
+        parts.append(f"记录页 {results['records_url']}")
+    return "；".join(parts)
 
 
 def format_products(products: list[dict[str, Any]], source: str) -> str:

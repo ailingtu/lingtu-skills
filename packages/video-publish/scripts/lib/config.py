@@ -42,6 +42,45 @@ TIMEZONE_MAP: dict[str, str] = {
     "CA": "America/Toronto",
 }
 
+REGION_TIMEZONE_MAP: dict[str, str] = {
+    "US": "America/Los_Angeles",
+    "USA": "America/Los_Angeles",
+    "UNITED_STATES": "America/Los_Angeles",
+    "UNITED STATES": "America/Los_Angeles",
+    "CA": "America/Toronto",
+    "CAN": "America/Toronto",
+    "MX": "America/Mexico_City",
+    "MEX": "America/Mexico_City",
+    "BR": "America/Sao_Paulo",
+    "BRA": "America/Sao_Paulo",
+    "GB": "Europe/London",
+    "UK": "Europe/London",
+    "JP": "Asia/Tokyo",
+    "JPN": "Asia/Tokyo",
+    "KR": "Asia/Seoul",
+    "KOR": "Asia/Seoul",
+    "SG": "Asia/Singapore",
+    "SGP": "Asia/Singapore",
+    "MY": "Asia/Kuala_Lumpur",
+    "MYS": "Asia/Kuala_Lumpur",
+    "ID": "Asia/Jakarta",
+    "IDN": "Asia/Jakarta",
+    "TH": "Asia/Bangkok",
+    "THA": "Asia/Bangkok",
+    "VN": "Asia/Ho_Chi_Minh",
+    "VNM": "Asia/Ho_Chi_Minh",
+    "PH": "Asia/Manila",
+    "PHL": "Asia/Manila",
+    "CN": "Asia/Shanghai",
+    "CHN": "Asia/Shanghai",
+    "SA": "Asia/Riyadh",
+    "SAU": "Asia/Riyadh",
+    "AE": "Asia/Dubai",
+    "ARE": "Asia/Dubai",
+    "AU": "Australia/Sydney",
+    "AUS": "Australia/Sydney",
+}
+
 TIMEZONE_DROPDOWN_OPTIONS = [
     "America/New_York (EST)",
     "America/Los_Angeles (PST)",
@@ -69,7 +108,7 @@ CSV_REQUIRED_COLUMNS = ("creator_username", "platform", "title", "video_file")
 CSV_ALL_COLUMNS = (
     "creator_username", "platform",
     "product_id", "product_title",
-    "title",
+    "product_source", "title",
     "timezone", "scheduled_at",
     "video_file",
 )
@@ -79,6 +118,7 @@ COLUMN_LABELS: dict[str, str] = {
     "platform": "平台",
     "product_id": "产品ID",
     "product_title": "购物车标题",
+    "product_source": "商品来源",
     "title": "视频文案内容",
     "timezone": "时区",
     "scheduled_at": "发布时间",
@@ -88,6 +128,10 @@ COLUMN_LABELS: dict[str, str] = {
 COLUMN_LABEL_TO_KEY: dict[str, str] = {v: k for k, v in COLUMN_LABELS.items()}
 
 PRODUCT_SOURCE_OPTIONS = ("SHOP", "SHOWCASE")
+
+PRODUCT_TITLE_MAX_LENGTH = 30
+POST_TITLE_MAX_LENGTH = 4000
+PUBLISH_RECORDS_URL = "https://app.ailingtu.com/video-center?tab=records"
 
 UPLOAD_TIMEOUT = 600
 API_TIMEOUT = 60

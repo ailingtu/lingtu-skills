@@ -10,8 +10,16 @@ import time
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
+def _shared_scripts_dir() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "shared" / "scripts"
+        if candidate.exists():
+            return candidate
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+
+
+sys.path.insert(0, str(_shared_scripts_dir()))
 from lingtu_auth import add_identity_arguments, configure_identity
 
 from .api import (
@@ -25,18 +33,29 @@ from .api import (
 from .config import (
     DEFAULT_DESKTOP,
     PLATFORM_LABELS,
+    PRODUCT_TITLE_MAX_LENGTH,
+    POST_TITLE_MAX_LENGTH,
+    PUBLISH_RECORDS_URL,
+    REGION_TIMEZONE_MAP,
     SUPPORTED_PLATFORMS,
 )
 from .excel_utils import (
+    COLUMN_LABELS,
+    COLUMN_LABEL_TO_KEY,
+    CSV_ALL_COLUMNS,
+    generate_csv_template,
     generate_excel_template,
     parse_date_for_filename,
     parse_datetime_to_epoch_ms,
     parse_excel_or_csv,
     parse_timezone,
+    has_unsupported_plain_text,
+    sanitize_post_title,
     sanitize_product_title,
+    write_csv_schedule,
 )
 from .report import format_creators, format_products, format_publish_results
-from .scheduler import auto_assign_schedule
+from .scheduler import auto_assign_schedule, build_schedule_rows, compute_schedule_times
 
 
 def print_json(data: Any) -> None:
@@ -47,6 +66,8 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
     """将排期数据格式化为聊天预览文本。"""
     from collections import defaultdict
 
+    is_shop = rows_data[0].get("platform") == "tiktok_shop"
+
     # 按日期+达人分组统计
     by_day_creator: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for r in rows_data:
@@ -56,9 +77,9 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
         by_day_creator[d][c] += 1
 
     lines = ["📋 排期预览：", ""]
-    lines.append(f"类型：{'带货视频' if rows_data[0].get('platform') == 'tiktok_shop' else '养号视频'}")
+    lines.append(f"类型：{'带货视频' if is_shop else '养号视频'}")
     lines.append(f"时区：{tz}")
-    lines.append(f"时间段：{' / '.join(times)}")
+    lines.append(f"默认基础时间段：{' / '.join(times)}（达人间按分钟错峰）")
     lines.append(f"产品ID：{rows_data[0].get('product_id') or '无'}")
     lines.append("")
 
@@ -73,10 +94,54 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
     all_creators = set(r["creator_username"] for r in rows_data)
     lines.append(f"共 {len(dates)} 天 · {len(rows_data)} 条视频 · {len(all_creators)} 个达人")
     lines.append("")
-    lines.append("确认后生成 Excel，你只需补充：")
-    lines.append("  · 购物车标题 · 视频文案内容 · 视频文件名")
+    lines.append("确认后生成 CSV，你只需补充：")
+    if is_shop:
+        lines.append("  · 购物车标题 · 视频文案内容 · 视频文件名")
+    else:
+        lines.append("  · 视频文案内容 · 视频文件名")
 
     return "\n".join(lines)
+
+
+def _timezone_from_creator_info(creator_info: dict[str, Any]) -> str:
+    for key in (
+        "targetRegion",
+        "targetMarket",
+        "marketRegion",
+        "shopRegion",
+        "selectionRegion",
+        "oauthRegion",
+        "registerRegion",
+    ):
+        region = str(creator_info.get(key) or "").strip()
+        if not region:
+            continue
+        normalized = region.upper().replace("-", "_")
+        if normalized in REGION_TIMEZONE_MAP:
+            return REGION_TIMEZONE_MAP[normalized]
+    return "America/Los_Angeles"
+
+
+def _timezone_map_for_creators(
+    creators: list[str],
+    creator_info_by_username: dict[str, dict[str, Any]] | None,
+    timezone_override: str,
+    region_hint: str = "",
+) -> dict[str, str]:
+    if timezone_override:
+        return {creator.lower(): timezone_override for creator in creators}
+    if region_hint:
+        region_tz = _timezone_from_creator_info({"targetRegion": region_hint})
+        return {creator.lower(): region_tz for creator in creators}
+    creator_info_by_username = creator_info_by_username or {}
+    return {
+        creator.lower(): _timezone_from_creator_info(creator_info_by_username.get(creator.lower(), {}))
+        for creator in creators
+    }
+
+
+def _normalize_region(raw: str | None) -> str:
+    return (raw or "").strip().upper().replace("-", "_")
 
 
 # ── gen-csv ──────────────────────────────────────────────────
@@ -84,13 +149,11 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
 def command_gen_csv(args: argparse.Namespace) -> None:
     platform = args.platform
     date_str = parse_date_for_filename(args.date)
-    tz_raw = args.timezone
-    tz_iana = parse_timezone(tz_raw)
+    tz_iana = parse_timezone(args.timezone) if args.timezone else ""
+    region_hint = _normalize_region(getattr(args, "region", ""))
     count = max(1, args.count)
     days = max(1, args.days)
 
-    # 生成时间列表
-    from .scheduler import compute_schedule_times
     from datetime import datetime, timedelta
     times = compute_schedule_times(count)
 
@@ -107,16 +170,16 @@ def command_gen_csv(args: argparse.Namespace) -> None:
 
     if args.dry_run:
         creator_list = raw_creators if raw_creators else ["（全部已授权达人）"]
-        rows_data: list[dict[str, str]] = []
-        for d in dates:
-            for creator in creator_list:
-                for t in times:
-                    rows_data.append({
-                        "creator_username": creator, "platform": platform,
-                        "product_id": product_id, "product_title": "", "title": "",
-                        "timezone": tz_iana, "scheduled_at": f"{d} {t}", "video_file": "",
-                    })
-        print(_format_preview_table(rows_data, times, tz_iana, dates))
+        preview_tz = tz_iana or _timezone_from_creator_info({"targetRegion": region_hint})
+        rows_data = build_schedule_rows(
+            dates=dates,
+            creators=creator_list,
+            platform=platform,
+            product_id=product_id,
+            timezone_by_creator={creator.lower(): preview_tz for creator in creator_list},
+            count=count,
+        )
+        print(_format_preview_table(rows_data, times, preview_tz, dates))
         return
 
     # ── 正式生成：调 API 验证达人 ──
@@ -125,14 +188,17 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     if raw_creators:
         creator_list = raw_creators
     else:
-        result = list_creator_accounts(platform=platform)
+        selection_region = region_hint if platform == "tiktok_shop" and region_hint else None
+        result = list_creator_accounts(platform=platform, selection_region=selection_region)
         data = result.get("data") or {}
         items = data.get("list") or []
         creator_list = [item.get("username", "") for item in items if item.get("username")]
         if not creator_list:
-            raise SystemExit(f"该平台（{PLATFORM_LABELS.get(platform, platform)}）下没有已授权的达人。")
+            region_msg = f"、地区 {region_hint}" if selection_region else ""
+            raise SystemExit(f"该平台（{PLATFORM_LABELS.get(platform, platform)}{region_msg}）下没有已授权的达人。")
 
     # 验证指定的达人是否存在
+    creator_info_by_username: dict[str, dict[str, Any]] = {}
     if raw_creators:
         found, not_found = resolve_creator_batch(creator_list, platform=platform)
         if not_found:
@@ -140,19 +206,35 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         if not found:
             raise SystemExit("所有指定的达人均未找到或未授权。")
         creator_list = list(found.keys())
+        creator_info_by_username = found
+    else:
+        creator_info_by_username = {
+            str(item.get("username", "")).lower(): {
+                "targetRegion": item.get("targetRegion") or "",
+                "targetMarket": item.get("targetMarket") or "",
+                "marketRegion": item.get("marketRegion") or "",
+                "shopRegion": item.get("shopRegion") or "",
+                "selectionRegion": item.get("selectionRegion") or "",
+                "oauthRegion": item.get("oauthRegion") or "",
+                "registerRegion": item.get("registerRegion") or "",
+            }
+            for item in items
+            if item.get("username")
+        }
+
+    timezone_by_creator = _timezone_map_for_creators(creator_list, creator_info_by_username, tz_iana, region_hint)
 
     # 构建所有行
-    rows_data = []
-    for d in dates:
-        for creator in creator_list:
-            for t in times:
-                rows_data.append({
-                    "creator_username": creator, "platform": platform,
-                    "product_id": product_id, "product_title": "", "title": "",
-                    "timezone": tz_iana, "scheduled_at": f"{d} {t}", "video_file": "",
-                })
+    rows_data = build_schedule_rows(
+        dates=dates,
+        creators=creator_list,
+        platform=platform,
+        product_id=product_id,
+        timezone_by_creator=timezone_by_creator,
+        count=count,
+    )
 
-    # 生成文件夹和 Excel
+    # 生成文件夹和 CSV
     if days == 1:
         folder_name = f"视频发布_{date_str}"
     else:
@@ -160,21 +242,25 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         folder_name = f"视频发布_{date_str}_to_{end_str}"
     output_dir = args.output_dir or str(DEFAULT_DESKTOP / folder_name)
     output_dir = str(Path(output_dir).expanduser())
-    excel_path = str(Path(output_dir) / "schedule.xlsx")
+    csv_path = str(Path(output_dir) / "schedule.csv")
 
-    generated = generate_excel_template(
-        output_path=excel_path,
+    generated = generate_csv_template(
+        output_path=csv_path,
         rows_data=rows_data,
     )
 
     output = {
         "folder": output_dir,
-        "excel": generated,
+        "csv": generated,
+        "schedule": generated,
         "platform": platform,
         "date": date_str,
         "days": days,
         "dates": dates,
-        "timezone": tz_iana,
+        "timezone": tz_iana or "auto",
+        "region": region_hint,
+        "region_filter_applied": platform == "tiktok_shop" and bool(region_hint) and not raw_creators,
+        "timezones_by_creator": timezone_by_creator,
         "creators": creator_list,
         "creators_count": len(creator_list),
         "videos_per_creator_per_day": count,
@@ -186,17 +272,26 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         return
 
     print(f"已在桌面创建排期文件夹：{output_dir}")
-    print(f"  ├── schedule.xlsx  ← 排期表（已预填达人、时间，带下拉校验）")
+    print(f"  ├── schedule.csv  ← 排期表（已预填达人、时间）")
     print(f"  └── （请将视频文件拖入此文件夹）")
     print()
     print(f"达人数量：{len(creator_list)}")
     print(f"日期范围：{date_str} ~ {dates[-1]}（{days} 天）")
     print(f"每达人每日：{count} 条")
-    print(f"发布时间：{', '.join(times)}（{tz_iana}）")
+    if tz_iana:
+        print(f"发布时间：{', '.join(times)}（{tz_iana}，达人间已错峰）")
+    else:
+        unique_tz = sorted(set(timezone_by_creator.values()))
+        print(f"发布时间：{', '.join(times)}（按达人区域自动时区：{', '.join(unique_tz)}；达人间已错峰）")
+    if region_hint:
+        if platform == "tiktok_shop" and not raw_creators:
+            print(f"达人筛选：带货达人列表已按地区 {region_hint} 筛选")
+        elif platform == "tiktok":
+            print(f"达人筛选：普通/养号达人列表不支持按国家筛选，地区 {region_hint} 仅用于默认时区")
     print(f"总排期行数：{len(rows_data)}")
     print()
     print("下一步：")
-    print(f"  1. 打开 schedule.xlsx，填写 title 和 video_file（填文件名即可）")
+    print(f"  1. 打开 schedule.csv，填写 title 和 video_file（填文件名即可）")
     print(f"  2. 将所有视频文件复制到文件夹内")
     print(f"  3. 运行：lingtu_video_publish.py publish --folder {output_dir} --confirm")
 
@@ -205,9 +300,12 @@ def command_gen_csv(args: argparse.Namespace) -> None:
 
 def command_creators(args: argparse.Namespace) -> None:
     platform = args.platform or None
+    region = _normalize_region(getattr(args, "region", ""))
+    selection_region = region if platform == "tiktok_shop" and region else None
     result = list_creator_accounts(
         platform=platform,
         page_size=args.page_size,
+        selection_region=selection_region,
     )
     data = result.get("data") or {}
     items = data.get("list") or []
@@ -233,12 +331,12 @@ def command_publish(args: argparse.Namespace) -> None:
         raise SystemExit(f"路径不是文件夹：{folder}")
 
     # 查找排期文件
-    excel_file = folder / "schedule.xlsx"
     csv_file = folder / "schedule.csv"
-    if excel_file.exists():
-        schedule_path = str(excel_file)
-    elif csv_file.exists():
+    excel_file = folder / "schedule.xlsx"
+    if csv_file.exists():
         schedule_path = str(csv_file)
+    elif excel_file.exists():
+        schedule_path = str(excel_file)
     else:
         raise SystemExit(f"文件夹内未找到 schedule.xlsx 或 schedule.csv：{folder}")
 
@@ -266,46 +364,21 @@ def command_publish(args: argparse.Namespace) -> None:
 
     # dry-run
     if not args.confirm:
-        results: dict[str, Any] = {
-            "mode": "dry-run",
-            "total": len(rows),
-            "dry_run_valid": len(valid_rows),
-            "dry_run_invalid": len(validation_errors),
-            "succeeded": 0,
-            "failed_count": len(validation_errors),
-            "rows": [],
-            "validation_errors": validation_errors,
-        }
-        for idx, row in enumerate(valid_rows):
-            results["rows"].append({
-                "index": idx + 2,
-                "creator_username": row.get("creator_username", ""),
-                "platform": row.get("platform", ""),
-                "title": row.get("title", ""),
-                "video_file": row.get("video_file", ""),
-                "scheduled_at": row.get("scheduled_at", ""),
-                "status": "dry-run",
-            })
-        for ve in validation_errors:
-            results["rows"].append({
-                "index": ve["index"],
-                "creator_username": ve["row"].get("creator_username", ""),
-                "platform": ve["row"].get("platform", ""),
-                "title": ve["row"].get("title", ""),
-                "video_file": ve["row"].get("video_file", ""),
-                "scheduled_at": ve["row"].get("scheduled_at", ""),
-                "status": "failed",
-                "errors": ve["errors"],
-            })
+        results = _build_validation_results(rows, valid_rows, validation_errors, mode="dry-run")
 
         if args.format == "json":
             print_json(results)
         else:
             print(format_publish_results(results))
-            if not args.confirm:
-                print("\n这是 dry-run。加 --confirm 执行实际发布。", file=sys.stderr)
-        if validation_errors:
-            sys.exit(1)
+            print("\n这是 dry-run。加 --confirm 执行实际发布。", file=sys.stderr)
+        return
+
+    if validation_errors:
+        results = _build_validation_results(rows, valid_rows, validation_errors, mode="needs-edit")
+        if args.format == "json":
+            print_json(results)
+        else:
+            print(format_publish_results(results))
         return
 
     # 批量查 creatorId
@@ -317,6 +390,8 @@ def command_publish(args: argparse.Namespace) -> None:
         "total": len(valid_rows),
         "succeeded": 0,
         "failed_count": 0,
+        "video_type": _video_type_from_rows(valid_rows),
+        "records_url": PUBLISH_RECORDS_URL,
         "rows": [],
     }
 
@@ -370,12 +445,13 @@ def command_publish(args: argparse.Namespace) -> None:
                 scheduled_tz = tz_str
 
             print(f"[{idx + 2}/{len(valid_rows)}] 发布：{username} - {row.get('title', '')}", file=sys.stderr)
+            clean_title = sanitize_post_title(row.get("title", "") or "Untitled")
             raw_product_title = row.get("product_title") or ""
             clean_product_title = sanitize_product_title(raw_product_title) if raw_product_title else ""
 
             post_result = create_post(
                 creator_id=creator_info["creatorId"],
-                title=row.get("title", "") or "Untitled",
+                title=clean_title or "Untitled",
                 business_id=file_id,
                 platform=platform,
                 scheduled_at=scheduled_at,
@@ -410,6 +486,51 @@ def command_publish(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def _build_validation_results(
+    rows: list[dict[str, Any]],
+    valid_rows: list[dict[str, Any]],
+    validation_errors: list[dict[str, Any]],
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    results: dict[str, Any] = {
+            "mode": "dry-run",
+            "total": len(rows),
+            "dry_run_valid": len(valid_rows),
+            "dry_run_invalid": len(validation_errors),
+            "needs_edit_count": len(validation_errors),
+            "succeeded": 0,
+            "failed_count": 0,
+            "rows": [],
+            "validation_errors": validation_errors,
+        }
+    if mode == "needs-edit":
+        results["mode"] = "needs-edit"
+
+    for idx, row in enumerate(valid_rows):
+        results["rows"].append({
+            "index": idx + 2,
+            "creator_username": row.get("creator_username", ""),
+            "platform": row.get("platform", ""),
+            "title": row.get("title", ""),
+            "video_file": row.get("video_file", ""),
+            "scheduled_at": row.get("scheduled_at", ""),
+            "status": "dry-run",
+        })
+    for ve in validation_errors:
+        results["rows"].append({
+            "index": ve["index"],
+            "creator_username": ve["row"].get("creator_username", ""),
+            "platform": ve["row"].get("platform", ""),
+            "title": ve["row"].get("title", ""),
+            "video_file": ve["row"].get("video_file", ""),
+            "scheduled_at": ve["row"].get("scheduled_at", ""),
+            "status": "needs-edit",
+            "errors": ve["errors"],
+        })
+    return results
+
+
 def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     """逐行校验，返回错误信息列表。"""
     errors: list[str] = []
@@ -425,6 +546,8 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     title = (row.get("title") or "").strip()
     if not title:
         errors.append("title 为空")
+    elif has_unsupported_plain_text(title, POST_TITLE_MAX_LENGTH, allowed_symbols="#"):
+        errors.append(f"title 不能超过 {POST_TITLE_MAX_LENGTH} 字符，且不能包含表情、标点或特殊符号（# 可用于 hashtag）")
 
     if platform == "tiktok_shop":
         product_id = (row.get("product_id") or "").strip()
@@ -433,6 +556,8 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
         product_title = (row.get("product_title") or "").strip()
         if not product_title:
             errors.append("带货视频 (tiktok_shop) 必须填写 购物车标题")
+        elif has_unsupported_plain_text(product_title, PRODUCT_TITLE_MAX_LENGTH):
+            errors.append(f"购物车标题不能超过 {PRODUCT_TITLE_MAX_LENGTH} 字符，且不能包含表情、标点或特殊符号")
 
     scheduled_at = (row.get("scheduled_at") or "").strip()
     if scheduled_at:
@@ -446,6 +571,8 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
             parse_timezone(tz_raw)
         except SystemExit as exc:
             errors.append(str(exc))
+    elif scheduled_at:
+        errors.append("scheduled_at 已填写时，timezone 不能为空")
 
     video_file = (row.get("video_file") or "").strip()
     if not video_file:
@@ -460,16 +587,29 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     return errors
 
 
+def _video_type_from_rows(rows: list[dict[str, Any]]) -> str:
+    platforms = {row.get("platform") for row in rows if row.get("platform")}
+    if platforms == {"tiktok_shop"}:
+        return "带货"
+    if platforms == {"tiktok"}:
+        return "普通/养号"
+    return "混合"
+
+
 # ── fill ─────────────────────────────────────────────────────
 
 def command_fill(args: argparse.Namespace) -> None:
-    """更新 Excel 排期表中的单元格。"""
+    """更新 CSV/XLSX 排期表中的单元格。"""
     folder = Path(args.folder).expanduser()
-    schedule_file = folder / "schedule.xlsx"
+    schedule_file = folder / "schedule.csv"
     if not schedule_file.exists():
-        schedule_file = folder / "schedule.csv"
+        schedule_file = folder / "schedule.xlsx"
     if not schedule_file.exists():
         raise SystemExit(f"文件夹内未找到排期表：{folder}")
+
+    if schedule_file.suffix.lower() == ".csv":
+        command_fill_csv(args, schedule_file)
+        return
 
     try:
         from openpyxl import load_workbook
@@ -483,16 +623,15 @@ def command_fill(args: argparse.Namespace) -> None:
 
     # 读取表头映射
     headers = [str(c.value or "").strip() for c in next(ws.iter_rows(min_row=1, max_row=1))]
-    from .config import COLUMN_LABEL_TO_KEY, COLUMN_LABELS
     col_map: dict[str, int] = {}
     for idx, h in enumerate(headers):
         eng = COLUMN_LABEL_TO_KEY.get(h, h)
         col_map[eng] = idx
 
-    target_col = args.col
+    target_col = COLUMN_LABEL_TO_KEY.get(args.col, args.col)
     if target_col not in col_map:
         avail = [COLUMN_LABELS.get(c, c) for c in col_map]
-        raise SystemExit(f"找不到列「{target_col}」，可用列：{', '.join(avail)}")
+        raise SystemExit(f"找不到列「{args.col}」，可用列：{', '.join(avail)}")
     col_idx = col_map[target_col]
 
     updated = 0
@@ -512,7 +651,8 @@ def command_fill(args: argparse.Namespace) -> None:
             try:
                 # 尝试从 shop 产品搜索获取标题
                 from .api import list_shop_products, resolve_creator_batch
-                cinfo = resolve_creator_batch([creator]).get(creator.lower(), {})
+                found, _ = resolve_creator_batch([creator])
+                cinfo = found.get(creator.lower(), {})
                 cid = (cinfo or {}).get("creatorId", "")
                 if cid:
                     result = list_shop_products(creator_id=cid, page_size=5, title_keyword=pid)
@@ -532,7 +672,7 @@ def command_fill(args: argparse.Namespace) -> None:
 
     # 按行号填充
     elif args.row is not None:
-        row_idx = args.row + 1  # 0-indexed → Excel row (header=1)
+        row_idx = args.row + 2  # 0-indexed → Excel data row (header=1)
         ws.cell(row=row_idx, column=col_idx + 1).value = args.value
         updated = 1
 
@@ -553,6 +693,40 @@ def command_fill(args: argparse.Namespace) -> None:
 
     wb.save(str(schedule_file))
     wb.close()
+
+    if args.format == "json":
+        print_json({"updated": updated, "col": target_col})
+    else:
+        print(f"已更新 {updated} 行：{COLUMN_LABELS.get(target_col, target_col)}")
+
+
+def command_fill_csv(args: argparse.Namespace, schedule_file: Path) -> None:
+    """更新 CSV 排期表。"""
+    rows = parse_excel_or_csv(str(schedule_file))
+    target_col = COLUMN_LABEL_TO_KEY.get(args.col, args.col)
+    if target_col not in CSV_ALL_COLUMNS:
+        avail = [COLUMN_LABELS.get(c, c) for c in CSV_ALL_COLUMNS]
+        raise SystemExit(f"找不到列「{args.col}」，可用列：{', '.join(avail)}")
+
+    updated = 0
+    if args.auto_product_title:
+        raise SystemExit("CSV 模式暂不支持 --auto-product-title，请直接填 product_title 或改用具体 --value。")
+    if args.row is not None:
+        if args.row < 0 or args.row >= len(rows):
+            raise SystemExit(f"行号超出范围：{args.row}（当前 {len(rows)} 行数据）")
+        rows[args.row][target_col] = args.value
+        updated = 1
+    elif args.creator:
+        for row in rows:
+            if (row.get("creator_username") or "").strip().lower() == args.creator.lower():
+                row[target_col] = args.value
+                updated += 1
+    elif args.value:
+        for row in rows:
+            row[target_col] = args.value
+        updated = len(rows)
+
+    write_csv_schedule(str(schedule_file), rows)
 
     if args.format == "json":
         print_json({"updated": updated, "col": target_col})
@@ -631,14 +805,15 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # gen-csv
-    p = subparsers.add_parser("gen-csv", help="生成排期 Excel 模板（桌面文件夹）。")
+    p = subparsers.add_parser("gen-csv", help="生成排期 CSV 模板（桌面文件夹）。")
     p.add_argument("--platform", choices=SUPPORTED_PLATFORMS, required=True, help="发布平台。")
     p.add_argument("--creators", default=None, help="逗号分隔的达人用户名，不传则取全部已授权。")
     p.add_argument("--date", required=True, help="起始日期 YYYY-MM-DD。")
     p.add_argument("--days", type=int, default=1, help="连续发布天数，默认 1。")
     p.add_argument("--count", type=int, default=3, help="每达人每日发布条数，默认 3。")
     p.add_argument("--product-id", default="", help="产品 ID（仅 tiktok_shop）。")
-    p.add_argument("--timezone", required=True, help="时区简码或 IANA，如 EST、PST、CN、America/New_York。")
+    p.add_argument("--timezone", default="", help="时区简码或 IANA，如 EST、PST、CN、America/New_York。不传则按达人区域自动推断。")
+    p.add_argument("--region", "--country", dest="region", default="", help="目标地区/国家，如 US。tiktok_shop 列表可按地区筛选；tiktok 普通视频仅用于默认时区。")
     p.add_argument("--output-dir", default=None, help="自定义输出目录，默认 ~/Desktop/视频发布_{date}/。")
     p.add_argument("--dry-run", action="store_true", help="仅预览排期表，不生成文件。")
     add_format_argument(p, default="text")
@@ -648,6 +823,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = subparsers.add_parser("creators", help="列出已授权的创作者账号。")
     p.add_argument("--platform", choices=SUPPORTED_PLATFORMS, default=None, help="筛选平台。")
     p.add_argument("--username", default="", help="按用户名搜索。")
+    p.add_argument("--region", "--country", dest="region", default="", help="地区筛选，仅 tiktok_shop 带货达人列表支持。")
     p.add_argument("--page-size", type=int, default=200, help="每页数量。")
     add_format_argument(p, default="text")
     p.set_defaults(func=command_creators)
@@ -662,7 +838,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=command_publish)
 
     # fill
-    p = subparsers.add_parser("fill", help="更新 Excel 排期表单元格。")
+    p = subparsers.add_parser("fill", help="更新 CSV/XLSX 排期表单元格。")
     p.add_argument("--folder", required=True, help="排期文件夹路径。")
     p.add_argument("--col", required=True, help="要填充的列名（英文 key 或中文名）。")
     p.add_argument("--value", default="", help="填充的值（所有行/按 --creator/按 --row）。")

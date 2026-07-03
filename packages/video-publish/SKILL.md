@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-publish
 version: 0.1.0
-description: 灵途批量视频发布 — 从 Excel 排期表批量向 TikTok Shop / TikTok 养号账号发布视频。支持生成 Excel 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、XLSX/CSV 通用读取、dry-run 预览。
+description: 灵途批量视频发布 — 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频。支持生成 CSV 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、CSV/XLSX 通用读取、dry-run 预览。
 ---
 
 # 灵途批量视频发布
@@ -12,7 +12,24 @@ description: 灵途批量视频发布 — 从 Excel 排期表批量向 TikTok Sh
 
 ## Bot 调用指南
 
-当用户触发关键词（帮我发布视频 / 我要发视频 / 发布带货视频 / 批量发布）时，**一次性引导**收集信息：
+当用户触发关键词（帮我发布视频 / 我要发视频 / 发布带货视频 / 批量发布）时，先查询当前用户的已授权达人列表，并从返回结果里取 2-3 个真实用户名作为示例；不要在话术里写死示例达人。
+
+美国带货视频示例查询：
+
+```bash
+python3 scripts/lingtu_video_publish.py creators \
+  --platform tiktok_shop \
+  --region US
+```
+
+普通视频 / 养号视频示例查询：
+
+```bash
+python3 scripts/lingtu_video_publish.py creators \
+  --platform tiktok
+```
+
+拿到列表后再**一次性引导**收集信息：
 
 ```
 收到，生成视频发布排期表需要以下信息：
@@ -21,22 +38,27 @@ description: 灵途批量视频发布 — 从 Excel 排期表批量向 TikTok Sh
    A. TikTok 带货视频   B. TikTok 不带货视频
 
 ② 要发布的达人名字，以及带货的话每个达人带什么产品
-   示例：达人 vacbirdusa、vacbird.life 带产品 176118111232433423
+   示例：达人 <从你的授权列表里取 2-3 个用户名> 带产品 176118111232433423
    （不写达人 = 拉取全部已授权达人）
+   发布美国带货视频时，不写达人可直接筛选带货达人列表里的美国达人。
+   发布美国普通视频 / 养号视频 / 不带货视频时，达人列表不能按国家筛选；不需要产品 ID，地区只用于默认时区。
 
-③ 发布时间和时区
-   示例：美西时间（PST）、美东时间（EST）、北京时间（CN）
+③ 时区（可选）
+   默认按达人授权区域自动选择：美国达人默认美西 America/Los_Angeles。
+   用户可指定覆盖，例如美东时间（EST / America/New_York）。
 
 ④ 发布频率：每天发几条、发哪几天
    示例：每天 2 条，7 月 5 号开始发 3 天
 
+发布时间不用让用户指定。默认按早上 / 中午 / 晚上三档分配，并按达人错开分钟，避免完全重合；用户后续可在 CSV 的「发布时间」列自行修改。
+
 ⑤ 产品信息（选 ①-A 的话需要产品 ID）
    如果你给我产品 ID，我可以搜到产品标题帮你预填。
-   购物车标题也可以你自己后续在 Excel 里补充。
+   购物车标题也可以你自己后续在 CSV 里补充。
 
 你可以直接这样告诉我：
-"带货，达人 vacbirdusa、vacbird.life 带产品 176118111232433423，
- 美西时间，每天 2 条，7 月 5 号起 3 天"
+"带货，达人 <授权列表里的达人A>、<授权列表里的达人B> 带产品 176118111232433423，
+ 每天 2 条，7 月 5 号起 3 天"
 ```
 
 用户补齐信息后调用 gen-csv（不足的用默认值：每达人每天 3 条、全部已授权达人）：
@@ -44,32 +66,34 @@ description: 灵途批量视频发布 — 从 Excel 排期表批量向 TikTok Sh
 ```bash
 python3 scripts/lingtu_video_publish.py gen-csv \
   --platform tiktok_shop \
-  --creators "vacbirdusa,vacbird.life" \
+  --region US \
+  --creators "<授权列表里的达人A>,<授权列表里的达人B>" \
   --date 2026-07-05 \
   --days 3 \
   --count 2 \
-  --product-id 176118111232433423 \
-  --timezone PST
+  --product-id 176118111232433423
 ```
+
+如果用户明确指定美东、美西或其他时区，再传 `--timezone EST|PST|IANA` 覆盖自动推断。
 
 **生成结果返回给用户：**
 
 ```
 已在桌面生成排期文件夹：视频发布_2026-07-05_to_2026-07-07/
-  ├── schedule.xlsx  ← 排期表，达人/产品/时间已填好
+  ├── schedule.csv  ← 排期表，达人/产品/时间已填好
   └── （请把视频文件拖进这个文件夹）
 
-打开 schedule.xlsx，你只需要填：
-  · 购物车标题 — 产品展示名（不填也行，我帮你从产品信息里取）
-  · 视频文案内容 — 视频的 caption
+打开 schedule.csv，你只需要填：
+  · 购物车标题 — 产品展示名，最多 30 字符，不支持表情、标点或特殊符号
+  · 视频文案内容 — 视频的 caption，最多 4000 字符，不支持表情、标点或特殊符号；`#` 可用于 hashtag
   · 视频文件名 — 拖进来的视频文件名，如 video1.mp4
 
-然后我帮你填表，不用自己打开 Excel 改。
+然后我帮你填表，不用自己手动改 CSV。
 ```
 
 ### 第三步：自动填表
 
-用户确认预览后，调用 gen-csv 生成 Excel。然后主动帮用户填：
+用户确认预览后，调用 gen-csv 生成 CSV。然后主动帮用户填：
 
 **1. 购物车标题 — 自动从产品信息填入：**
 
@@ -100,7 +124,7 @@ python3 scripts/lingtu_video_publish.py fill \
 
 # 按达人不同文案
 python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col title --creator vacbirdusa --value "文案A"
+  --folder ~/Desktop/... --col title --creator <授权列表里的达人A> --value "文案A"
 
 # 指定某行
 python3 scripts/lingtu_video_publish.py fill \
@@ -116,7 +140,7 @@ python3 scripts/lingtu_video_publish.py fill \
 ```bash
 # 按达人填
 python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col video_file --creator vacbirdusa --value "bird1.mp4"
+  --folder ~/Desktop/... --col video_file --creator <授权列表里的达人A> --value "video1.mp4"
 
 # 按行填
 python3 scripts/lingtu_video_publish.py fill \
@@ -124,6 +148,8 @@ python3 scripts/lingtu_video_publish.py fill \
 ```
 
 全部填完后展示最终排期表，用户确认即发布。
+
+用户编辑 CSV 时可能新增或删除行。行数变化本身不算失败；如果新增行缺字段或格式不对，dry-run / confirm 阶段只提示「需修改」，让用户补齐或删除该行后再确认发布，不要把它表述为发布失败。
 
 ### 第四步：执行发布
 
@@ -144,19 +170,29 @@ python3 scripts/lingtu_video_publish.py publish \
 
 返回每条结果：成功 → postId + status，失败 → 原因。
 
+发布完成后必须给用户这段信息，并且必须包含发布记录链接：
+
+```
+发布完成，发布 X 条 XX 视频。
+发布基本信息：类型、达人、发布时间范围、成功/失败数量。
+请前往发布记录确认发布内容：
+https://app.ailingtu.com/video-center?tab=records
+```
+
 ---
 
 ## 命令参考
 
 ### gen-csv — 生成排期模板
 
-在桌面创建文件夹，内含 `schedule.xlsx`（达人/产品/时间预填），用户只需补「购物车标题」「视频文案内容」「视频文件名」三列。
+在桌面创建文件夹，内含 `schedule.csv`（达人/产品/时间预填），用户只需补「购物车标题」「视频文案内容」「视频文件名」三列。购物车标题最多 30 字符，不支持表情、标点或特殊符号；视频文案内容最多 4000 字符，不支持表情、标点或特殊符号，但 `#` 可用于 hashtag。
 
 ```
 python3 scripts/lingtu_video_publish.py gen-csv \
   --platform {tiktok_shop,tiktok} \
   --date YYYY-MM-DD \
-  --timezone EST|PST|CN|... \
+  [--timezone EST|PST|CN|...] \
+  [--region US|GB|JP|...] \
   [--creators "@a,@b"] \
   [--days 1] \
   [--count 3] \
@@ -168,7 +204,8 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 |------|------|------|
 | --platform | 是 | tiktok_shop（带货）或 tiktok（养号） |
 | --date | 是 | 起始日期 YYYY-MM-DD |
-| --timezone | 是 | 时区短码或 IANA |
+| --timezone | 否 | 时区短码或 IANA。不传则按达人授权区域推断；美国默认美西 |
+| --region / --country | 否 | 目标地区。`tiktok_shop` 且不指定达人时用于筛选带货达人列表；`tiktok` 普通/养号视频不筛选列表，仅用于默认时区 |
 | --creators | 否 | 逗号分隔达人，不传=全部已授权 |
 | --days | 否 | 连续发布天数，默认 1 |
 | --count | 否 | 每达人每日条数，默认 3 |
@@ -180,13 +217,16 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 ```
 python3 scripts/lingtu_video_publish.py creators \
   [--platform tiktok_shop|tiktok] \
+  [--region US] \
   [--username keyword] \
   [--format json|text]
 ```
 
-### fill — 更新 Excel 单元格
+`creators --region` 仅对 `--platform tiktok_shop` 生效；普通 TikTok / 养号达人列表当前不支持按国家筛选。
 
-用于 bot 根据对话自动填表，用户无需手动编辑 Excel。
+### fill — 更新 CSV 单元格
+
+用于 bot 根据对话自动填表，用户无需手动编辑 CSV。
 
 ```
 # 自动从产品 API 搜索并填入购物车标题
@@ -200,7 +240,7 @@ python3 scripts/lingtu_video_publish.py fill \
 
 # 按达人筛选填充
 python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col title --creator vacbirdusa --value "文案A"
+  --folder ~/Desktop/... --col title --creator <授权列表里的达人A> --value "文案A"
 
 # 指定行填充（--row 0 = 第一行数据）
 python3 scripts/lingtu_video_publish.py fill \
@@ -241,17 +281,18 @@ python3 scripts/lingtu_video_publish.py products search \
 
 ---
 
-## Excel 排期表格式
+## CSV 排期表格式
 
 | 列 | 预填 | 用户操作 |
 |----|------|----------|
 | 达人用户名 | 达人用户名 | 不改 |
 | 平台 | tiktok_shop/tiktok | 可改 |
 | 产品ID | 产品 ID | 可改 |
-| 购物车标题 | 空 | **用户填** |
-| 视频文案内容 | 空 | **用户填** |
+| 购物车标题 | 空 | **用户填**；最多 30 字符，不支持表情、标点或特殊符号 |
+| 商品来源 | SHOP | 可改为 SHOWCASE |
+| 视频文案内容 | 空 | **用户填**；最多 4000 字符，不支持表情、标点或特殊符号，`#` 可用于 hashtag |
 | 时区 | 如 America/Los_Angeles | 可改 |
-| 发布时间 | YYYY-MM-DD HH:MM | 可改 |
+| 发布时间 | YYYY-MM-DD HH:MM；默认早/中/晚并按达人错峰 | 可改 |
 | 视频文件名 | 空 | **用户填** |
 
 ---
@@ -275,11 +316,12 @@ python3 shared/scripts/user_keys.py single bind
 ## 依赖
 
 - Python 3.9+
-- openpyxl（~249KB）
 
-安装：`pip install openpyxl`
+默认 CSV 流程不需要第三方依赖。只有读取或编辑旧版 `schedule.xlsx` 时才需要 `openpyxl`。
 
 ## 时区
+
+`gen-csv` 的 `--timezone` 可省略。省略时会读取达人授权信息里的 `oauthRegion` / `registerRegion` 推断时区；美国地区默认 `America/Los_Angeles`，如用户要美东则明确传 `--timezone EST` 或 `--timezone America/New_York`。
 
 支持短码 → IANA 映射：
 

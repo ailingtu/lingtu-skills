@@ -1,9 +1,10 @@
-"""Excel 模板生成、下拉校验、CSV/XLSX 通用读取。"""
+"""CSV 模板生成、CSV/XLSX 通用读取。"""
 
 from __future__ import annotations
 
 import csv
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,8 @@ from .config import (
     COLUMN_LABEL_TO_KEY,
     CSV_ALL_COLUMNS,
     PRODUCT_SOURCE_OPTIONS,
+    PRODUCT_TITLE_MAX_LENGTH,
+    POST_TITLE_MAX_LENGTH,
     SUPPORTED_PLATFORMS,
     TIMEZONE_DROPDOWN_OPTIONS,
 )
@@ -99,6 +102,27 @@ def _parse_xlsx(file_path: Path) -> list[dict[str, str]]:
 
     wb.close()
     return rows
+
+
+def generate_csv_template(
+    output_path: str,
+    rows_data: list[dict[str, str]],
+) -> str:
+    """生成 CSV 排期表，返回输出路径。"""
+    out = Path(output_path).expanduser()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    headers = [COLUMN_LABELS.get(c, c) for c in CSV_ALL_COLUMNS]
+    with out.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows_data:
+            writer.writerow({COLUMN_LABELS.get(key, key): row.get(key, "") for key in CSV_ALL_COLUMNS})
+    return str(out)
+
+
+def write_csv_schedule(output_path: str, rows_data: list[dict[str, str]]) -> str:
+    """把英文 key 行数据写回 CSV 排期表。"""
+    return generate_csv_template(output_path, rows_data)
 
 
 def generate_excel_template(
@@ -244,23 +268,41 @@ def parse_datetime_to_epoch_ms(scheduled_at: str, tz_iana: str) -> int:
         raise SystemExit(f"时间格式错误：{scheduled_at}（需要 YYYY-MM-DD HH:MM）") from exc
 
 
-def sanitize_product_title(title: str, max_length: int = 30) -> str:
-    """清理产品标题：去表情、去标点、截断至 max_length 字符。"""
-    import re
-    # Remove emoji
-    cleaned = re.sub(
-        r"[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF"
-        r"\U0001F1E0-\U0001F1FF☀-⛿✀-➿"
-        r"︀-️‍\uD83C-􏰀-\uDFFF]",
-        "", title
-    )
-    # Remove common punctuation
-    cleaned = re.sub(
-        r'[!"#$%&\'()*+,\-./:;<=>?@\[\\\]^_`{|}~×–°—‐‑‒―„‚‛""''‹›«»、。《》'
-        r'【】；：？！…¡¿]',
-        "", cleaned
-    )
-    return cleaned.strip()[:max_length]
+def sanitize_plain_text(value: str, max_length: int, allowed_symbols: str = "") -> str:
+    """清理平台不支持的表情、符号、标点，并截断到最大长度。"""
+    normalized = unicodedata.normalize("NFKC", value or "")
+    chars: list[str] = []
+    previous_space = False
+    for char in normalized:
+        category = unicodedata.category(char)
+        if char in allowed_symbols:
+            chars.append(char)
+            previous_space = False
+        elif category[0] in ("L", "N") or category == "Zs" or char in ("\n", "\r", "\t"):
+            if char in ("\n", "\r", "\t") or category == "Zs":
+                if not previous_space:
+                    chars.append(" ")
+                    previous_space = True
+            else:
+                chars.append(char)
+                previous_space = False
+    return "".join(chars).strip()[:max_length]
+
+
+def has_unsupported_plain_text(value: str, max_length: int, allowed_symbols: str = "") -> bool:
+    """判断文本是否超长或包含平台不支持的表情/符号/标点。"""
+    raw = (value or "").strip()
+    return len(raw) > max_length or sanitize_plain_text(raw, max_length, allowed_symbols) != raw
+
+
+def sanitize_product_title(title: str, max_length: int = PRODUCT_TITLE_MAX_LENGTH) -> str:
+    """清理购物车标题：去表情和特殊符号，截断至 max_length 字符。"""
+    return sanitize_plain_text(title, max_length)
+
+
+def sanitize_post_title(title: str, max_length: int = POST_TITLE_MAX_LENGTH) -> str:
+    """清理视频文案：去表情和特殊符号，保留 #，截断至 max_length 字符。"""
+    return sanitize_plain_text(title, max_length, allowed_symbols="#")
 
 
 def parse_date_for_filename(date_str: str) -> str:
