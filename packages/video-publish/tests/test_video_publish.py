@@ -223,6 +223,57 @@ class CreatorRegionFlowTests(unittest.TestCase):
         self.assertEqual(payload["timezones_by_creator"]["alice"], "America/Los_Angeles")
         self.assertEqual(captured_rows[0]["product_id"], "")
 
+    def test_daily_counts_generate_one_schedule_with_mixed_day_counts(self) -> None:
+        args = argparse.Namespace(
+            platform="tiktok",
+            creators="alice,bob",
+            date="2026-07-06",
+            days=1,
+            count=3,
+            daily_counts="2026-07-06=2,2026-07-07=3",
+            product_id="pid",
+            timezone="",
+            region="US",
+            output_dir="/tmp/video-publish-test",
+            dry_run=False,
+            format="json",
+        )
+        captured_rows = []
+
+        def fake_generate_csv_template(output_path: str, rows_data: list[dict[str, str]]) -> str:
+            captured_rows.extend(rows_data)
+            return output_path
+
+        with mock.patch.object(cli_module, "require_api_key"), \
+                mock.patch.object(cli_module, "generate_csv_template", side_effect=fake_generate_csv_template), \
+                mock.patch.object(cli_module, "resolve_creator_batch", return_value=({
+                    "alice": {"targetRegion": "US"},
+                    "bob": {"targetRegion": "US"},
+                }, [])), \
+                contextlib.redirect_stdout(io.StringIO()) as stdout:
+            command_gen_csv(args)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["dates"], ["2026-07-06", "2026-07-07"])
+        self.assertEqual(payload["days"], 2)
+        self.assertEqual(payload["daily_counts"], {"2026-07-06": 2, "2026-07-07": 3})
+        self.assertEqual(len(captured_rows), 10)
+        self.assertEqual(
+            [row["scheduled_at"] for row in captured_rows],
+            [
+                "2026-07-06 09:00",
+                "2026-07-06 14:00",
+                "2026-07-06 09:11",
+                "2026-07-06 14:11",
+                "2026-07-07 09:00",
+                "2026-07-07 14:00",
+                "2026-07-07 19:00",
+                "2026-07-07 09:11",
+                "2026-07-07 14:11",
+                "2026-07-07 19:11",
+            ],
+        )
+
 
 class FillCommandTests(unittest.TestCase):
     def test_fill_row_zero_updates_first_csv_data_row_not_header(self) -> None:

@@ -49,6 +49,7 @@ from .excel_utils import (
     parse_datetime_to_epoch_ms,
     parse_excel_or_csv,
     parse_timezone,
+    read_csv_columns,
     has_unsupported_plain_text,
     sanitize_post_title,
     sanitize_product_title,
@@ -80,7 +81,8 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
     lines.append(f"类型：{'带货视频' if is_shop else '养号视频'}")
     lines.append(f"时区：{tz}")
     lines.append(f"默认基础时间段：{' / '.join(times)}（达人间按分钟错峰）")
-    lines.append(f"产品ID：{rows_data[0].get('product_id') or '无'}")
+    if is_shop:
+        lines.append(f"产品ID：{rows_data[0].get('product_id') or '无'}")
     lines.append("")
 
     # 按日期汇总
@@ -101,6 +103,16 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
         lines.append("  · 视频文案内容 · 视频文件名")
 
     return "\n".join(lines)
+
+
+def _csv_columns_for_platform(platform: str) -> tuple[str, ...]:
+    if platform == "tiktok":
+        return (
+            "creator_username", "platform",
+            "title", "timezone",
+            "scheduled_at", "video_file",
+        )
+    return CSV_ALL_COLUMNS
 
 
 def _timezone_from_creator_info(creator_info: dict[str, Any]) -> str:
@@ -144,6 +156,34 @@ def _normalize_region(raw: str | None) -> str:
     return (raw or "").strip().upper().replace("-", "_")
 
 
+def _parse_daily_counts(raw: str, start_year: int) -> dict[str, int]:
+    """Parse YYYY-MM-DD=N or MM-DD=N entries into a date -> count map."""
+    if not raw.strip():
+        return {}
+
+    import re
+
+    counts: dict[str, int] = {}
+    for item in raw.split(","):
+        part = item.strip()
+        if not part:
+            continue
+        if "=" not in part:
+            raise SystemExit(f"--daily-counts 格式错误：{part}（需要 YYYY-MM-DD=条数）")
+        date_part, count_part = [value.strip() for value in part.split("=", 1)]
+        if not count_part.isdigit() or int(count_part) < 1:
+            raise SystemExit(f"--daily-counts 条数错误：{part}（条数必须为正整数）")
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", date_part):
+            date_key = parse_date_for_filename(date_part)
+        elif re.match(r"^\d{1,2}-\d{1,2}$", date_part):
+            month, day = [int(value) for value in date_part.split("-", 1)]
+            date_key = parse_date_for_filename(f"{start_year:04d}-{month:02d}-{day:02d}")
+        else:
+            raise SystemExit(f"--daily-counts 日期格式错误：{date_part}（需要 YYYY-MM-DD 或 MM-DD）")
+        counts[date_key] = int(count_part)
+    return counts
+
+
 # ── gen-csv ──────────────────────────────────────────────────
 
 def command_gen_csv(args: argparse.Namespace) -> None:
@@ -155,11 +195,17 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     days = max(1, args.days)
 
     from datetime import datetime, timedelta
-    times = compute_schedule_times(count)
 
     # 计算多天日期列表
     start_dt = datetime.strptime(date_str, "%Y-%m-%d")
-    dates = [(start_dt + timedelta(days=d)).strftime("%Y-%m-%d") for d in range(days)]
+    count_by_date = _parse_daily_counts(getattr(args, "daily_counts", "") or "", start_dt.year)
+    if count_by_date:
+        dates = sorted(count_by_date)
+        preview_count = max(count_by_date.values())
+    else:
+        dates = [(start_dt + timedelta(days=d)).strftime("%Y-%m-%d") for d in range(days)]
+        preview_count = count
+    times = compute_schedule_times(preview_count)
 
     product_id = args.product_id or ""
     if platform == "tiktok":
@@ -178,6 +224,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
             product_id=product_id,
             timezone_by_creator={creator.lower(): preview_tz for creator in creator_list},
             count=count,
+            count_by_date=count_by_date,
         )
         print(_format_preview_table(rows_data, times, preview_tz, dates))
         return
@@ -232,14 +279,16 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         product_id=product_id,
         timezone_by_creator=timezone_by_creator,
         count=count,
+        count_by_date=count_by_date,
     )
 
     # 生成文件夹和 CSV
-    if days == 1:
-        folder_name = f"视频发布_{date_str}"
+    first_date = dates[0]
+    last_date = dates[-1]
+    if len(dates) == 1:
+        folder_name = f"视频发布_{first_date}"
     else:
-        end_str = dates[-1]
-        folder_name = f"视频发布_{date_str}_to_{end_str}"
+        folder_name = f"视频发布_{first_date}_to_{last_date}"
     output_dir = args.output_dir or str(DEFAULT_DESKTOP / folder_name)
     output_dir = str(Path(output_dir).expanduser())
     csv_path = str(Path(output_dir) / "schedule.csv")
@@ -247,6 +296,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     generated = generate_csv_template(
         output_path=csv_path,
         rows_data=rows_data,
+        columns=_csv_columns_for_platform(platform),
     )
 
     output = {
@@ -254,8 +304,8 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         "csv": generated,
         "schedule": generated,
         "platform": platform,
-        "date": date_str,
-        "days": days,
+        "date": first_date,
+        "days": len(dates),
         "dates": dates,
         "timezone": tz_iana or "auto",
         "region": region_hint,
@@ -264,6 +314,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         "creators": creator_list,
         "creators_count": len(creator_list),
         "videos_per_creator_per_day": count,
+        "daily_counts": count_by_date,
         "total_rows": len(rows_data),
     }
 
@@ -276,8 +327,11 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     print(f"  └── （请将视频文件拖入此文件夹）")
     print()
     print(f"达人数量：{len(creator_list)}")
-    print(f"日期范围：{date_str} ~ {dates[-1]}（{days} 天）")
-    print(f"每达人每日：{count} 条")
+    print(f"日期范围：{first_date} ~ {last_date}（{len(dates)} 天）")
+    if count_by_date:
+        print("每达人每日：" + "，".join(f"{d} {n} 条" for d, n in count_by_date.items()))
+    else:
+        print(f"每达人每日：{count} 条")
     if tz_iana:
         print(f"发布时间：{', '.join(times)}（{tz_iana}，达人间已错峰）")
     else:
@@ -291,7 +345,10 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     print(f"总排期行数：{len(rows_data)}")
     print()
     print("下一步：")
-    print(f"  1. 打开 schedule.csv，填写 title 和 video_file（填文件名即可）")
+    if platform == "tiktok":
+        print(f"  1. 打开 schedule.csv，填写 title 和 video_file（填文件名即可）")
+    else:
+        print(f"  1. 打开 schedule.csv，填写 product_title、title 和 video_file（填文件名即可）")
     print(f"  2. 将所有视频文件复制到文件夹内")
     print(f"  3. 运行：lingtu_video_publish.py publish --folder {output_dir} --confirm")
 
@@ -702,10 +759,11 @@ def command_fill(args: argparse.Namespace) -> None:
 
 def command_fill_csv(args: argparse.Namespace, schedule_file: Path) -> None:
     """更新 CSV 排期表。"""
+    current_columns = read_csv_columns(str(schedule_file))
     rows = parse_excel_or_csv(str(schedule_file))
     target_col = COLUMN_LABEL_TO_KEY.get(args.col, args.col)
-    if target_col not in CSV_ALL_COLUMNS:
-        avail = [COLUMN_LABELS.get(c, c) for c in CSV_ALL_COLUMNS]
+    if target_col not in current_columns:
+        avail = [COLUMN_LABELS.get(c, c) for c in current_columns]
         raise SystemExit(f"找不到列「{args.col}」，可用列：{', '.join(avail)}")
 
     updated = 0
@@ -726,7 +784,7 @@ def command_fill_csv(args: argparse.Namespace, schedule_file: Path) -> None:
             row[target_col] = args.value
         updated = len(rows)
 
-    write_csv_schedule(str(schedule_file), rows)
+    write_csv_schedule(str(schedule_file), rows, columns=current_columns)
 
     if args.format == "json":
         print_json({"updated": updated, "col": target_col})
@@ -811,6 +869,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--date", required=True, help="起始日期 YYYY-MM-DD。")
     p.add_argument("--days", type=int, default=1, help="连续发布天数，默认 1。")
     p.add_argument("--count", type=int, default=3, help="每达人每日发布条数，默认 3。")
+    p.add_argument("--daily-counts", default="", help="按日期指定每达人发布条数，如 2026-07-06=2,2026-07-07=3。传入后优先使用这些日期。")
     p.add_argument("--product-id", default="", help="产品 ID（仅 tiktok_shop）。")
     p.add_argument("--timezone", default="", help="时区简码或 IANA，如 EST、PST、CN、America/New_York。不传则按达人区域自动推断。")
     p.add_argument("--region", "--country", dest="region", default="", help="目标地区/国家，如 US。tiktok_shop 列表可按地区筛选；tiktok 普通视频仅用于默认时区。")

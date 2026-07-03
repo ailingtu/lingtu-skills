@@ -49,13 +49,15 @@ def build_schedule_rows(
     product_id: str,
     timezone_by_creator: dict[str, str],
     count: int,
+    count_by_date: dict[str, int] | None = None,
 ) -> list[dict[str, str]]:
     """构建带默认错峰时间的发布行。"""
     rows: list[dict[str, str]] = []
     for date in dates:
+        day_count = max(1, count_by_date.get(date, count)) if count_by_date else count
         for creator_idx, creator in enumerate(creators):
             offset = creator_offset_minutes(creator_idx)
-            times = compute_schedule_times(count, offset_minutes=offset)
+            times = compute_schedule_times(day_count, offset_minutes=offset)
             for scheduled_time in times:
                 rows.append({
                     "creator_username": creator,

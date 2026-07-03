@@ -26,6 +26,16 @@ python3 scripts/lingtu_video_publish.py publish \
 
 不传 `--timezone` 时会按达人授权区域自动推断时区；美国达人默认美西。需要美东等指定时区时再传 `--timezone EST`。`--region US` 对带货达人列表生效；普通 TikTok / 养号视频不按国家筛选列表，且不需要产品 ID。
 
+不同日期发布条数不同时，仍生成一个排期文件夹和一份 CSV：
+
+```bash
+python3 scripts/lingtu_video_publish.py gen-csv \
+  --platform tiktok \
+  --region US \
+  --date 2026-07-06 \
+  --daily-counts 2026-07-06=2,2026-07-07=3
+```
+
 ## 命令
 
 | 命令 | 说明 |

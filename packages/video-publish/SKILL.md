@@ -49,6 +49,8 @@ python3 scripts/lingtu_video_publish.py creators \
 
 ④ 发布频率：每天发几条、发哪几天
    示例：每天 2 条，7 月 5 号开始发 3 天
+   如果不同日期条数不同，也要生成同一个排期文件夹，不要拆多个文件夹。
+   示例：7 月 6 号各发 2 条，7 月 7 号各发 3 条
 
 发布时间不用让用户指定。默认按早上 / 中午 / 晚上三档分配，并按达人错开分钟，避免完全重合；用户后续可在 CSV 的「发布时间」列自行修改。
 
@@ -74,16 +76,31 @@ python3 scripts/lingtu_video_publish.py gen-csv \
   --product-id 176118111232433423
 ```
 
+如果用户指定了不同日期的不同条数，优先用 `--daily-counts` 生成一份 CSV：
+
+```bash
+python3 scripts/lingtu_video_publish.py gen-csv \
+  --platform tiktok \
+  --region US \
+  --creators "<授权列表里的达人A>,<授权列表里的达人B>" \
+  --date 2026-07-06 \
+  --daily-counts 2026-07-06=2,2026-07-07=3
+```
+
 如果用户明确指定美东、美西或其他时区，再传 `--timezone EST|PST|IANA` 覆盖自动推断。
 
 **生成结果返回给用户：**
 
 ```
 已在桌面生成排期文件夹：视频发布_2026-07-05_to_2026-07-07/
-  ├── schedule.csv  ← 排期表，达人/产品/时间已填好
+  ├── schedule.csv  ← 排期表，达人/时间已填好
   └── （请把视频文件拖进这个文件夹）
 
-打开 schedule.csv，你只需要填：
+如果是 TikTok 不带货视频，打开 schedule.csv，只需要填：
+  · 视频文案内容 — 视频的 caption，最多 4000 字符，不支持表情、标点或特殊符号；`#` 可用于 hashtag
+  · 视频文件名 — 拖进来的视频文件名，如 video1.mp4
+
+如果是 TikTok Shop 带货视频，打开 schedule.csv，你需要填：
   · 购物车标题 — 产品展示名，最多 30 字符，不支持表情、标点或特殊符号
   · 视频文案内容 — 视频的 caption，最多 4000 字符，不支持表情、标点或特殊符号；`#` 可用于 hashtag
   · 视频文件名 — 拖进来的视频文件名，如 video1.mp4
@@ -93,9 +110,11 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 
 ### 第三步：自动填表
 
-用户确认预览后，调用 gen-csv 生成 CSV。然后主动帮用户填：
+用户确认预览后，调用 gen-csv 生成 CSV。然后主动帮用户填。
 
-**1. 购物车标题 — 自动从产品信息填入：**
+不带货视频的 CSV 不应出现「产品ID」「购物车标题」「商品来源」三列；只需要填视频文案和视频文件名。
+
+**1. 购物车标题 — 仅带货视频需要，自动从产品信息填入：**
 
 ```bash
 python3 scripts/lingtu_video_publish.py fill \
@@ -103,7 +122,7 @@ python3 scripts/lingtu_video_publish.py fill \
   --col product_title --auto-product-title
 ```
 
-告知用户：
+带货视频填完后告知用户：
 ```
 购物车标题已从产品信息自动填入 ✓
 ```
@@ -185,7 +204,10 @@ https://app.ailingtu.com/video-center?tab=records
 
 ### gen-csv — 生成排期模板
 
-在桌面创建文件夹，内含 `schedule.csv`（达人/产品/时间预填），用户只需补「购物车标题」「视频文案内容」「视频文件名」三列。购物车标题最多 30 字符，不支持表情、标点或特殊符号；视频文案内容最多 4000 字符，不支持表情、标点或特殊符号，但 `#` 可用于 hashtag。
+在桌面创建文件夹，内含 `schedule.csv`。
+`tiktok_shop` 带货视频会生成带货字段，用户需补「购物车标题」「视频文案内容」「视频文件名」。
+`tiktok` 不带货视频不会生成「产品ID」「购物车标题」「商品来源」三列，用户只需补「视频文案内容」「视频文件名」。
+购物车标题最多 30 字符，不支持表情、标点或特殊符号；视频文案内容最多 4000 字符，不支持表情、标点或特殊符号，但 `#` 可用于 hashtag。
 
 ```
 python3 scripts/lingtu_video_publish.py gen-csv \
@@ -196,6 +218,7 @@ python3 scripts/lingtu_video_publish.py gen-csv \
   [--creators "@a,@b"] \
   [--days 1] \
   [--count 3] \
+  [--daily-counts YYYY-MM-DD=N,YYYY-MM-DD=N] \
   [--product-id xxx] \
   [--output-dir /custom/path]
 ```
@@ -209,6 +232,7 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 | --creators | 否 | 逗号分隔达人，不传=全部已授权 |
 | --days | 否 | 连续发布天数，默认 1 |
 | --count | 否 | 每达人每日条数，默认 3 |
+| --daily-counts | 否 | 按日期指定每达人条数，如 `2026-07-06=2,2026-07-07=3`；传入后生成同一个文件夹和一份 CSV |
 | --product-id | 仅带货 | 产品 ID |
 | --output-dir | 否 | 自定义输出目录，默认桌面 |
 
@@ -283,10 +307,23 @@ python3 scripts/lingtu_video_publish.py products search \
 
 ## CSV 排期表格式
 
+### TikTok 不带货视频
+
 | 列 | 预填 | 用户操作 |
 |----|------|----------|
 | 达人用户名 | 达人用户名 | 不改 |
-| 平台 | tiktok_shop/tiktok | 可改 |
+| 平台 | tiktok | 不改 |
+| 视频文案内容 | 空 | **用户填**；最多 4000 字符，不支持表情、标点或特殊符号，`#` 可用于 hashtag |
+| 时区 | 如 America/Los_Angeles | 可改 |
+| 发布时间 | YYYY-MM-DD HH:MM；默认早/中/晚并按达人错峰 | 可改 |
+| 视频文件名 | 空 | **用户填** |
+
+### TikTok Shop 带货视频
+
+| 列 | 预填 | 用户操作 |
+|----|------|----------|
+| 达人用户名 | 达人用户名 | 不改 |
+| 平台 | tiktok_shop | 不改 |
 | 产品ID | 产品 ID | 可改 |
 | 购物车标题 | 空 | **用户填**；最多 30 字符，不支持表情、标点或特殊符号 |
 | 商品来源 | SHOP | 可改为 SHOWCASE |

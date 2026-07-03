@@ -107,22 +107,36 @@ def _parse_xlsx(file_path: Path) -> list[dict[str, str]]:
 def generate_csv_template(
     output_path: str,
     rows_data: list[dict[str, str]],
+    columns: list[str] | tuple[str, ...] | None = None,
 ) -> str:
     """生成 CSV 排期表，返回输出路径。"""
     out = Path(output_path).expanduser()
     out.parent.mkdir(parents=True, exist_ok=True)
-    headers = [COLUMN_LABELS.get(c, c) for c in CSV_ALL_COLUMNS]
+    selected_columns = list(columns or CSV_ALL_COLUMNS)
+    headers = [COLUMN_LABELS.get(c, c) for c in selected_columns]
     with out.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=headers, extrasaction="ignore")
         writer.writeheader()
         for row in rows_data:
-            writer.writerow({COLUMN_LABELS.get(key, key): row.get(key, "") for key in CSV_ALL_COLUMNS})
+            writer.writerow({COLUMN_LABELS.get(key, key): row.get(key, "") for key in selected_columns})
     return str(out)
 
 
-def write_csv_schedule(output_path: str, rows_data: list[dict[str, str]]) -> str:
+def write_csv_schedule(
+    output_path: str,
+    rows_data: list[dict[str, str]],
+    columns: list[str] | tuple[str, ...] | None = None,
+) -> str:
     """把英文 key 行数据写回 CSV 排期表。"""
-    return generate_csv_template(output_path, rows_data)
+    return generate_csv_template(output_path, rows_data, columns=columns)
+
+
+def read_csv_columns(path: str) -> list[str]:
+    """读取 CSV 当前表头并映射为英文 key，用于回写时保持原表结构。"""
+    p = Path(path).expanduser()
+    with p.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        return [COLUMN_LABEL_TO_KEY.get((h or "").strip(), (h or "").strip()) for h in (reader.fieldnames or [])]
 
 
 def generate_excel_template(
