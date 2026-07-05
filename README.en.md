@@ -47,6 +47,14 @@ python3 shared/scripts/user_keys.py single bind
 
 When no channel or user id is provided, the command generates and saves a stable local user id with platform `LOCAL`. Open the returned `/binduser` URL to finish binding. Business scripts do not need `--channel` or `--user-id` in `single` mode. Requests send the key as header `x-api-key`. Never commit API keys or generated business data.
 
+To bind a TikTok Shop, or when the shop / shop-product list is empty, ask the user to open this link and finish shop authorization before retrying:
+
+https://app.ailingtu.com/teamshop
+
+When video publishing has no authorized creators, or a creator is missing / unauthorized, ask the user to open this link and finish creator authorization before retrying:
+
+https://app.ailingtu.com/video-post
+
 ## Install
 
 ```bash

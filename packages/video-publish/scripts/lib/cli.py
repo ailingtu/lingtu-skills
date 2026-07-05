@@ -242,7 +242,10 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         creator_list = [item.get("username", "") for item in items if item.get("username")]
         if not creator_list:
             region_msg = f"、地区 {region_hint}" if selection_region else ""
-            raise SystemExit(f"该平台（{PLATFORM_LABELS.get(platform, platform)}{region_msg}）下没有已授权的达人。")
+            raise SystemExit(
+                f"该平台（{PLATFORM_LABELS.get(platform, platform)}{region_msg}）下没有已授权的达人。"
+                "请先打开 https://app.ailingtu.com/video-post 授权达人后再重试。"
+            )
 
     # 验证指定的达人是否存在
     creator_info_by_username: dict[str, dict[str, Any]] = {}
@@ -251,7 +254,10 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         if not_found:
             print(f"⚠ 以下达人未找到或未授权：{', '.join(not_found)}", file=sys.stderr)
         if not found:
-            raise SystemExit("所有指定的达人均未找到或未授权。")
+            raise SystemExit(
+                "所有指定的达人均未找到或未授权。"
+                "请先打开 https://app.ailingtu.com/video-post 授权达人后再重试。"
+            )
         creator_list = list(found.keys())
         creator_info_by_username = found
     else:

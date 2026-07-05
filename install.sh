@@ -218,6 +218,8 @@ generate_agent_doc() {
     echo "## Authentication (single-user mode)"
     echo
     echo "- Before first use, run \`python3 .lingtu-agent-kit/shared/scripts/user_keys.py single bind\` to bind the administrator key."
+    echo "- For TikTok Shop binding or empty shop/product lists, ask the user to bind their shop at https://app.ailingtu.com/teamshop."
+    echo "- For missing or unauthorized video-publishing creators, ask the user to authorize creators at https://app.ailingtu.com/video-post."
     echo "- Scripts resolve the API key automatically and send it as the \`x-api-key\` header."
     echo "- Do not set \`LINGTU_API_KEY\` in the environment — prefer the package scripts which handle auth internally."
     echo

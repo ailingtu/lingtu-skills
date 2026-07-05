@@ -38,6 +38,8 @@ Open the returned link to bind the administrator's key. Send the resolved key as
 
 For multi-user bot mode, pass `--channel feishu|wechat --user-id <external-user-id>` to `scripts/lingtu_shop_data.py` subcommands. The script resolves the user's key from `~/.lingtu-skills/config.json`, or calls the backend binding check endpoint if the local key is missing. Use `shared/scripts/user_keys.py bind` to generate the `/binduser` URL.
 
+TikTok Shop 店铺绑定入口是 https://app.ailingtu.com/teamshop 。当用户想绑定 TikTok 店铺、查询不到店铺、或店铺列表为空时，明确让用户打开这个链接完成店铺绑定，然后再执行 `list-shops` 或日报查询。
+
 Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
 
 ## Workflow

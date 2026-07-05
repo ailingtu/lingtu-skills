@@ -14,6 +14,10 @@ description: 灵途批量视频发布 — 从 CSV 排期表批量向 TikTok Shop
 
 当用户触发关键词（帮我发布视频 / 我要发视频 / 发布带货视频 / 批量发布）时，先查询当前用户的已授权达人列表，并从返回结果里取 2-3 个真实用户名作为示例；不要在话术里写死示例达人。
 
+如果用户说要绑定 TikTok 店铺，或查询 TikTok Shop 店铺商品时发现没有店铺/没有店铺商品，让用户打开 https://app.ailingtu.com/teamshop 完成 TikTok Shop 店铺绑定。
+
+如果查询 TikTok Shop 带货达人或普通 TikTok 发布达人时发现没有已授权达人、达人未找到或未授权，让用户打开 https://app.ailingtu.com/video-post 完成达人授权。授权完成后再回来继续生成排期或发布。
+
 美国带货视频示例查询：
 
 ```bash

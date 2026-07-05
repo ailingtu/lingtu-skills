@@ -68,6 +68,14 @@ python3 shared/scripts/user_keys.py single bind --channel feishu --user-id ou_ad
 
 打开命令返回的 `/binduser` 链接完成绑定后，业务脚本在 `single` 模式下无需传 `--channel` 和 `--user-id`。请求通过请求头 `x-api-key` 传递密钥。切勿将密钥或业务数据提交到 Git。
 
+如果用户需要绑定 TikTok Shop 店铺，或店铺/店铺商品列表为空，让用户打开以下链接完成店铺绑定/授权后再继续：
+
+https://app.ailingtu.com/teamshop
+
+如果发布视频时没有已授权达人，或达人未找到/未授权，让用户打开以下链接完成达人授权后再继续：
+
+https://app.ailingtu.com/video-post
+
 多用户 bot 模式不要让用户在聊天里发送 API Key。绑定页固定使用 `https://app.ailingtu.com/binduser`。部署 bot 时由管理员设置一次多用户模式；业务请求执行过程中不要自动切换认证模式。每次生成绑定链接时，skills 都会自动生成一个唯一 session `token`，主站据此保存/校验用户绑定关系。
  
 ```bash

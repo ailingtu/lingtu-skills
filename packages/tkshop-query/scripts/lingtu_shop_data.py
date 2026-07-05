@@ -96,7 +96,11 @@ def resolve_shop(shop_id_arg=None, shop_name_arg=None):
 
     raw, shops = list_shops()
     if not shops:
-        raise SystemExit(f"No shops found in /v1/shop/list response: {json.dumps(raw, ensure_ascii=False)}")
+        raise SystemExit(
+            "No shops found in /v1/shop/list response. "
+            "请先打开 https://app.ailingtu.com/teamshop 绑定 TikTok Shop 店铺后再重试。\n"
+            f"Raw response: {json.dumps(raw, ensure_ascii=False)}"
+        )
 
     if not shop_name_arg:
         first = shops[0]
