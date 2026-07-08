@@ -339,14 +339,17 @@ install_export() {
   local dest="$1"
   shift
 
-  local git_commit="unknown"
+  local git_commit="unknown" git_dirty=false
   if command -v git >/dev/null 2>&1 && git -C "$ROOT_DIR" rev-parse --short HEAD >/dev/null 2>&1; then
     git_commit="$(git -C "$ROOT_DIR" rev-parse --short HEAD)"
+    if [[ -n "$(git -C "$ROOT_DIR" status --porcelain)" ]]; then
+      git_dirty=true
+    fi
   fi
 
-  local version="0.1.0"
+  local global_version="0.1.0"
   if [[ -f "$ROOT_DIR/VERSION" ]]; then
-    version="$(head -1 "$ROOT_DIR/VERSION")"
+    global_version="$(head -1 "$ROOT_DIR/VERSION")"
   fi
 
   local kit_dir="$dest/.lingtu-agent-kit"
@@ -356,34 +359,51 @@ install_export() {
   copy_dir "$ROOT_DIR/shared" "$kit_dir/shared"
   echo "Installed shared scripts to $kit_dir/shared"
 
-  local pkg_json="["
-  local _first=true
-  local _pkg
+  local pkg_json="[" _first=true _pkg _skill_md _skill_name _pkg_version
   for _pkg in "$@"; do
+    _skill_md="$kit_dir/packages/$_pkg/SKILL.md"
+    _skill_name="unknown"
+    _pkg_version="0.0.0"
+    if [[ -f "$_skill_md" ]]; then
+      _skill_name=$(sed -n '/^---$/,/^---$/p' "$_skill_md" | sed -n 's/^name: *//p')
+      _pkg_version=$(sed -n '/^---$/,/^---$/p' "$_skill_md" | sed -n 's/^version: *//p')
+    fi
+
     if [[ "$_first" == true ]]; then
       _first=false
     else
       pkg_json+=", "
     fi
-    pkg_json+="\"$_pkg\""
+    printf -v _entry '{"id": "%s", "skill_name": "%s", "version": "%s"}' \
+      "$_pkg" "${_skill_name:-unknown}" "${_pkg_version:-0.0.0}"
+    pkg_json+="$_entry"
   done
   pkg_json+="]"
 
   local timestamp
   timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
+  local dirty_json="false"
+  if [[ "$git_dirty" == true ]]; then
+    dirty_json="true"
+  fi
+
   cat > "$kit_dir/manifest.json" <<JSON
 {
-  "version": "$version",
+  "version": "$global_version",
   "commit": "$git_commit",
+  "dirty": $dirty_json,
   "exported_at": "$timestamp",
   "packages": $pkg_json
 }
 JSON
 
   echo "Exported Lingtu skills to $kit_dir"
-  echo "  version: $version"
+  echo "  version: $global_version"
   echo "  commit:  $git_commit"
+  if [[ "$git_dirty" == true ]]; then
+    echo "  WARNING: working tree is dirty"
+  fi
 }
 
 main() {
