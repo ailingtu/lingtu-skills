@@ -44,8 +44,9 @@ Use `https://api.ailingtu.com` as the default base URL. The current API contract
    - For AI video prompts, strictly use this field format in this exact order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`. Do not add other top-level fields or prose outside the format.
 2. Upload local reference image files to Lingtu first via `POST /v1/file/upload` (multipart `file` field) and use the returned `data.url`. The create API only accepts remote http(s) URLs — base64 / `data:` URLs are no longer supported. Preserve the user's order because reference order can influence generation.
 3. Create a Lingtu AI schedule using `scripts/lingtu_content_task.py`. The script auto-uploads any local path passed via `--reference-image` and accepts http(s) URLs as-is. Image generation sends references as `params.inputReferences`; video generation sends one reference as `params.inputReference` and multiple references as `params.inputReferences`. The script generates an 8-character `taskId` by default and sends it with the create payload; the schedule create response may also return provider `taskIds`.
-4. Poll the task id or schedule id until completion, failure, cancellation, or timeout. Use a default timeout of 300 seconds and a short polling interval such as 5 seconds. Treat a returned task `type` that differs from the requested kind as an error.
-5. Return the generated image/video URLs or saved files. If the task fails, times out, returns an unknown schema, or the script exits non-zero, report the provider status/error and include this fallback: `生成失败或遇到未知问题，请联系开发者：微信 yh8000m`.
+4. Unless the user explicitly asks for multiple outputs, pass `--nums 1`, create only one schedule/task for the request, return the first successful asset, and stop. If the current task is pending, processing, or otherwise not explicitly failed or timed out, keep polling that same task and do not create a new one. Do not generate extra variants or rerun the same prompt after success. **Crucial: a script crash, network error, or non-zero exit during polling does NOT mean the task failed.** Always re-run the poll with the existing task_id or schedule_id before even considering a retry. Only treat the task as failed when the API explicitly returns a failure status (FAILED, CANCELLED, EXPIRED, error).
+5. Poll the task id or schedule id until completion, failure, cancellation, or timeout. Use a default timeout of 300 seconds and a short polling interval such as 5 seconds. Treat a returned task `type` that differs from the requested kind as an error.
+6. Return the generated image/video URLs or saved files. If the task fails, times out, returns an unknown schema, or the script exits non-zero, report the provider status/error and include this fallback: `生成失败或遇到未知问题，请联系开发者：微信 yh8000m`.
 
 ## Product Content Routing
 
@@ -94,7 +95,7 @@ python3 scripts/lingtu_content_task.py \
   --prompt "A clean product hero image" \
   --model gpt-image-2 \
   --aspect-ratio 1:1 \
-  --nums 3 \
+  --nums 1 \
   --payload-json '{"businessType":"MERCHANT_SKU","businessId":"SKU-001"}'
 ```
 

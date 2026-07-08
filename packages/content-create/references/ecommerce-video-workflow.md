@@ -82,7 +82,7 @@ Overall feeling:
 
 ## Generation And Result Handling
 
-Submit separate tasks for different scripts so a failure does not block all variants. Poll each task to completion or timeout. If a video task times out but remains pending, query the schedule id once more before reporting failure; video tasks may complete shortly after the polling deadline.
+Only submit separate tasks for different scripts when the user explicitly requests multiple videos or variants. For an ordinary request, submit one task with `--nums 1`, return the first completed video, and stop. If the current video task is pending or processing, keep polling that same task and do not create another task unless the API explicitly returns a failure status (FAILED, CANCELLED, EXPIRED, error). If a video task times out but remains pending, query the schedule id once more before reporting failure; video tasks may complete shortly after the polling deadline. A script crash or network error during polling does NOT mean the task failed — always re-poll the existing task/schedule first.
 
 Download completed videos to a local output directory and return both local media embeds and useful remote URLs.
 

@@ -561,10 +561,20 @@ def poll_task(args: argparse.Namespace, api_key: str, task_id: Any) -> int:
     deadline = time.monotonic() + args.timeout
     last_response: dict[str, Any] = {}
     expected_type = expected_task_type(args.kind)
+    consecutive_errors = 0
     while time.monotonic() < deadline:
         status_path = format_path(args.status_path, task_id=task_id)
         status_url = build_url(args.base_url, status_path)
-        last_response = http_json("GET", status_url, api_key)
+        try:
+            last_response = http_json("GET", status_url, api_key)
+        except RuntimeError as exc:
+            consecutive_errors += 1
+            if consecutive_errors >= 5:
+                print_error({"task_id": task_id, "error": f"Too many consecutive poll errors: {exc}", "last_response": last_response})
+                return 1
+            time.sleep(args.interval)
+            continue
+        consecutive_errors = 0
         status = deep_get(last_response, ["status", "state", "data.status", "data.state"])
         normalized = str(status or "").lower()
 
@@ -638,11 +648,27 @@ def poll_schedule(args: argparse.Namespace, api_key: str, schedule_id: Any, task
     last_task_list_response: dict[str, Any] = {}
     expected_type = expected_task_type(args.kind)
     asset_type = asset_type_for_kind(args.kind)
+    consecutive_errors = 0
 
     while time.monotonic() < deadline:
         task_list_path = format_path(args.task_list_path, asset_type=asset_type, task_type=expected_type, schedule_id=schedule_id)
         task_list_url = build_url(args.base_url, task_list_path)
-        last_task_list_response = http_json("GET", task_list_url, api_key)
+        try:
+            last_task_list_response = http_json("GET", task_list_url, api_key)
+        except RuntimeError as exc:
+            consecutive_errors += 1
+            if consecutive_errors >= 5:
+                print_error(
+                    {
+                        "schedule_id": schedule_id,
+                        "error": f"Too many consecutive poll errors: {exc}",
+                        "last_response": {"task_list": last_task_list_response},
+                    }
+                )
+                return 1
+            time.sleep(args.interval)
+            continue
+        consecutive_errors = 0
         records = [
             record
             for record in extract_list_response(last_task_list_response)
@@ -661,7 +687,9 @@ def poll_schedule(args: argparse.Namespace, api_key: str, schedule_id: Any, task
                 assets.extend(record_assets)
 
         assets = dedupe_assets(assets)
-        if len(assets) >= max(1, args.nums):
+        requested_count = max(1, args.nums)
+        if len(assets) >= requested_count:
+            assets = assets[:requested_count]
             saved = save_assets(assets, Path(args.output_dir))
             print_success(
                 {
@@ -748,10 +776,22 @@ def main() -> int:
     task_id = deep_get(created, ["task_id", "taskId", "id", "data.task_id", "data.taskId", "data.id"])
     schedule_id = deep_get(created, ["schedule_id", "scheduleId", "data.schedule_id", "data.scheduleId"])
     task_ids = normalize_task_ids(deep_get(created, ["taskIds", "task_ids", "data.taskIds", "data.task_ids"]))
-    if task_id:
-        return poll_task(args, api_key, task_id)
-    if schedule_id:
-        return poll_schedule(args, api_key, schedule_id, task_ids, create_started_at)
+    try:
+        if task_id:
+            return poll_task(args, api_key, task_id)
+        if schedule_id:
+            return poll_schedule(args, api_key, schedule_id, task_ids, create_started_at)
+    except Exception as exc:
+        print_error(
+            {
+                "task_id": task_id,
+                "schedule_id": schedule_id,
+                "task_ids": task_ids,
+                "error": f"Unexpected error during polling: {exc}",
+                "hint": "Re-run poll with the same task_id/schedule_id — the task may still be running.",
+            }
+        )
+        return 1
 
     print_error(
         {
