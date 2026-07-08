@@ -15,7 +15,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
 
-from lingtu_auth import add_identity_arguments, configure_identity
+# lingtu_auth is used via .utils.require_api_key
 
 from .analysis import analyze_with_focus
 from .api import fetch_material, fetch_material_comments, fetch_posts
@@ -813,20 +813,6 @@ def add_platform_argument(parser: argparse.ArgumentParser, *, required: bool = F
     )
 
 
-def add_identity_arguments_recursive(parser: argparse.ArgumentParser) -> None:
-    for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction):
-            for child in action.choices.values():
-                existing = {
-                    option
-                    for child_action in child._actions
-                    for option in child_action.option_strings
-                }
-                if "--channel" not in existing:
-                    add_identity_arguments(child)
-                add_identity_arguments_recursive(child)
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="灵途跨平台达人监控。")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1018,14 +1004,12 @@ def build_parser() -> argparse.ArgumentParser:
     add_format_argument(p, default="text")
     p.set_defaults(func=command_digest)
 
-    add_identity_arguments_recursive(parser)
     return parser
 
 
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
-    configure_identity(getattr(args, "channel", None), getattr(args, "user_id", None))
     args.func(args)
 
 

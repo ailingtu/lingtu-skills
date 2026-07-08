@@ -54,19 +54,19 @@ install.sh          # 一键安装脚本
 
 ## 环境准备
 
-单用户模式使用前需先绑定一个管理员。单用户模式仍然是多人共用同一个付费主体，但本地会记住这个管理员身份，并通过同一套 `/binduser` 流程取回该管理员的 key：
+认证使用 `LINGTU_API_KEY` 环境变量。OpenClaw 启动 skill 子进程时自动注入。本地 CLI 自行 export：
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+用户没有 API Key 时，生成 `/binduser` 链接：
 
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
 
-命令会自动生成并保存一个稳定的本地用户 id，使用 `LOCAL` 平台完成绑定。需要把飞书/微信里的某个人明确记为管理员时，也可以传入身份：
-
-```bash
-python3 shared/scripts/user_keys.py single bind --channel feishu --user-id ou_admin_xxx --remark "单用户模式管理员"
-```
-
-打开命令返回的 `/binduser` 链接完成绑定后，业务脚本在 `single` 模式下无需传 `--channel` 和 `--user-id`。请求通过请求头 `x-api-key` 传递密钥。切勿将密钥或业务数据提交到 Git。
+打开返回的链接在网站上完成绑定，获取 API Key 后设为环境变量即可。
 
 如果用户需要绑定 TikTok Shop 店铺，或店铺/店铺商品列表为空，让用户打开以下链接完成店铺绑定/授权后再继续：
 
@@ -75,26 +75,6 @@ https://app.ailingtu.com/teamshop
 如果发布视频时没有已授权达人，或达人未找到/未授权，让用户打开以下链接完成达人授权后再继续：
 
 https://app.ailingtu.com/video-post
-
-多用户 bot 模式不要让用户在聊天里发送 API Key。绑定页固定使用 `https://app.ailingtu.com/binduser`。部署 bot 时由管理员设置一次多用户模式；业务请求执行过程中不要自动切换认证模式。每次生成绑定链接时，skills 都会自动生成一个唯一 session `token`，主站据此保存/校验用户绑定关系。
- 
-```bash
-python3 shared/scripts/user_keys.py mode set multi
-python3 shared/scripts/user_keys.py bind --channel feishu --user-id ou_xxx --remark "机器人备注"
-```
-
-默认认证模式是 `single`，业务脚本使用已绑定的单用户管理员 key。部署切到 `multi` 后，业务脚本必须传入 `--channel` 和 `--user-id`，并始终走多用户认证；切换命令会尽量清理本地单用户 key：当前进程环境、单用户管理员的本地 key、旧版顶层本地配置字段，以及 macOS `launchctl` 应用环境。如果用户未绑定，返回 `/binduser` 链接让用户绑定，不要临时切回单用户模式。本地没有该用户 key 时，会调用固定后端绑定查询接口 `https://api.ailingtu.com/v1/apiKeyBind/check` 取回并保存；飞书、微信、本地单用户身份分别使用 `FEISHU`、`WEIXIN`、`LOCAL` 平台值。配置文件权限写入为 `0600`。
-
-```bash
-python3 packages/tkshop-query/scripts/lingtu_shop_data.py list-shops --channel feishu --user-id ou_xxx
-python3 shared/scripts/user_keys.py unbind --channel feishu --user-id ou_xxx
-```
-
-用户级 session `token` 是必需绑定凭证，但默认由 `bind` 命令自动生成并保存到本地配置。同一用户重复生成绑定链接也会得到新的 token，并覆盖本地保存的旧 token；旧链接自然失效。调用 `/v1/apiKeyBind/check` 取回 key 时只使用最新 token，成功后清理该 token。需要调试或复用外部 token 时，也可以在生成单个链接时临时传 `--token`：
-
-```bash
-python3 shared/scripts/user_keys.py bind --channel feishu --user-id ou_xxx --token "..."
-```
 
 ## 安装
 

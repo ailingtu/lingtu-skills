@@ -340,19 +340,25 @@ python3 scripts/lingtu_video_publish.py products search \
 
 ## 配置
 
-单用户模式绑定管理员：
+认证通过 `LINGTU_API_KEY` 环境变量。OpenClaw 启动子进程时自动注入，本地 CLI 自行 export：
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+用户没有 API Key 时，生成 `/binduser` 链接：
 
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
+
+打开返回的链接在网站上完成绑定，然后设置 `LINGTU_API_KEY`。
 
 环境变量：
 
 | 变量 | 含义 | 默认 |
 |------|------|------|
 | LINGTU_AI_BASE_URL | API base URL | https://api.ailingtu.com |
-
-多用户 bot 模式，传入 `--channel feishu|wechat --user-id <external-user-id>`。
 
 ## 依赖
 

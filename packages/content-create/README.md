@@ -23,19 +23,19 @@ The main package instruction file is [`SKILL.md`](./SKILL.md). Codex can read it
 
 ## Requirements
 
-Bind the single-user administrator before running task creation:
+Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use:
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+If you don't have an API key yet, generate a `/binduser` URL:
 
 ```bash
 python3 ../../shared/scripts/user_keys.py single bind
 ```
 
-Open the returned link to finish binding. The skill sends the resolved key as:
-
-```text
-x-api-key: <key>
-```
-
-Do not commit API keys or generated private media.
+Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as `x-api-key: <key>`. Do not commit API keys or generated private media.
 
 ## Script Usage
 

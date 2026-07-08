@@ -39,13 +39,19 @@ install.sh          # One-command installer
 
 ## Prerequisites
 
-Bind an administrator before using single-user mode. Single-user mode still lets multiple people share one payer, but the local config remembers which administrator owns that key and resolves it through the same `/binduser` flow:
+Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use:
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+If you don't have an API key yet, generate a `/binduser` URL:
 
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
 
-When no channel or user id is provided, the command generates and saves a stable local user id with platform `LOCAL`. Open the returned `/binduser` URL to finish binding. Business scripts do not need `--channel` or `--user-id` in `single` mode. Requests send the key as header `x-api-key`. Never commit API keys or generated business data.
+Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. Requests send the key as the `x-api-key` header. Never commit API keys or business data.
 
 To bind a TikTok Shop, or when the shop / shop-product list is empty, ask the user to open this link and finish shop authorization before retrying:
 

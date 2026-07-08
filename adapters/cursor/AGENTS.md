@@ -27,6 +27,12 @@ Use for single local videos, TikTok URLs, YouTube URLs, or Instagram URLs that n
 
 Use for TK 达人黑名单查询, TikTok influencer blacklist lookup, and batch uniqueId blacklist checks. Start with `packages/tk-blacklist/SKILL.md`.
 
-## Authentication (single-user mode)
+## Authentication
 
-Before first use, run `python3 shared/scripts/user_keys.py single bind` to bind the administrator key. Scripts resolve the API key automatically and send it as the `x-api-key` header. Do not set `LINGTU_API_KEY` in the environment.
+Set your API key before use. Run `python3 shared/scripts/user_keys.py single bind` if you need a `/binduser` URL:
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+Scripts read `LINGTU_API_KEY` from the environment and send it as the `x-api-key` header.

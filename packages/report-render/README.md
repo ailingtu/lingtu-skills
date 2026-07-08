@@ -15,7 +15,9 @@ python3 scripts/lingtu_report_render.py \
   --template daily_report \
   --data '{"title":"今日小报","summary":"一切正常"}'
 
-# AI mode (after backend is wired up):
+# AI mode — set LINGTU_API_KEY first (OpenClaw injects it automatically):
+export LINGTU_API_KEY=xxx
+# If you don't have a key yet:
 python3 ../../shared/scripts/user_keys.py single bind
 python3 scripts/lingtu_report_render.py \
   --template daily_report \

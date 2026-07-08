@@ -18,11 +18,19 @@
 
 ## 环境
 
+认证通过 `LINGTU_API_KEY` 环境变量，OpenClaw 自动注入，本地 CLI 自行 export：
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+没有 API Key 时，生成 `/binduser` 链接：
+
 ```bash
 python3 ../../shared/scripts/user_keys.py single bind
 ```
 
-打开返回的链接完成单用户管理员绑定。
+打开返回的链接在网站上完成绑定，然后设置 `LINGTU_API_KEY`。
 
 可选：
 

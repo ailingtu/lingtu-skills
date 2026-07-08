@@ -18,25 +18,12 @@ Use this repository when a user asks for Lingtu AI content generation, TK shop d
 
 ## Shared Rules
 
-- Single-user mode is the default and requires a configured administrator binding, created with `python3 shared/scripts/user_keys.py single bind`. When no channel or user id is provided, generate and reuse a stable local user id with platform `LOCAL`. Do not use `LINGTU_API_KEY` for business scripts.
-- Do not change auth mode to satisfy a business request. If current mode is `multi`, business scripts must use multi-user authentication with `--channel feishu|wechat --user-id <external-user-id>`; if the user is unbound, return the `/binduser` link and ask them to bind.
-- Switching to multi-user mode clears local single-user key state where possible: the current process environment, the configured single-user administrator's local key, legacy top-level local config key fields, and macOS `launchctl` app environment.
-- Only run `python3 shared/scripts/user_keys.py mode set single|multi` when the operator explicitly asks to administer the global auth mode, not during content generation, shop queries, social monitoring, video understanding, or blacklist lookups.
-- Multi-user bot mode passes `--channel feishu|wechat --user-id <external-user-id>` to business scripts. Resolve keys through `shared/scripts/lingtu_auth.py`, which reads `~/.lingtu-skills/config.json` or calls `GET https://api.ailingtu.com/v1/apiKeyBind/check?externUid=<id>&platform=FEISHU|WEIXIN|LOCAL`.
-- Binding token is required and session-scoped. Generate single-user administrator `/binduser` URLs with `python3 shared/scripts/user_keys.py single bind`, and multi-user bot URLs with `python3 shared/scripts/user_keys.py bind --channel <channel> --user-id <user_id>`. Each call creates a new unique session token for that user and overwrites the previous token, so old links expire. The binding-check endpoint uses only the latest token, and the token is cleared after a key is retrieved.
+- Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically when spawning skill subprocesses. Standalone CLI users must `export LINGTU_API_KEY=xxx`.
+- When the user doesn't have an API key, generate a `/binduser` URL with `python3 shared/scripts/user_keys.py single bind`.
 - When presenting a `/binduser` URL to the user, output the full URL exactly as generated — never shorten, truncate, elide, or reflow it. If the messaging platform compresses long URLs, print the URL in a separate line with no surrounding text so the link stays intact.
-- Send the resolved key as `x-api-key`.
+- The key is sent as the `x-api-key` header. Do not store API keys in this repository.
 - Read the package `references/api.md` before changing endpoint paths, request fields, response fields, or status handling.
 - Prefer the package scripts over ad hoc API calls.
-- Do not store customer API keys in this repository.
-
-## Auth Mode Triggers
-
-These are administrative commands only. Run mode-switch commands only when the user's message exactly matches one of the listed Chinese phrases. Do not treat similar phrases, explanations, or business requests as permission to switch modes:
-
-- `切换到多用户模式`: `python3 shared/scripts/user_keys.py mode set multi`
-- `切换到单用户模式`: `python3 shared/scripts/user_keys.py mode set single`
-- `查看认证模式` / `当前认证模式`: `python3 shared/scripts/user_keys.py mode get`
 
 ## Routing
 

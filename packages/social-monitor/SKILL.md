@@ -40,11 +40,19 @@ description: 社媒达人/竞品监控、单条视频素材数据与评论抓取
 
 ## 配置
 
-单用户模式先绑定管理员：
+认证通过 `LINGTU_API_KEY` 环境变量。OpenClaw 启动子进程时自动注入，本地 CLI 自行 export：
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+用户没有 API Key 时，生成 `/binduser` 链接：
 
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
+
+打开返回的链接在网站上完成绑定，然后设置 `LINGTU_API_KEY`。请求头 `x-api-key` 发送。请勿提交密钥或私有监控数据。
 
 可选环境变量：
 
@@ -53,10 +61,6 @@ python3 shared/scripts/user_keys.py single bind
 | `LINGTU_AI_BASE_URL` | API base URL | `https://api.ailingtu.com` |
 | `LINGTU_SOCIAL_MONITOR_STORE` | 监控元数据 JSON 文件路径 | `~/.lingtu/social-monitor/monitors.json` |
 | `LINGTU_SOCIAL_MONITOR_SNAPSHOTS` | 每日快照根目录 | `~/.lingtu/social-monitor/snapshots` |
-
-打开返回的链接完成管理员 key 绑定。API Key 通过请求头 `x-api-key` 发送。请勿提交密钥或私有监控数据。
-
-多用户 bot 模式下，在业务子命令传入 `--channel feishu|wechat --user-id <external-user-id>`。脚本会从 `~/.lingtu-skills/config.json` 读取用户 key；本地没有时调用后端绑定查询接口取回。使用 `shared/scripts/user_keys.py bind` 生成 `/binduser` 链接。
 
 API 字段、`code` 取值参见 `references/api.md`，改接口前先更新该文档。
 
@@ -362,6 +366,6 @@ interface MonitorEntry {
 ## 错误处理约定
 
 - `code:-1`（uniqueId 不存在）→ 抛中文提示："未获取到该达人数据：…（uniqueId=xxx）"，原样回显给用户。
-- 缺少单用户管理员绑定或多用户身份参数 → 中文提示。
+- 缺少 `LINGTU_API_KEY` 环境变量 → 中文提示。
 - 网络/HTTP 错误 → 中文提示；`snapshot` / `batch-add` 会先按参数重试。
 - `digest` 中单个达人的 snapshot 缺失不会中断流程，会进入"未抓取到数据"段。

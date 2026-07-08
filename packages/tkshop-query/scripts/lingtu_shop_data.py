@@ -12,7 +12,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
 
-from lingtu_auth import add_identity_arguments, configure_identity, require_api_key
+from lingtu_auth import require_api_key
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -276,11 +276,7 @@ def main():
     ask_parser = subparsers.add_parser("ask", help="Ask an AI shop operations question.")
     ask_parser.add_argument("question", help="Question to send to /v1/ai/chat/create.")
 
-    for command_parser in (subparsers.choices["list-shops"], report_parser, summary_parser, ask_parser):
-        add_identity_arguments(command_parser)
-
     args = parser.parse_args()
-    configure_identity(getattr(args, "channel", None), getattr(args, "user_id", None))
     if args.command == "list-shops":
         data, _shops = list_shops()
         print(json.dumps(data, ensure_ascii=False, indent=2))

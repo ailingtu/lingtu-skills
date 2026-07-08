@@ -16,19 +16,19 @@ This skill currently only sends `type: "REPLICATION"`. The `ANALYSIS` mode is re
 
 ## Requirements
 
-Bind the single-user administrator before running API calls:
+Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use:
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+If you don't have an API key yet, generate a `/binduser` URL:
 
 ```bash
 python3 ../../shared/scripts/user_keys.py single bind
 ```
 
-Open the returned link to finish binding. The package sends the resolved key as:
-
-```text
-x-api-key: <key>
-```
-
-Do not commit API keys.
+Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as `x-api-key: <key>`. Do not commit API keys.
 
 ## Script Usage
 

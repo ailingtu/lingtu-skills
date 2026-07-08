@@ -25,7 +25,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
 
-from lingtu_auth import add_identity_arguments, configure_identity, require_api_key
+from lingtu_auth import require_api_key
 
 
 SUCCESS_STATUSES = {"succeeded", "success", "completed", "complete", "done", "finished"}
@@ -473,7 +473,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--interval", type=int, default=5)
     parser.add_argument("--output-dir", default=".")
-    add_identity_arguments(parser)
     args = parser.parse_args()
     args.seconds_was_set = args.seconds is not None
     return args
@@ -728,7 +727,6 @@ def poll_schedule(args: argparse.Namespace, api_key: str, schedule_id: Any, task
 
 def main() -> int:
     args = parse_args()
-    configure_identity(args.channel, args.user_id)
     resolved_mode = resolve_create_mode(args)
     if not args.client_task_id:
         args.client_task_id = generate_client_task_id()

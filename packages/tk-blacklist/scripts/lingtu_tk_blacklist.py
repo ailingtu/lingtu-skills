@@ -18,7 +18,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
 
-from lingtu_auth import add_identity_arguments, configure_identity, require_api_key as shared_require_api_key
+from lingtu_auth import require_api_key as shared_require_api_key
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -160,10 +160,8 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help="Search blacklist records by TikTok uniqueId.")
     search_parser.add_argument("unique_ids", nargs="+", help="One or more TikTok unique IDs, @handles, or TikTok URLs.")
     search_parser.add_argument("--format", choices=("json", "text"), default="json", help="Output format.")
-    add_identity_arguments(search_parser)
 
     args = parser.parse_args()
-    configure_identity(getattr(args, "channel", None), getattr(args, "user_id", None))
 
     if args.command == "search":
         unique_ids = dedupe([parse_unique_id(value) for value in args.unique_ids])

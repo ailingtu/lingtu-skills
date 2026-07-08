@@ -19,20 +19,19 @@ Use this repository as a reusable Lingtu AI capability kit.
 
 ## Environment & Authentication
 
-### Single-user mode (default)
+The `LINGTU_API_KEY` environment variable is the sole authentication method. OpenClaw injects it automatically when spawning skill subprocesses. For standalone CLI use, export it manually:
+
+```
+export LINGTU_API_KEY=xxx
+```
+
 When the user explicitly asks to bind, configure, or set up their Lingtu / 灵途 API key — e.g. "绑定灵途密钥"、"配置灵途 API Key"、"bind lingtu key"、"帮我绑定一下灵途" — run:
+
 ```
 python3 shared/scripts/user_keys.py single bind
 ```
-This generates a `/binduser` authorization link. Return the link to the user and instruct them to open it in a browser. After binding, keys are stored locally (0600 permissions) and sent via the `x-api-key` header. Never commit keys or business data to Git.
 
-### Multi-user (bot) mode
-When deploying a bot, first switch mode then bind per user:
-```
-python3 shared/scripts/user_keys.py mode set multi
-python3 shared/scripts/user_keys.py bind --channel feishu --user-id ou_xxx --remark "备注"
-```
-After switching to multi mode, every request must include `--channel` and `--user-id`.
+This generates a `/binduser` authorization link. Return the link to the user and instruct them to open it in a browser. After binding on the website, the user gets their API key and sets `LINGTU_API_KEY`.
 
 ## Execution
 

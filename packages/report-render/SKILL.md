@@ -82,17 +82,19 @@ All fields are optional — sensible defaults fill in. Any section without data 
 
 ## Configuration
 
-Same authentication pattern as the other Lingtu skills. Only `ai` mode needs the key — `fill` mode runs offline.
+Authentication uses the `LINGTU_API_KEY` environment variable — only `ai` mode needs it; `fill` mode runs offline. OpenClaw injects the key automatically. For standalone CLI use, export it:
 
-Single-user mode uses a configured administrator binding. Generate the administrator `/binduser` URL before using `ai` mode:
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+If the user doesn't have an API key yet, generate a `/binduser` URL:
 
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
 
-Open the returned link to bind the administrator's key.
-
-For multi-user bot mode, pass `--channel feishu|wechat --user-id <external-user-id>` when using `--mode ai`. The script resolves the user's key from `~/.lingtu-skills/config.json`, or calls the backend binding check endpoint if the local key is missing. Use `shared/scripts/user_keys.py bind` to generate the `/binduser` URL.
+Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`.
 
 ## Install (one-time)
 

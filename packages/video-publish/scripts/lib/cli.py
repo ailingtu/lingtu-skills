@@ -20,7 +20,7 @@ def _shared_scripts_dir() -> Path:
 
 
 sys.path.insert(0, str(_shared_scripts_dir()))
-from lingtu_auth import add_identity_arguments, configure_identity
+# lingtu_auth is used via .api.require_api_key
 
 from .api import (
     create_post,
@@ -848,22 +848,6 @@ def add_format_argument(parser: argparse.ArgumentParser, default: str = "json") 
     parser.add_argument("--format", choices=("json", "text"), default=default, help="输出格式。")
 
 
-def add_identity_arguments_recursive(parser: argparse.ArgumentParser) -> None:
-    for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction):
-            for child in action.choices.values():
-                existing = {
-                    option
-                    for child_action in child._actions
-                    for option in child_action.option_strings
-                }
-                if "--channel" not in existing:
-                    add_identity_arguments(child)
-                add_identity_arguments_recursive(child)
-
-
-# ── parser ───────────────────────────────────────────────────
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="灵途批量视频发布。")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -925,14 +909,12 @@ def build_parser() -> argparse.ArgumentParser:
     add_format_argument(ps, default="text")
     ps.set_defaults(func=command_products_search)
 
-    add_identity_arguments_recursive(parser)
     return parser
 
 
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
-    configure_identity(getattr(args, "channel", None), getattr(args, "user_id", None))
     args.func(args)
 
 

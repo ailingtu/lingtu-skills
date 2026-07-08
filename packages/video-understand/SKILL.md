@@ -30,17 +30,19 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 ## Configuration
 
-Use the same authentication pattern as the other Lingtu skills.
+Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically when spawning skill subprocesses. For standalone CLI use, export it:
 
-Single-user mode uses a configured administrator binding. Generate the administrator `/binduser` URL before making requests:
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+If the user doesn't have an API key yet, generate a `/binduser` URL:
 
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
 
-Open the returned link to bind the administrator's key. Send the resolved key as the request header `x-api-key: <key>`. Do not store user API keys in this skill directory or commit them to source control.
-
-For multi-user bot mode, pass `--channel feishu|wechat --user-id <external-user-id>` to `scripts/lingtu_video_understand.py` subcommands. The script resolves the user's key from `~/.lingtu-skills/config.json`, or calls the backend binding check endpoint if the local key is missing. Use `shared/scripts/user_keys.py bind` to generate the `/binduser` URL.
+Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as the `x-api-key` header. Do not commit API keys.
 
 Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
 

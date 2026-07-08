@@ -4,13 +4,15 @@ Use this directory when the user asks Claude Code or OpenClaw to create images, 
 
 ## Requirements
 
-Single-user mode uses a configured administrator binding. Generate the administrator `/binduser` URL before running business scripts:
+Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use, `export LINGTU_API_KEY=xxx`.
+
+If the user doesn't have an API key yet, generate a `/binduser` URL:
 
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
 
-Open the returned link to bind the administrator's key. Send the resolved key as the request header `x-api-key`.
+Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as the `x-api-key` header.
 
 ## Workflow
 

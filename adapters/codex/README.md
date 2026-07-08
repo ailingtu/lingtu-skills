@@ -18,4 +18,10 @@ This copies:
 - `packages/video-understand` to `~/.codex/skills/lingtu-video-understand`
 - `packages/tk-blacklist` to `~/.codex/skills/lingtu-tk-blacklist`
 
-Before first use, run `python3 shared/scripts/user_keys.py single bind` to bind the administrator key. Scripts resolve the API key automatically — do not set `LINGTU_API_KEY`.
+Before first use, set your API key and run `python3 shared/scripts/user_keys.py single bind` if you need a `/binduser` URL:
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+Scripts read `LINGTU_API_KEY` from the environment and send it as `x-api-key`.

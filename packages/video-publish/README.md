@@ -53,6 +53,14 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 
 ## 配置
 
+认证通过 `LINGTU_API_KEY` 环境变量，OpenClaw 自动注入。本地 CLI 自行 export：
+
+```bash
+export LINGTU_API_KEY=xxx
+```
+
+没有 API Key 时生成绑定链接：
+
 ```bash
 python3 shared/scripts/user_keys.py single bind
 ```
