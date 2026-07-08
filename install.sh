@@ -19,6 +19,7 @@ Usage:
   ./install.sh openclaw [destination] [packages...]
   ./install.sh openai [destination] [packages...]
   ./install.sh dify [destination] [packages...]
+  ./install.sh export [destination] [packages...]
 
 Examples:
   ./install.sh
@@ -27,6 +28,7 @@ Examples:
   ./install.sh claude /path/to/project content-create
   ./install.sh cursor /path/to/project all
   ./install.sh openclaw /path/to/project all
+  ./install.sh export ./out all
 
 Targets:
   auto    Detect the current AI platform and install the matching adapter.
@@ -36,6 +38,7 @@ Targets:
   openclaw  Install selected packages and AGENTS.md into an OpenClaw project.
   openai  Export selected packages with an OpenAI adapter prompt.
   dify    Export selected packages with Dify notes.
+  export  Export skills as a clean directory for downstream apps (no AGENTS.md, no auth bind).
 
 Packages:
   all
@@ -232,6 +235,40 @@ generate_agent_doc() {
   } > "$file"
 }
 
+upsert_agent_marker() {
+  local dest="$1"
+  local agent_md="$dest/AGENTS.md"
+  local marker_start="<!-- LINGTU_SKILLS_START -->"
+  local marker_end="<!-- LINGTU_SKILLS_END -->"
+
+  local block
+  block=$(cat <<'BLOCK'
+<!-- LINGTU_SKILLS_START -->
+## Lingtu AI Skills
+
+Lingtu skills are installed under `.lingtu-agent-kit/packages`.
+For package routing and authentication details, read `.lingtu-agent-kit/AGENTS.lingtu.md`.
+
+<!-- LINGTU_SKILLS_END -->
+BLOCK
+)
+
+  if [[ ! -f "$agent_md" ]]; then
+    printf '%s\n' "$block" > "$agent_md"
+    echo "Created $agent_md with Lingtu skills block"
+  elif grep -qF "$marker_start" "$agent_md" && grep -qF "$marker_end" "$agent_md"; then
+    local tmp_file="${agent_md}.tmp"
+    sed -n "1,/$marker_start/p" "$agent_md" | sed '$d' > "$tmp_file"
+    printf '%s\n' "$block" >> "$tmp_file"
+    sed -n "/$marker_end/,\$p" "$agent_md" | sed '1d' >> "$tmp_file"
+    mv "$tmp_file" "$agent_md"
+    echo "Updated Lingtu skills block in $agent_md"
+  else
+    printf '\n%s\n' "$block" >> "$agent_md"
+    echo "Appended Lingtu skills block to $agent_md"
+  fi
+}
+
 install_codex() {
   local skills_dir="${CODEX_SKILLS_DIR:-$HOME/.codex/skills}"
   local id idx
@@ -267,15 +304,17 @@ install_project_adapter() {
       mkdir -p "$dest/.lingtu-agent-kit/packages"
       install_selected_packages_to_dir "$dest/.lingtu-agent-kit/packages" "$@"
       copy_shared
-      generate_agent_doc cursor "$dest/AGENTS.md" "$@"
-      echo "Installed Cursor adapter to $dest/AGENTS.md"
+      upsert_agent_marker "$dest"
+      generate_agent_doc cursor "$dest/.lingtu-agent-kit/AGENTS.lingtu.md" "$@"
+      echo "Installed Cursor adapter to $dest/.lingtu-agent-kit/"
       ;;
     openclaw)
       mkdir -p "$dest/.lingtu-agent-kit/packages"
       install_selected_packages_to_dir "$dest/.lingtu-agent-kit/packages" "$@"
       copy_shared
-      generate_agent_doc openclaw "$dest/AGENTS.md" "$@"
-      echo "Installed OpenClaw adapter to $dest/AGENTS.md"
+      upsert_agent_marker "$dest"
+      generate_agent_doc openclaw "$dest/.lingtu-agent-kit/AGENTS.lingtu.md" "$@"
+      echo "Installed OpenClaw adapter to $dest/.lingtu-agent-kit/"
       ;;
     openai)
       mkdir -p "$dest/lingtu-openai-adapter"
@@ -294,6 +333,57 @@ install_project_adapter() {
       echo "Exported Dify adapter to $dest/lingtu-dify-adapter"
       ;;
   esac
+}
+
+install_export() {
+  local dest="$1"
+  shift
+
+  local git_commit="unknown"
+  if command -v git >/dev/null 2>&1 && git -C "$ROOT_DIR" rev-parse --short HEAD >/dev/null 2>&1; then
+    git_commit="$(git -C "$ROOT_DIR" rev-parse --short HEAD)"
+  fi
+
+  local version="0.1.0"
+  if [[ -f "$ROOT_DIR/VERSION" ]]; then
+    version="$(head -1 "$ROOT_DIR/VERSION")"
+  fi
+
+  local kit_dir="$dest/.lingtu-agent-kit"
+  mkdir -p "$kit_dir/packages"
+
+  install_selected_packages_to_dir "$kit_dir/packages" "$@"
+  copy_dir "$ROOT_DIR/shared" "$kit_dir/shared"
+  echo "Installed shared scripts to $kit_dir/shared"
+
+  local pkg_json="["
+  local _first=true
+  local _pkg
+  for _pkg in "$@"; do
+    if [[ "$_first" == true ]]; then
+      _first=false
+    else
+      pkg_json+=", "
+    fi
+    pkg_json+="\"$_pkg\""
+  done
+  pkg_json+="]"
+
+  local timestamp
+  timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  cat > "$kit_dir/manifest.json" <<JSON
+{
+  "version": "$version",
+  "commit": "$git_commit",
+  "exported_at": "$timestamp",
+  "packages": $pkg_json
+}
+JSON
+
+  echo "Exported Lingtu skills to $kit_dir"
+  echo "  version: $version"
+  echo "  commit:  $git_commit"
 }
 
 main() {
@@ -333,6 +423,16 @@ main() {
       fi
       mkdir -p "$dest"
       ;;
+    export)
+      if [[ "${1:-}" != "" ]] && [[ "${1:-}" != "all" ]] && ! package_index "${1:-}" >/dev/null 2>&1 && ! [[ "${1:-}" =~ ^[0-9,]+$ ]]; then
+        dest="$1"
+        shift
+      else
+        dest="./lingtu-agent-kit-export"
+        echo "No target path given, using: $dest"
+      fi
+      mkdir -p "$dest"
+      ;;
     *)
       echo "Unknown target: $target"
       usage
@@ -341,9 +441,13 @@ main() {
   esac
 
   local selected=()
-  while IFS= read -r package_id; do
-    selected+=("$package_id")
-  done < <(normalize_packages "$@")
+  if [[ "$target" == "export" ]] && [[ "$#" -eq 0 ]]; then
+    selected=("${PACKAGE_IDS[@]}")
+  else
+    while IFS= read -r package_id; do
+      selected+=("$package_id")
+    done < <(normalize_packages "$@")
+  fi
 
   echo
   echo "Selected packages:"
@@ -356,6 +460,9 @@ main() {
       ;;
     claude|cursor|openclaw|openai|dify)
       install_project_adapter "$target" "$dest" "${selected[@]}"
+      ;;
+    export)
+      install_export "$dest" "${selected[@]}"
       ;;
   esac
 }
