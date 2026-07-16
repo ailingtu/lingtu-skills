@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-import http.client
 import json
-import mimetypes
 import os
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
-import uuid
 from pathlib import Path
 
 
@@ -24,12 +20,11 @@ def _shared_scripts_dir() -> Path:
 sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key
+from lingtu_http import base_url as shared_base_url
+from lingtu_upload import multipart_upload
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
-UPLOAD_PATH = "/v1/file/upload"
-UPLOAD_CHUNK_SIZE = 64 * 1024
-PROGRESS_MIN_BYTES = 1024 * 1024
 
 
 def api_key():
@@ -37,101 +32,11 @@ def api_key():
 
 
 def base_url():
-    return os.environ.get("LINGTU_AI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
-
-
-def _format_bytes(n):
-    if n >= 1024 * 1024:
-        return f"{n / (1024 * 1024):.1f} MB"
-    if n >= 1024:
-        return f"{n / 1024:.1f} KB"
-    return f"{n} B"
-
-
-def _emit_progress(sent, total, show):
-    if not show:
-        return
-    pct = (sent / total * 100) if total else 0
-    sys.stderr.write(
-        f"\rUploading: {_format_bytes(sent)} / {_format_bytes(total)} ({pct:5.1f}%)"
-    )
-    sys.stderr.flush()
+    return shared_base_url(DEFAULT_BASE_URL)
 
 
 def upload_file(path):
-    if not os.path.isfile(path):
-        raise SystemExit(f"File not found: {path}")
-
-    filename = os.path.basename(path)
-    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    boundary = f"----LingtuFormBoundary{uuid.uuid4().hex}"
-
-    file_size = os.path.getsize(path)
-    header = (
-        f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
-        f"Content-Type: {content_type}\r\n\r\n"
-    ).encode("utf-8")
-    trailer = f"\r\n--{boundary}--\r\n".encode("utf-8")
-    total_size = len(header) + file_size + len(trailer)
-    show_progress = file_size >= PROGRESS_MIN_BYTES and sys.stderr.isatty()
-
-    parsed = urllib.parse.urlparse(base_url())
-    if parsed.scheme not in ("http", "https"):
-        raise SystemExit(f"Unsupported base URL scheme: {base_url()}")
-    conn_cls = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
-    host = parsed.hostname
-    port = parsed.port or (443 if parsed.scheme == "https" else 80)
-
-    conn = conn_cls(host, port, timeout=600)
-    try:
-        conn.putrequest("POST", UPLOAD_PATH)
-        conn.putheader("x-api-key", api_key())
-        conn.putheader("Accept", "application/json")
-        conn.putheader("Content-Type", f"multipart/form-data; boundary={boundary}")
-        conn.putheader("Content-Length", str(total_size))
-        conn.endheaders()
-
-        sent = 0
-        conn.send(header)
-        sent += len(header)
-        _emit_progress(sent, total_size, show_progress)
-
-        with open(path, "rb") as fh:
-            while True:
-                chunk = fh.read(UPLOAD_CHUNK_SIZE)
-                if not chunk:
-                    break
-                conn.send(chunk)
-                sent += len(chunk)
-                _emit_progress(sent, total_size, show_progress)
-
-        conn.send(trailer)
-        sent += len(trailer)
-        _emit_progress(sent, total_size, show_progress)
-        if show_progress:
-            sys.stderr.write("\n")
-            sys.stderr.flush()
-
-        resp = conn.getresponse()
-        body = resp.read().decode("utf-8", errors="replace")
-        if resp.status >= 400:
-            raise SystemExit(f"HTTP {resp.status} from {base_url()}{UPLOAD_PATH}: {body}")
-    finally:
-        conn.close()
-
-    try:
-        payload = json.loads(body)
-    except json.JSONDecodeError:
-        raise SystemExit(f"Upload returned non-JSON body: {body}")
-
-    if not isinstance(payload, dict) or payload.get("code") != 0:
-        raise SystemExit(f"Upload failed: {json.dumps(payload, ensure_ascii=False)}")
-    data = payload.get("data") or {}
-    file_id = data.get("id")
-    if file_id is None:
-        raise SystemExit(f"Upload response missing data.id: {json.dumps(payload, ensure_ascii=False)}")
-    return {"id": file_id, "url": data.get("url"), "isNew": data.get("isNew")}
+    return multipart_upload(path, stream=True, progress=True, require_id=True, as_system_exit=True)
 
 
 def stream_replication(payload, raw=False):

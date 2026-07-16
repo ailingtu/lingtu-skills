@@ -5,12 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from typing import Any
-from urllib import error as urllib_error
-from urllib import request as urllib_request
 from urllib.parse import urlparse
 from pathlib import Path
 
@@ -27,6 +24,7 @@ def _shared_scripts_dir() -> Path:
 sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key as shared_require_api_key
+from lingtu_http import LingtuHttpError, base_url as shared_base_url, request_json as shared_request_json
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -38,7 +36,7 @@ def require_api_key() -> str:
 
 
 def base_url() -> str:
-    return os.environ.get("LINGTU_AI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    return shared_base_url(DEFAULT_BASE_URL)
 
 
 def parse_unique_id(raw: str) -> str:
@@ -77,32 +75,15 @@ def dedupe(values: list[str]) -> list[str]:
 
 
 def request_json(path: str, payload: dict[str, Any]) -> dict[str, Any]:
-    url = f"{base_url()}{path}"
-    req = urllib_request.Request(
-        url,
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={
-            "x-api-key": require_api_key(),
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
     try:
-        with urllib_request.urlopen(req, timeout=60) as response:
-            body = response.read().decode("utf-8")
-    except urllib_error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"HTTP {exc.code} from {url}: {detail}") from exc
-    except urllib_error.URLError as exc:
-        raise SystemExit(f"Network error from {url}: {exc.reason}") from exc
-
-    if not body:
+        parsed = shared_request_json("POST", path, body=payload, timeout=60)
+    except LingtuHttpError as exc:
+        raise SystemExit(str(exc)) from exc
+    if parsed is None:
         return {}
-    try:
-        return json.loads(body)
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid JSON from {url}: {body}") from exc
+    if not isinstance(parsed, dict):
+        raise SystemExit(f"Invalid JSON from {base_url()}{path}: {parsed}")
+    return parsed
 
 
 def search_blacklist(unique_ids: list[str]) -> dict[str, Any]:

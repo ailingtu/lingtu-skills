@@ -21,6 +21,7 @@ def _shared_scripts_dir() -> Path:
 sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key
+from lingtu_http import LingtuHttpError, base_url as shared_base_url, request_json as shared_request_json
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -31,32 +32,14 @@ def api_key():
 
 
 def base_url():
-    return os.environ.get("LINGTU_AI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    return shared_base_url(DEFAULT_BASE_URL)
 
 
 def request_json(method, path, payload=None):
-    url = f"{base_url()}{path}"
-    data = None
-    headers = {
-        "x-api-key": api_key(),
-        "Accept": "application/json",
-    }
-    if payload is not None:
-        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        headers["Content-Type"] = "application/json"
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            body = resp.read().decode("utf-8")
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"HTTP {exc.code} from {url}: {detail}") from exc
-    if not body:
-        return None
-    try:
-        return json.loads(body)
-    except json.JSONDecodeError:
-        return body
+        return shared_request_json(method, path, body=payload, timeout=60)
+    except LingtuHttpError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def extract_list(value):

@@ -2,26 +2,24 @@
 
 from __future__ import annotations
 
-import json
-import os
 import sys
 from pathlib import Path
 from typing import Any
-from urllib import error as urllib_error
-from urllib import parse as urllib_parse
-from urllib import request as urllib_request
+
 
 def _shared_scripts_dir() -> Path:
     current = Path(__file__).resolve()
     for parent in current.parents:
         candidate = parent / "shared" / "scripts"
-        if candidate.exists():
+        if candidate.is_dir():
             return candidate
     raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
 
 
 sys.path.insert(0, str(_shared_scripts_dir()))
 from lingtu_auth import require_api_key as shared_require_api_key
+from lingtu_http import LingtuHttpError, base_url as shared_base_url, raise_system_exit, request_json
+from lingtu_upload import compute_content_hash, put_file
 
 from .config import (
     API_TIMEOUT,
@@ -46,7 +44,7 @@ def require_api_key() -> str:
 
 
 def base_url() -> str:
-    return os.environ.get("LINGTU_AI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    return shared_base_url(DEFAULT_BASE_URL)
 
 
 def _request_json(
@@ -57,62 +55,60 @@ def _request_json(
     timeout: int = API_TIMEOUT,
 ) -> dict[str, Any]:
     """统一的 JSON API 请求，自动处理 envelope (code==0) 和错误。"""
-    api_key = require_api_key()
-    url = f"{base_url()}{path}"
-    if query_params:
-        url = f"{url}?{urllib_parse.urlencode(query_params, doseq=True)}"
-
-    req = urllib_request.Request(url, method=method)
-    req.add_header("x-api-key", api_key)
-    req.add_header("Accept", "application/json")
-
-    if body is not None:
-        payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
-        req.data = payload
-        req.add_header("Content-Type", "application/json")
-
     try:
-        with urllib_request.urlopen(req, timeout=timeout) as response:
-            result = json.loads(response.read().decode("utf-8"))
-    except urllib_error.HTTPError as exc:
-        try:
-            detail = json.loads(exc.read().decode("utf-8"))
-            message = detail.get("message") or exc.reason
-        except Exception:
-            message = exc.reason
-        raise SystemExit(f"{path} HTTP 错误：{exc.code} {message}")
-    except urllib_error.URLError as exc:
-        raise SystemExit(f"{path} 网络错误：{exc.reason}")
+        result = request_json(
+            method,
+            path,
+            body=body,
+            query=query_params,
+            timeout=timeout,
+            expect_envelope=True,
+        )
+    except LingtuHttpError as exc:
+        if exc.status is not None:
+            message = exc.reason or str(exc)
+            # Prefer server message body when present.
+            if exc.body:
+                try:
+                    import json
 
-    code = result.get("code")
-    if code == 0:
-        return result
-
-    message = result.get("message") or "未知错误"
-    raise SystemExit(f"{path} 调用失败 (code={code})：{message}")
+                    detail = json.loads(exc.body)
+                    message = detail.get("message") or message
+                except Exception:
+                    pass
+            raise SystemExit(f"{path} HTTP 错误：{exc.status} {message}") from exc
+        raise SystemExit(f"{path} 网络错误：{exc.reason or exc}") from exc
+    if not isinstance(result, dict):
+        raise SystemExit(f"{path} 调用失败：响应不是 JSON 对象")
+    return result
 
 
 def _compute_file_hash(file_path: Path) -> str:
     """计算文件 SHA-256 hash（与后端 Java 一致：raw bytes → hex → SHA-256）。"""
-    import hashlib
-    raw = file_path.read_bytes()
-    hex_str = raw.hex()
-    return hashlib.sha256(hex_str.encode("utf-8")).hexdigest()
+    return compute_content_hash(file_path)
+
+
+def _put_file(url: str, data: bytes, content_type: str) -> None:
+    """HTTP PUT 文件到 presigned URL。"""
+    try:
+        put_file(url, data, content_type, timeout=UPLOAD_TIMEOUT)
+    except LingtuHttpError as exc:
+        raise_system_exit(exc)
 
 
 def upload_file(file_path: str) -> dict[str, Any]:
     """通过 presigned URL 上传视频文件，返回 {id, url}。
 
     Flow: presign → PUT to uploadUrl (if new) → confirm → return {id, url}
+    Kept as a thin wrapper so tests can patch `_request_json` / `_put_file`.
     """
-    import http.client
-    import mimetypes
-
     p = Path(file_path).expanduser()
     if not p.exists():
         raise SystemExit(f"视频文件不存在：{p}")
     if not p.is_file():
         raise SystemExit(f"路径不是文件：{p}")
+
+    import mimetypes
 
     file_size = p.stat().st_size
     file_name = p.name
@@ -135,37 +131,12 @@ def upload_file(file_path: str) -> dict[str, Any]:
     final_url = data.get("url") or ""
 
     # Step 2/3: only newly uploaded files need PUT + confirm.
-    # When isNew=false the backend has already matched an existing file by hash.
     should_upload = is_new or (raw_is_new is None and bool(upload_url))
     if should_upload and upload_url:
         _put_file(upload_url, p.read_bytes(), content_type)
         _request_json("POST", FILE_CONFIRM_PATH, body={"fileId": file_id}, timeout=API_TIMEOUT)
 
     return {"id": str(file_id), "url": final_url}
-
-
-def _put_file(url: str, data: bytes, content_type: str) -> None:
-    """HTTP PUT 文件到 presigned URL。"""
-    import http.client
-
-    parsed = urllib_parse.urlparse(url)
-    conn: http.client.HTTPSConnection | http.client.HTTPConnection
-    try:
-        if parsed.scheme == "https":
-            conn = http.client.HTTPSConnection(parsed.hostname or "", timeout=UPLOAD_TIMEOUT)
-        else:
-            conn = http.client.HTTPConnection(parsed.hostname or "", timeout=UPLOAD_TIMEOUT)
-        conn.request("PUT", parsed.path + ("?" + parsed.query if parsed.query else ""),
-                     body=data,
-                     headers={"Content-Type": content_type})
-        resp = conn.getresponse()
-        resp.read()  # consume response
-        if resp.status >= 400:
-            raise SystemExit(f"文件上传失败：HTTP {resp.status} {resp.reason}")
-    except http.client.HTTPException as exc:
-        raise SystemExit(f"文件上传网络错误：{exc}")
-    finally:
-        conn.close()
 
 
 def list_creator_accounts(

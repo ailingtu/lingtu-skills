@@ -16,7 +16,6 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -34,13 +33,14 @@ def _shared_scripts_dir() -> Path:
 sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key
+from lingtu_http import LingtuHttpError, build_url, request_json as shared_request_json
+from lingtu_upload import multipart_upload
 
 
 SUCCESS_STATUSES = {"succeeded", "success", "completed", "complete", "done", "finished"}
 FAILURE_STATUSES = {"failed", "failure", "error", "cancelled", "canceled", "expired"}
 DEVELOPER_CONTACT = "微信 yh8000m"
 DEVELOPER_CONTACT_MESSAGE = "生成失败或遇到未知问题，请联系开发者：微信 yh8000m"
-UPLOAD_PATH = "/v1/file/upload"
 
 IMAGE_MODELS = {
     "gpt-image-2",
@@ -107,52 +107,22 @@ def generate_client_task_id() -> str:
 
 
 def upload_reference_image(path: str, base_url: str, api_key: str) -> str:
-    image_path = Path(path)
-    if not image_path.is_file():
-        raise FileNotFoundError(f"Reference image not found: {path}")
-
-    filename = image_path.name
-    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    boundary = f"----LingtuFormBoundary{uuid.uuid4().hex}"
-    file_bytes = image_path.read_bytes()
-    body = (
-        f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
-        f"Content-Type: {content_type}\r\n\r\n"
-    ).encode("utf-8") + file_bytes + f"\r\n--{boundary}--\r\n".encode("utf-8")
-
-    upload_url = build_url(base_url, UPLOAD_PATH)
-    request = urllib.request.Request(
-        upload_url,
-        data=body,
-        headers={
-            "Accept": "application/json",
-            "x-api-key": api_key,
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-        },
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(request, timeout=600) as response:
-            raw = response.read().decode("utf-8")
-    except urllib.error.HTTPError as exc:
-        raw = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {exc.code} from {upload_url}: {raw}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Reference upload failed for {path}: {exc}") from exc
-
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Upload returned non-JSON body: {raw[:500]}") from exc
-    if not isinstance(payload, dict) or payload.get("code") not in (0, None):
-        raise RuntimeError(f"Upload failed: {raw[:500]}")
-    data = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(data, dict):
-        raise RuntimeError(f"Upload response missing data: {raw[:500]}")
-    url = data.get("url")
+        result = multipart_upload(
+            path,
+            base=base_url,
+            api_key=api_key,
+            stream=False,
+            allow_null_code=True,
+            require_id=False,
+        )
+    except LingtuHttpError as exc:
+        raise RuntimeError(str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Reference image not found: {path}") from exc
+    url = result.get("url")
     if not isinstance(url, str) or not url:
-        raise RuntimeError(f"Upload response missing data.url: {raw[:500]}")
+        raise RuntimeError(f"Upload response missing data.url for {path}")
     return url
 
 
@@ -163,29 +133,10 @@ def resolve_reference_image(path_or_url: str, base_url: str, api_key: str) -> st
 
 
 def http_json(method: str, url: str, api_key: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-    headers = {
-        "Accept": "application/json",
-        "x-api-key": api_key,
-    }
-    data = None
-    if body is not None:
-        data = json.dumps(body, ensure_ascii=False).encode("utf-8")
-        headers["Content-Type"] = "application/json"
-
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            raw = response.read().decode("utf-8")
-    except urllib.error.HTTPError as exc:
-        raw = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {exc.code} from {url}: {raw}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Request failed for {url}: {exc}") from exc
-
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Expected JSON from {url}, got: {raw[:500]}") from exc
+        parsed = shared_request_json(method, url, body=body, api_key=api_key, timeout=60)
+    except LingtuHttpError as exc:
+        raise RuntimeError(str(exc)) from exc
     if not isinstance(parsed, dict):
         raise RuntimeError(f"Expected JSON object from {url}, got: {type(parsed).__name__}")
     return parsed
@@ -397,12 +348,6 @@ def save_assets(assets: list[str], output_dir: Path) -> list[str]:
         path.write_bytes(base64.b64decode(payload))
         saved.append(str(path.resolve()))
     return saved
-
-
-def build_url(base_url: str, path: str) -> str:
-    if path.startswith(("http://", "https://")):
-        return path
-    return urllib.parse.urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
 
 
 def format_path(path: str, **values: Any) -> str:

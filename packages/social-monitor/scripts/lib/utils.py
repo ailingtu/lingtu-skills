@@ -24,6 +24,7 @@ def _shared_scripts_dir() -> Path:
 sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key as shared_require_api_key
+from lingtu_http import base_url as shared_base_url
 
 from .config import (
     DEFAULT_BASE_URL,
@@ -45,7 +46,7 @@ def require_api_key() -> str:
 
 
 def base_url() -> str:
-    return os.environ.get("LINGTU_AI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    return shared_base_url(DEFAULT_BASE_URL)
 
 
 def store_path() -> Path:

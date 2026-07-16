@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
-from urllib import error as urllib_error
-from urllib import parse as urllib_parse
-from urllib import request as urllib_request
 
 from .config import (
     DEFAULT_PLATFORM,
@@ -17,13 +13,12 @@ from .config import (
     INS_FETCH_MATERIAL_PATH,
     INS_FETCH_POSTS_PATH,
 )
-from .utils import (
-    base_url,
+from .utils import (  # noqa: I001 — utils inserts shared/scripts onto sys.path
     cursor_is_empty,
     normalize_platform,
     platform_label,
-    require_api_key,
 )
+from lingtu_http import LingtuHttpError, raise_system_exit, request_json
 
 
 def fetch_posts(
@@ -33,20 +28,20 @@ def fetch_posts(
     timeout: int = 30,
 ) -> dict[str, Any]:
     platform = normalize_platform(platform)
-    api_key = require_api_key()
-    query = urllib_parse.urlencode({"uniqueId": unique_id, "count": max(1, count)})
     path = INS_FETCH_POSTS_PATH if platform == "instagram" else FETCH_POSTS_PATH
-    url = f"{base_url()}{path}?{query}"
-    req = urllib_request.Request(url, method="GET")
-    req.add_header("x-api-key", api_key)
-    req.add_header("Accept", "application/json")
+    label = f"fetchPosts({platform})"
     try:
-        with urllib_request.urlopen(req, timeout=timeout) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib_error.HTTPError as exc:
-        raise SystemExit(f"fetchPosts({platform}) HTTP 错误：{exc.code} {exc.reason}")
-    except urllib_error.URLError as exc:
-        raise SystemExit(f"fetchPosts({platform}) 网络错误：{exc.reason}")
+        payload = request_json(
+            "GET",
+            path,
+            query={"uniqueId": unique_id, "count": max(1, count)},
+            timeout=timeout,
+        )
+    except LingtuHttpError as exc:
+        raise_system_exit(exc, label)
+
+    if not isinstance(payload, dict):
+        raise SystemExit(f"{label} 调用失败：响应不是 JSON 对象")
 
     code = payload.get("code")
     if code == 0 and isinstance(payload.get("data"), dict):
@@ -55,23 +50,17 @@ def fetch_posts(
     message = payload.get("message") or "未知错误"
     if code == -1:
         raise SystemExit(f"未获取到该达人数据：{message}（uniqueId={unique_id}）")
-    raise SystemExit(f"fetchPosts({platform}) 调用失败 (code={code})：{message}")
+    raise SystemExit(f"{label} 调用失败 (code={code})：{message}")
 
 
 def post_json(path: str, body: dict[str, Any], label: str, timeout: int = 60) -> dict[str, Any]:
-    api_key = require_api_key()
-    payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
-    req = urllib_request.Request(f"{base_url()}{path}", data=payload, method="POST")
-    req.add_header("x-api-key", api_key)
-    req.add_header("Accept", "application/json")
-    req.add_header("Content-Type", "application/json")
     try:
-        with urllib_request.urlopen(req, timeout=timeout) as response:
-            result = json.loads(response.read().decode("utf-8"))
-    except urllib_error.HTTPError as exc:
-        raise SystemExit(f"{label} HTTP 错误：{exc.code} {exc.reason}")
-    except urllib_error.URLError as exc:
-        raise SystemExit(f"{label} 网络错误：{exc.reason}")
+        result = request_json("POST", path, body=body, timeout=timeout)
+    except LingtuHttpError as exc:
+        raise_system_exit(exc, label)
+
+    if not isinstance(result, dict):
+        raise SystemExit(f"{label} 调用失败：响应不是 JSON 对象")
 
     code = result.get("code")
     if code == 0 and isinstance(result.get("data"), dict):
