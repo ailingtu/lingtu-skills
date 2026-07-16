@@ -5,31 +5,37 @@
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/content-create/SKILL.md",
-      "computedHash": "dd37fddbd96b858983dac1f87eea65db80a00aa326243d6779fdfa7cf779c171"
+      "computedHash": "c804a8f194b29fc42943f77552493a6066a61afd6a1d4a950b39d474327866db"
     },
     "lingtu-tkshop-query": {
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/tkshop-query/SKILL.md",
-      "computedHash": "7ea40730c30e0a6fc7b6215a7a0baf88ec37c388e4b7b5ddecc911e60bcc54f1"
+      "computedHash": "f834b06e7ba888965a99ff0ae72af8a6c50393375588d153a716c4cb03f1a97b"
     },
     "lingtu-social-monitor": {
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/social-monitor/SKILL.md",
-      "computedHash": "2d25a2dd56f10ecdf60b9619d84fdc65f058f223b640ed7b562b5b3011eb9249"
+      "computedHash": "d3cf10f6039efced91ea9c54441067ac9e0d90191be54d34a159a4aafafff1da"
     },
     "lingtu-video-understand": {
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/video-understand/SKILL.md",
-      "computedHash": "ff957983a955b635768bf3893749133282e24d701cd78aada368e6336453b632"
+      "computedHash": "13c2c6e3d007b725416b825a00ee86a8b7de1465ab0b2e32014e58e28cb7359c"
+    },
+    "lingtu-video-publish": {
+      "source": "ailingtu/lingtu-skills",
+      "sourceType": "github",
+      "skillPath": "packages/video-publish/SKILL.md",
+      "computedHash": "87398ab853c8d8ce6b9af5ceb4ba2cc37b707115c7651e3cf9758af91cca359d"
     },
     "lingtu-tk-blacklist": {
       "source": "ailingtu/lingtu-skills",
       "sourceType": "github",
       "skillPath": "packages/tk-blacklist/SKILL.md",
-      "computedHash": "e6b39eb86d5f9750e74ffefa44050299ebcbf39ac5938606e79cf633c485d013"
+      "computedHash": "1ba0cf40d71ec18981ddec3119aba083caaab19b0d45549b082bc7b59cfa5770"
     }
   }
 }

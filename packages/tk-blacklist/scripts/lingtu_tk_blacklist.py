@@ -15,8 +15,16 @@ from urllib.parse import urlparse
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
+def _shared_scripts_dir() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "shared" / "scripts"
+        if candidate.is_dir():
+            return candidate
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+
+
+sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key as shared_require_api_key
 

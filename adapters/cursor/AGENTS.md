@@ -23,6 +23,10 @@ Use for TikTok/Instagram creator links, usernames, creator/competitor monitoring
 
 Use for single local videos, TikTok URLs, YouTube URLs, or Instagram URLs that need summarization, tagging, breakdown, remix planning, or a replication prompt. If the user also asks for metrics or comments, fetch them first with `packages/social-monitor`.
 
+## Use `packages/video-publish`
+
+Use for batch publishing TikTok / TikTok Shop videos, generating a publishing schedule CSV/Excel, looking up authorized publishing creators or products, dry-run / preview of a schedule, or confirming a publish batch. Start with `packages/video-publish/SKILL.md`.
+
 ## Use `packages/tk-blacklist`
 
 Use for TK 达人黑名单查询, TikTok influencer blacklist lookup, and batch uniqueId blacklist checks. Start with `packages/tk-blacklist/SKILL.md`.

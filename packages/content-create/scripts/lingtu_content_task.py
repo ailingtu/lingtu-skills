@@ -22,8 +22,16 @@ from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
+def _shared_scripts_dir() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "shared" / "scripts"
+        if candidate.is_dir():
+            return candidate
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+
+
+sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key
 
@@ -33,6 +41,29 @@ FAILURE_STATUSES = {"failed", "failure", "error", "cancelled", "canceled", "expi
 DEVELOPER_CONTACT = "微信 yh8000m"
 DEVELOPER_CONTACT_MESSAGE = "生成失败或遇到未知问题，请联系开发者：微信 yh8000m"
 UPLOAD_PATH = "/v1/file/upload"
+
+IMAGE_MODELS = {
+    "gpt-image-2",
+    "nano-banana-2",
+    "nano-banana-2-2k",
+    "nano-banana-2-4k",
+    "seedream5.0-lite",
+}
+# model -> (default_seconds, allowed_seconds, allowed_sizes)
+VIDEO_MODELS: dict[str, tuple[int, set[int], set[str]]] = {
+    "gemini-omni-video": (10, {6, 8, 10}, {"720x1280", "1280x720", "1080x1920", "1920x1080"}),
+    "veo3.1-lite-extend": (8, {8}, {"720x1280", "1280x720"}),
+    "veo3.1-extend": (8, {8}, {"720x1280", "1280x720"}),
+    "grok-imagine-1.5": (15, {6, 10, 15, 20, 25, 30}, {"720x1280", "1280x720"}),
+    "seedance2.0-mini": (10, {4, 8, 10, 12, 15}, {"480x854", "854x480", "720x1280", "1280x720"}),
+    "seedance2.0": (10, {4, 8, 10, 12, 15}, {"480x854", "854x480", "720x1280", "1280x720"}),
+    "seedance2.0-fast": (10, {4, 8, 10, 12, 15}, {"480x854", "854x480", "720x1280", "1280x720"}),
+}
+LEGACY_MODEL_ALIASES = {
+    "grok-imagine-1": "grok-imagine-1.5",
+    "seedance-2.0": "seedance2.0-fast",
+}
+
 ASSET_KEYS = {
     "url",
     "urls",
@@ -427,15 +458,18 @@ def build_create_payload(args: argparse.Namespace, references: list[str]) -> dic
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create and poll a Lingtu AI content schedule.")
     parser.add_argument("--kind", required=True, help="Media type, such as image or video.")
-    parser.add_argument("--prompt", required=True, help="Generation prompt.")
+    parser.add_argument(
+        "--prompt",
+        help="Generation prompt. Required when creating a new task; optional when polling an existing task/schedule.",
+    )
     parser.add_argument(
         "--model",
-        help="Lingtu AI model name. Video: gemini-omni-video (default), veo3.1-lite-extend, veo3.1-extend, grok-imagine-1, seedance2.0-fast, seedance-2.0. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k.",
+        help="Lingtu AI model name. Video: gemini-omni-video (default), veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
     )
     parser.add_argument(
         "--seconds",
         type=int,
-        help="Video duration in seconds. Defaults: gemini-omni-video=10, veo3.1-*=8, grok-imagine-1=15, seedance2.0-fast=10.",
+        help="Video duration in seconds. Defaults: gemini-omni-video=10, veo3.1-*=8, grok-imagine-1.5=15, seedance2.0*=10.",
     )
     parser.add_argument("--size", default="720x1280", help="Video size, such as 720x1280 or 1280x720.")
     parser.add_argument("--aspect-ratio", default="1:1", help="Image aspect ratio, such as 1:1 or 9:16.")
@@ -459,6 +493,14 @@ def parse_args() -> argparse.Namespace:
         default=os.getenv("LINGTU_AI_CREATE_MODE", "auto"),
         help="Create through the schedule API by default, or direct task API when explicitly requested.",
     )
+    parser.add_argument(
+        "--poll-task-id",
+        help="Poll an existing task id without creating a new task. Use after a crash/network error during polling.",
+    )
+    parser.add_argument(
+        "--poll-schedule-id",
+        help="Poll an existing schedule id without creating a new schedule. Use after a crash/network error during polling.",
+    )
     parser.add_argument("--base-url", default=os.getenv("LINGTU_AI_BASE_URL", "https://api.ailingtu.com"))
     parser.add_argument("--create-path", default=os.getenv("LINGTU_AI_CREATE_PATH", "/v1/ai/task/create"))
     parser.add_argument("--status-path", default=os.getenv("LINGTU_AI_STATUS_PATH", "/v1/ai/task/query?taskId={task_id}"))
@@ -475,20 +517,61 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default=".")
     args = parser.parse_args()
     args.seconds_was_set = args.seconds is not None
+    args.size_was_set = "--size" in sys.argv
     return args
+
+
+def resolve_model_name(model: str) -> str:
+    key = model.strip()
+    alias = LEGACY_MODEL_ALIASES.get(key.lower())
+    if alias:
+        print(
+            json.dumps(
+                {"warning": f"Model '{key}' is deprecated; using '{alias}' instead."},
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
+        return alias
+    return key
+
+
+def validate_model_args(args: argparse.Namespace) -> None:
+    kind = args.kind.lower()
+    model = args.model
+    if kind == "image":
+        if model not in IMAGE_MODELS:
+            raise ValueError(
+                f"Unknown image model '{model}'. Supported: {', '.join(sorted(IMAGE_MODELS))}."
+            )
+        return
+    if kind == "video":
+        if model not in VIDEO_MODELS:
+            raise ValueError(
+                f"Unknown video model '{model}'. Supported: {', '.join(sorted(VIDEO_MODELS))}."
+            )
+        default_seconds, allowed_seconds, allowed_sizes = VIDEO_MODELS[model]
+        if args.seconds is None:
+            args.seconds = default_seconds
+        elif args.seconds not in allowed_seconds:
+            allowed = ", ".join(str(value) for value in sorted(allowed_seconds))
+            raise ValueError(
+                f"Model '{model}' does not support --seconds {args.seconds}. Allowed: {allowed}."
+            )
+        if args.size_was_set and args.size not in allowed_sizes:
+            allowed = ", ".join(sorted(allowed_sizes))
+            raise ValueError(
+                f"Model '{model}' does not support --size {args.size}. Allowed: {allowed}."
+            )
+        return
+    raise ValueError(f"Unsupported kind '{args.kind}'. Use image or video.")
 
 
 def default_video_seconds(model: str) -> int:
     """Return the default duration for a given video model."""
-    m = model.lower()
-    if m == "gemini-omni-video":
-        return 10
-    if m in ("veo3.1-lite-extend", "veo3.1-extend"):
-        return 8
-    if m == "grok-imagine-1":
-        return 15
-    if m in ("seedance2.0-fast", "seedance-2.0"):
-        return 10
+    info = VIDEO_MODELS.get(model.lower())
+    if info:
+        return info[0]
     return 8  # conservative fallback
 
 
@@ -628,11 +711,11 @@ def record_matches_request(
         return False
 
     prompt = deep_get(record, ["params.prompt", "inputData.prompt", "inputData.params.prompt", "data.params.prompt"])
-    if prompt and prompt != args.prompt:
+    if args.prompt and prompt and prompt != args.prompt:
         return False
 
     model = deep_get(record, ["params.model", "inputData.model", "model"])
-    if model and args.model and model != args.model:
+    if args.model and model and model != args.model:
         return False
 
     created_at = parse_created_at(deep_get(record, ["createdAt", "created_at", "data.createdAt"]))
@@ -727,18 +810,52 @@ def poll_schedule(args: argparse.Namespace, api_key: str, schedule_id: Any, task
 
 def main() -> int:
     args = parse_args()
+    poll_only = bool(args.poll_task_id or args.poll_schedule_id)
+    if args.poll_task_id and args.poll_schedule_id:
+        print_error({"error": "Use only one of --poll-task-id or --poll-schedule-id."}, stderr=True)
+        return 2
+    if not poll_only and not args.prompt:
+        print_error({"error": "--prompt is required when creating a new task."}, stderr=True)
+        return 2
+
     resolved_mode = resolve_create_mode(args)
-    if not args.client_task_id:
+    if not args.client_task_id and not poll_only:
         args.client_task_id = generate_client_task_id()
-    if not args.model:
+    if args.model:
+        args.model = resolve_model_name(args.model)
+    elif not poll_only:
         args.model = "gpt-image-2" if args.kind.lower() == "image" else "gemini-omni-video"
-    if args.kind.lower() == "video" and not args.seconds_was_set:
+    if args.model and not poll_only:
+        try:
+            validate_model_args(args)
+        except ValueError as exc:
+            print_error({"error": str(exc)}, stderr=True)
+            return 2
+    elif args.kind.lower() == "video" and not args.seconds_was_set and args.model:
         args.seconds = default_video_seconds(args.model)
+
     try:
         api_key = require_api_key()
     except SystemExit as exc:
         print_error({"error": str(exc)}, stderr=True)
         return 2
+
+    if poll_only:
+        try:
+            if args.poll_task_id:
+                return poll_task(args, api_key, args.poll_task_id)
+            return poll_schedule(args, api_key, args.poll_schedule_id, [], time.time())
+        except Exception as exc:
+            print_error(
+                {
+                    "task_id": args.poll_task_id,
+                    "schedule_id": args.poll_schedule_id,
+                    "error": f"Unexpected error during polling: {exc}",
+                    "hint": "Re-run with the same --poll-task-id / --poll-schedule-id — the task may still be running.",
+                }
+            )
+            return 1
+
     try:
         reference_images = [
             resolve_reference_image(path_or_url, args.base_url, api_key)
@@ -786,7 +903,12 @@ def main() -> int:
                 "schedule_id": schedule_id,
                 "task_ids": task_ids,
                 "error": f"Unexpected error during polling: {exc}",
-                "hint": "Re-run poll with the same task_id/schedule_id — the task may still be running.",
+                "hint": (
+                    "Re-run poll with the same id — the task may still be running. "
+                    f"Example: --kind {args.kind} --poll-schedule-id {schedule_id}"
+                    if schedule_id
+                    else f"Example: --kind {args.kind} --poll-task-id {task_id}"
+                ),
             }
         )
         return 1

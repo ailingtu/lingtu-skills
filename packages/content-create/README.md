@@ -2,7 +2,7 @@
 
 Lingtu Content Create is a reusable agent package for product-content generation with Lingtu AI. It supports image generation, optimized product reference images, ecommerce/UGC-style selling videos, viral-remake workflows, and direct Lingtu AI task submission through a schedule API.
 
-Current package version: `0.1.0`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
+Current package version: `0.3.0`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
 
 ## What It Does
 

@@ -14,8 +14,8 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 - **`packages/tkshop-query`** — query TK shop data: daily reports, shop lists, and AI-powered operations Q&A.
 - **`packages/social-monitor`** — monitor TikTok/Instagram creators or competitor accounts, fetch account video lists and single-video material metrics, export video comments, and generate recent-video intelligence reports.
 - **`packages/video-understand`** — turn a local video file or a TikTok/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, or video breakdown.
+- **`packages/video-publish`** — batch TikTok / TikTok Shop video publishing, schedule CSV generation, creator/product lookup, and dry-run validation.
 - **`packages/tk-blacklist`** — batch query TK blacklist records by TikTok uniqueId.
-- **`packages/report-render`** — turn structured report JSON into shareable PNG long-images (work in progress, not yet installable).
 
 ## Repository Layout
 
@@ -25,8 +25,8 @@ packages/
   tkshop-query/     # TK shop data & analytics
   social-monitor/   # Social creator monitoring, material metrics, comment export
   video-understand/ # Video understanding & replication-prompt generation
-  tk-blacklist/ # TK blacklist query
-  report-render/    # Report JSON to shareable PNG long-image
+  video-publish/    # Batch video publishing and schedules
+  tk-blacklist/     # TK blacklist query
 adapters/
   codex/            # Codex skill installation
   claude/           # Claude Code CLAUDE.md
@@ -73,7 +73,7 @@ Or specify a target and packages explicitly:
 
 ```bash
 ./install.sh codex all
-./install.sh codex content-create tkshop-query social-monitor video-understand tk-blacklist
+./install.sh codex content-create tkshop-query social-monitor video-understand video-publish tk-blacklist
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
 ./install.sh openclaw /path/to/project all
@@ -137,10 +137,12 @@ python3 scripts/lingtu_social_monitor.py add \
   --input "https://www.tiktok.com/@example" \
   --remark "Competitor account, fitness products" \
   --source feishu_group \
-  --group-id mock_group_001 \
+  --group-id local_default \
   --operator-id user_001 \
   --format text
 ```
+
+`group_id` is an isolation key: use a Feishu group id in Feishu, or a stable local id such as `local_default` for Cursor / Codex / CLI.
 
 ## Quick Start — Video Understand
 
@@ -156,6 +158,28 @@ python3 scripts/lingtu_video_understand.py replicate --file ./clip.mp4
 
 # Upload only — returns file id and CDN url, no replication
 python3 scripts/lingtu_video_understand.py upload ./clip.mp4
+```
+
+## Quick Start — Video Publish
+
+```bash
+cd packages/video-publish
+
+# Generate a CSV schedule template
+python3 scripts/lingtu_video_publish.py gen-csv \
+  --platform tiktok_shop \
+  --region US \
+  --date 2026-07-05 \
+  --product-id pid_001234
+
+# Dry-run preview (after editing schedule.csv and adding videos)
+python3 scripts/lingtu_video_publish.py publish \
+  --folder ~/Desktop/video_publish_2026-07-05
+
+# Confirm publish
+python3 scripts/lingtu_video_publish.py publish \
+  --folder ~/Desktop/video_publish_2026-07-05 \
+  --confirm
 ```
 
 ## Quick Start — TK Blacklist

@@ -1,6 +1,6 @@
 # Lingtu AI Capabilities
 
-Use Lingtu AI packages from this repository when the user requests media generation, TK shop data analysis, TikTok/Instagram creator or competitor monitoring, single-video metric/comment export, video understanding, or TK blacklist lookup.
+Use Lingtu AI packages from this repository when the user requests media generation, TK shop data analysis, TikTok/Instagram creator or competitor monitoring, single-video metric/comment export, video understanding, TikTok/TikTok Shop video publishing, or TK blacklist lookup.
 
 ## Repository Source
 
@@ -53,6 +53,17 @@ Read `packages/video-understand/SKILL.md` when the user asks for:
 
 If the user also asks for metrics or comments, fetch them first with `packages/social-monitor`.
 
+## Video Publish
+
+Read `packages/video-publish/SKILL.md` when the user asks for:
+
+- batch publishing TikTok / TikTok Shop videos
+- generating a publishing schedule CSV/Excel
+- looking up authorized publishing creators or products
+- dry-run / preview of a schedule, or confirming a publish batch
+
+Use `packages/video-publish/scripts/lingtu_video_publish.py` for deterministic API calls.
+
 ## TK Blacklist
 
 Read `packages/tk-blacklist/SKILL.md` when the user asks for:
@@ -63,6 +74,6 @@ Read `packages/tk-blacklist/SKILL.md` when the user asks for:
 
 Use `packages/tk-blacklist/scripts/lingtu_tk_blacklist.py` for deterministic API calls.
 
-## Authentication (single-user mode)
+## Authentication
 
-Before first use, run `python3 shared/scripts/user_keys.py single bind` to bind the administrator key. Scripts resolve the API key automatically and send it as the `x-api-key` header. Do not set `LINGTU_API_KEY` in the environment. Never write customer API keys into source files.
+Authentication uses the `LINGTU_API_KEY` environment variable. Standalone CLI users must `export LINGTU_API_KEY=xxx`. If the user doesn't have a key yet, run `python3 shared/scripts/user_keys.py single bind` to generate a `/binduser` URL. Scripts send the key as the `x-api-key` header. Never write API keys into source files.

@@ -29,7 +29,6 @@
 - **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标和视频拆解。
 - **`packages/video-publish`** — TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。
 - **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询 TK 达人黑名单记录。
-- **`packages/report-render`** — 将结构化报告 JSON 渲染为可分享的 PNG 长图（开发中，暂未支持安装）。
 
 ## 目录结构 
 
@@ -40,8 +39,7 @@ packages/
   social-monitor/   # 社媒达人/竞品监控、素材数据、评论导出
   video-understand/ # 视频理解与复刻提示词生成
   video-publish/    # 批量视频发布和排期
-  tk-blacklist/ # TK 达人黑名单查询
-  report-render/    # 报告 JSON 转分享长图
+  tk-blacklist/     # TK 达人黑名单查询
 adapters/
   codex/            # Codex 技能安装
   claude/           # Claude Code 适配
@@ -154,10 +152,12 @@ python3 scripts/lingtu_social_monitor.py add \
   --input "https://www.tiktok.com/@example" \
   --remark "竞品账号，主卖健身产品" \
   --source feishu_group \
-  --group-id mock_group_001 \
+  --group-id local_default \
   --operator-id user_001 \
   --format text
 ```
+
+`group_id` 是隔离键：飞书可用群 ID；本地 / Cursor / Codex 可用 `local_default` 等稳定标识。
 
 ### 视频理解（Video Understand）
 
@@ -173,6 +173,28 @@ python3 scripts/lingtu_video_understand.py replicate --file ./clip.mp4
 
 # 仅上传文件，返回文件 id 和 CDN 地址
 python3 scripts/lingtu_video_understand.py upload ./clip.mp4
+```
+
+### 批量视频发布（Video Publish）
+
+```bash
+cd packages/video-publish
+
+# 生成 CSV 排期模板
+python3 scripts/lingtu_video_publish.py gen-csv \
+  --platform tiktok_shop \
+  --region US \
+  --date 2026-07-05 \
+  --product-id pid_001234
+
+# dry-run 预览（编辑 schedule.csv 并放入视频后）
+python3 scripts/lingtu_video_publish.py publish \
+  --folder ~/Desktop/视频发布_2026-07-05
+
+# 确认发布
+python3 scripts/lingtu_video_publish.py publish \
+  --folder ~/Desktop/视频发布_2026-07-05 \
+  --confirm
 ```
 
 ### TK 达人黑名单（TK Blacklist）

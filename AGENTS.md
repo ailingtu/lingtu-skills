@@ -1,6 +1,6 @@
 # Lingtu AI Agent Instructions
 
-Use this repository when a user asks for Lingtu AI content generation, TK shop data analysis, TikTok/Instagram creator or competitor monitoring, single-video metric/comment export, video understanding, or TK blacklist lookup.
+Use this repository when a user asks for Lingtu AI content generation, TK shop data analysis, TikTok/Instagram creator or competitor monitoring, single-video metric/comment export, video understanding, TikTok/TikTok Shop video publishing, or TK blacklist lookup.
 
 ## Repository Source
 

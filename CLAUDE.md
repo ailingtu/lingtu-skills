@@ -15,7 +15,6 @@ Use this repository as a reusable Lingtu AI capability kit.
 - For TikTok/Instagram creator or competitor monitoring, recent-video lookups, single-video metric refreshes, video comment exports/downloads, comment feedback summaries, and content intelligence reports, read `packages/social-monitor/SKILL.md`.
 - For TK blacklist lookup — batch query whether TikTok creator uniqueIds are in the blacklist, returning region, nickname, feedback count, latest feedback time, and reasons — read `packages/tk-blacklist/SKILL.md`.
 - For batch TikTok video publishing — generating Excel schedule templates, uploading videos, and creating scheduled posts to TikTok Shop (带货) or TikTok nurture (养号) accounts — read `packages/video-publish/SKILL.md`.
-- (WIP, do not advertise to end users) For turning structured report JSON into a shareable PNG long-image, read `packages/report-render/SKILL.md`. Still under development — only invoke when explicitly asked.
 
 ## Environment & Authentication
 
@@ -42,7 +41,6 @@ Use the scripts bundled in each package:
 - `packages/tkshop-query/scripts/lingtu_shop_data.py`
 - `packages/social-monitor/scripts/lingtu_social_monitor.py`
 - `packages/tk-blacklist/scripts/lingtu_tk_blacklist.py`
-- `packages/report-render/scripts/lingtu_report_render.py` (WIP)
 - `packages/video-publish/scripts/lingtu_video_publish.py`
 
 Read the relevant package `references/api.md` before changing API paths, schemas, response parsing, or status mappings.

@@ -88,6 +88,6 @@ Download completed videos to a local output directory and return both local medi
 
 ## Failure Handling
 
-- If `veo3.1` is requested for 10 seconds but the provider only supports 8 seconds or quality is poor, use a confirmed 10-second model such as `gemini-omni-video` when available.
+- If `veo3.1-lite-extend` / `veo3.1-extend` is requested for 10 seconds but those models only support 8 seconds, switch to a confirmed 10-second model such as `gemini-omni-video` or `seedance2.0-fast`.
 - If a model returns `未知模型`, stop retrying that model name and ask for or use a confirmed model.
 - If a provider fails with retry exhaustion, simplify the prompt: fewer people, one action, no complex camera moves, no exact text.

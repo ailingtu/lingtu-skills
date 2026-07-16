@@ -12,9 +12,6 @@ from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO_ROOT / "shared" / "scripts"))
-
 # lingtu_auth is used via .utils.require_api_key
 
 from .analysis import analyze_with_focus

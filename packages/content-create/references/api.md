@@ -18,9 +18,10 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 | `gemini-omni-video` | 6, 8, 10 | 10 |
 | `veo3.1-lite-extend` | 8 (fixed) | 8 |
 | `veo3.1-extend` | 8 (fixed) | 8 |
-| `grok-imagine-1` | 6, 10, 15, 20, 25, 30 | 15 |
+| `grok-imagine-1.5` | 6, 10, 15, 20, 25, 30 | 15 |
+| `seedance2.0-mini` | 4, 8, 10, 12, 15 | 10 |
+| `seedance2.0` | 4, 8, 10, 12, 15 | 10 |
 | `seedance2.0-fast` | 4, 8, 10, 12, 15 | 10 |
-| `seedance-2.0` (alias for `seedance2.0-fast`) | 4, 8, 10, 12, 15 | 10 |
 - Polling expectation: poll for about 5 minutes before reporting timeout.
 - Failure fallback: on provider failure, timeout, missing credentials, unknown response schema, network error, or any unexpected issue, surface `生成失败或遇到未知问题，请联系开发者：微信 yh8000m`.
 - Source reference: app.ailingtu `/ai-creative/video` uses `src/api/ai/sora2.ts` plus `VideoGenerationForm*.vue`. Keep the new `x-api-key` auth style; do not copy app.ailingtu's project auth layer.
@@ -120,7 +121,7 @@ Image request:
 ```
 
 Image models seen in app.ailingtu:
-`gpt-image-2`, `nano-banana-2`, `nano-banana-2-2k`, `nano-banana-2-4k`.
+`gpt-image-2`, `nano-banana-2`, `nano-banana-2-2k`, `nano-banana-2-4k`, `seedream5.0-lite`.
 
 Image aspect ratios seen in app.ailingtu:
 `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`.
@@ -134,12 +135,10 @@ Image aspect ratios seen in app.ailingtu:
 | `gemini-omni-video` | veo | 10 | 6, 8, 10 | 720p, 1080p |
 | `veo3.1-lite-extend` | veo | 8 | 8 (fixed) | 720p |
 | `veo3.1-extend` | veo | 8 | 8 (fixed) | 720p |
-| `grok-imagine-1` | grok | 15 | 6, 10, 15, 20, 25, 30 | 720p |
+| `grok-imagine-1.5` | grok | 15 | 6, 10, 15, 20, 25, 30 | 720p |
+| `seedance2.0-mini` | seedance | 10 | 4, 8, 10, 12, 15 | 480p, 720p |
+| `seedance2.0` | seedance | 10 | 4, 8, 10, 12, 15 | 480p, 720p |
 | `seedance2.0-fast` | seedance | 10 | 4, 8, 10, 12, 15 | 480p, 720p |
-
-Model aliases: `seedance-2.0` → `seedance2.0-fast`.
-
-Config-only (no UI entry): `veo3.1-pro`.
 
 ### Resolution → size map
 

@@ -220,11 +220,37 @@ generate_agent_doc() {
     echo
     echo "## Authentication (single-user mode)"
     echo
-    echo "- Before first use, run \`python3 .lingtu-agent-kit/shared/scripts/user_keys.py single bind\` to bind the administrator key."
+    echo "- Before first use, set \`LINGTU_API_KEY\` (OpenClaw injects it automatically when spawning skill subprocesses)."
+    echo "- If the user doesn't have a key yet, run \`python3 .lingtu-agent-kit/shared/scripts/user_keys.py single bind\` to generate a \`/binduser\` URL."
     echo "- For TikTok Shop binding or empty shop/product lists, ask the user to bind their shop at https://app.ailingtu.com/teamshop."
     echo "- For missing or unauthorized video-publishing creators, ask the user to authorize creators at https://app.ailingtu.com/video-post."
-    echo "- Scripts resolve the API key automatically and send it as the \`x-api-key\` header."
-    echo "- Do not set \`LINGTU_API_KEY\` in the environment — prefer the package scripts which handle auth internally."
+    echo "- Scripts read \`LINGTU_API_KEY\` from the environment and send it as the \`x-api-key\` header."
+    echo "- Do not store API keys in source files."
+    echo
+    echo "## Package Routing"
+    echo
+    for id in "$@"; do
+      case "$id" in
+        content-create)
+          echo "- \`content-create\`: product images, reference images, ecommerce videos, viral remakes."
+          ;;
+        tkshop-query)
+          echo "- \`tkshop-query\`: shop lists, daily reports, merchant/store metrics, operations Q&A."
+          ;;
+        social-monitor)
+          echo "- \`social-monitor\`: TikTok/Instagram creator monitoring, material metrics, comment export, digests."
+          ;;
+        video-understand)
+          echo "- \`video-understand\`: local or TikTok/YouTube/Instagram video understanding and replication prompts."
+          ;;
+        video-publish)
+          echo "- \`video-publish\`: batch TikTok/TikTok Shop publishing, schedule CSV, dry-run, confirm."
+          ;;
+        tk-blacklist)
+          echo "- \`tk-blacklist\`: TK influencer blacklist lookup by uniqueId."
+          ;;
+      esac
+    done
     echo
     echo "## Shared Rules"
     echo

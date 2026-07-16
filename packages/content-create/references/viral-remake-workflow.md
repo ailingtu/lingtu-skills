@@ -33,8 +33,32 @@ Translate the viral structure into the user's product:
 
 ## Prompt Template
 
+Use the same 8-field AI video prompt format required by `SKILL.md`:
+
 ```text
-10s vertical realistic phone video inspired by this structure: [hook -> demo -> result]. Use the provided product references only. Show one [product] in [target market setting]. [Single action and benefit]. [Voiceover/dialogue in target language if requested]. No subtitles/on-screen text if requested. Authentic handheld footage, no copied logos or text.
+Video style:
+[Vertical realistic phone video / UGC handheld / close-up demo — inspired by hook -> demo -> result]
+
+Scene:
+[Target-market setting with one clear product action; no copied logos or competitor branding]
+
+Camera:
+[Handheld / POV / close-up detail — match the remake plan, not the source shot-for-shot]
+
+Tone & pacing:
+[Fast hook in 1-2s, one clear benefit beat, natural ending]
+
+Character:
+[Optional: one realistic user type matching the target market; omit if product-only]
+
+Spoken script:
+[Optional short voiceover/dialogue in the target language; do not copy source lines]
+
+Audio:
+[Ambient / soft music / voiceover only — as planned]
+
+Overall feeling:
+[Authentic remake of the selling structure, not a frame copy; no on-screen text unless requested]
 ```
 
 ## Variants
