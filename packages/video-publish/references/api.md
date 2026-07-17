@@ -253,7 +253,7 @@ Body: raw file bytes
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| id | number | 是 | 创作者账号 ID |
+| id | number | 是 | 创作者账号表主键（`pageList` 返回的整数 `id`，**不是** `creatorId` 字符串） |
 | origin | string | 是 | "TIKTOK" |
 | pageSize | number | 是 | 每页数量 |
 | pageToken | string | 否 | 分页 token |

@@ -1034,9 +1034,10 @@ def command_fill(args: argparse.Namespace) -> None:
                 from .api import list_shop_products, resolve_creator_batch
                 found, _ = resolve_creator_batch([creator])
                 cinfo = found.get(creator.lower(), {})
-                cid = (cinfo or {}).get("creatorId", "")
-                if cid:
-                    result = list_shop_products(creator_id=cid, page_size=5, title_keyword=pid)
+                # 商品接口用 pageList 整数 id，不是 creatorId
+                account_id = (cinfo or {}).get("id") or ""
+                if account_id:
+                    result = list_shop_products(creator_id=account_id, page_size=5, title_keyword=pid)
                     products = (result.get("data") or {}).get("products") or []
                     # 匹配 product id
                     for p in products:
@@ -1129,20 +1130,23 @@ def command_products_search(args: argparse.Namespace) -> None:
     if not creator_info:
         raise SystemExit(f"未找到创作者账号：{username}")
 
-    creator_id = creator_info["creatorId"]
-    if not creator_id:
-        raise SystemExit(f"创作者 {username} 缺少 creatorId")
+    # 商品接口 id 为账号表整数主键，不是 creatorId（长字符串）
+    account_id = (creator_info.get("id") or "").strip()
+    if not account_id:
+        raise SystemExit(
+            f"创作者 {username} 缺少账号 id（pageList 的 id 字段），无法查询店铺/橱窗商品"
+        )
 
     if source == "shop":
         result = list_shop_products(
-            creator_id=creator_id,
+            creator_id=account_id,
             page_size=args.page_size,
             title_keyword=args.keyword or None,
         )
     else:
         from .api import list_showcase_products
         result = list_showcase_products(
-            creator_id=creator_id,
+            creator_id=account_id,
             page_size=args.page_size,
         )
 

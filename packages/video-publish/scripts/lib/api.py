@@ -177,7 +177,13 @@ def list_creator_accounts(
 
 def _creator_summary(item: dict[str, Any], fallback_username: str = "") -> dict[str, Any]:
     """从 pageList item 抽取发布所需字段（含 authSource / permissions）。"""
+    # id: 创作者账号表主键（整数），商品 listByShop/listByShowcase 的 query id 必须用它
+    # creatorId: 业务侧创作者 gid（字符串），发布 create_post 用它
+    account_id = item.get("id")
+    if account_id is None or account_id == "":
+        account_id = item.get("accountId") or item.get("creatorAccountId") or ""
     return {
+        "id": str(account_id) if account_id != "" and account_id is not None else "",
         "creatorId": item.get("creatorId") or "",
         "username": item.get("username") or fallback_username,
         "authSource": item.get("authSource") or item.get("auth_source") or "",
