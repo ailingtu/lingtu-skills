@@ -325,3 +325,24 @@ def parse_date_for_filename(date_str: str) -> str:
     if not _re.match(r"^\d{4}-\d{2}-\d{2}$", date_str.strip()):
         raise SystemExit(f"日期格式错误：{date_str}（需要 YYYY-MM-DD）")
     return date_str.strip()
+
+
+def parse_media_type(raw: str | None) -> str:
+    """解析媒体类：video / photo（大小写不敏感，支持中文）。
+
+    空值默认 video。可写：video / 视频 / 带货视频；photo / 图文 / 图片 / 带货图文。
+    """
+    value = (raw or "video").strip().lower()
+    if value in ("", "video", "v", "视频", "带货视频"):
+        return "video"
+    if value in ("photo", "image", "p", "图文", "图片", "带货图文"):
+        return "photo"
+    raise SystemExit(f"无效媒体类：{raw}（可选：video/视频 或 photo/图文）")
+
+
+def split_media_filenames(raw: str | None) -> list[str]:
+    """解析逗号/分号/竖线分隔的媒体文件名列表。"""
+    if not raw or not str(raw).strip():
+        return []
+    parts = re.split(r"[,;|，、]", str(raw))
+    return [p.strip() for p in parts if p.strip()]

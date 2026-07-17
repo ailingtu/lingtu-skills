@@ -1,6 +1,6 @@
-# 灵途批量视频发布
+# 灵途批量视频 / 带货图文发布
 
-从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频。
+从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频，或发布 TikTok Shop 带货图文（多图挂车）。
 
 ## 快速开始
 
@@ -12,7 +12,15 @@ python3 scripts/lingtu_video_publish.py gen-csv \
   --date 2026-07-05 \
   --product-id pid_001234
 
-# 2. 编辑 schedule.csv（填 title + video_file），视频拖入文件夹
+# 带货图文
+python3 scripts/lingtu_video_publish.py gen-csv \
+  --platform tiktok_shop \
+  --media-type photo \
+  --region US \
+  --date 2026-07-05 \
+  --product-id pid_001234
+
+# 2. 编辑 schedule.csv（视频：title + video_file；图文：title + image_files），媒体拖入文件夹
 
 # 3. dry-run 预览
 python3 scripts/lingtu_video_publish.py publish \

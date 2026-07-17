@@ -13,7 +13,7 @@ def format_creators(creators: list[dict[str, Any]]) -> str:
         return "未找到已授权的达人账号。"
 
     lines = [f"共 {len(creators)} 个已授权达人：\n"]
-    header = f"{'用户名':<24} {'平台':<12} {'区域':<10} {'用户类型':<12} {'标签'}"
+    header = f"{'用户名':<24} {'平台':<12} {'区域':<10} {'图文':<6} {'用户类型':<12} {'标签'}"
     lines.append(header)
     lines.append("-" * len(header))
 
@@ -23,8 +23,12 @@ def format_creators(creators: list[dict[str, Any]]) -> str:
         region = c.get("registerRegion") or c.get("selectionRegion") or "-"
         user_type = c.get("userType") or c.get("sellerType") or "-"
         tags = ", ".join(c.get("tagNames") or []) or "-"
+        if "canPublishPhoto" in c:
+            photo_flag = "是" if c.get("canPublishPhoto") else "否"
+        else:
+            photo_flag = "-"
         lines.append(
-            f"{c.get('username', '?'):<24} {platform:<12} {region:<10} {user_type:<12} {tags}"
+            f"{c.get('username', '?'):<24} {platform:<12} {region:<10} {photo_flag:<6} {user_type:<12} {tags}"
         )
     return "\n".join(lines)
 
@@ -58,8 +62,12 @@ def format_publish_results(results: dict[str, Any]) -> str:
         )
     else:
         video_type = results.get("video_type") or _video_type_from_rows(rows)
+        if video_type == "带货图文":
+            summary = f"发布完成，发布 {succeeded} 条带货图文。"
+        else:
+            summary = f"发布完成，发布 {succeeded} 条 {video_type} 视频。"
         lines = [
-            f"发布完成，发布 {succeeded} 条 {video_type} 视频。",
+            summary,
             f"发布结果：共 {total} 条，成功 {succeeded}，失败 {failed}。",
         ]
         basics = _format_publish_basics(results, rows)
@@ -106,18 +114,23 @@ def format_publish_results(results: dict[str, Any]) -> str:
     if dry_rows:
         lines.append("待发布（dry-run）：")
         for r in dry_rows:
+            media = r.get("image_files") or r.get("video_file") or "?"
+            media_label = "图片" if (r.get("media_type") or "").lower() == "photo" else "视频"
             lines.append(
                 f"  - @{r.get('creator_username','?')} "
                 f"[{PLATFORM_LABELS.get(r.get('platform',''), r.get('platform',''))}] "
                 f"时间={r.get('scheduled_at','?')} "
-                f"视频={r.get('video_file','?')}"
+                f"{media_label}={media}"
             )
 
     return "\n".join(lines)
 
 
 def _video_type_from_rows(rows: list[dict[str, Any]]) -> str:
+    media_types = {(str(row.get("media_type") or "").strip().lower()) for row in rows}
     platforms = {row.get("platform") for row in rows if row.get("platform")}
+    if media_types == {"photo"} and platforms == {"tiktok_shop"}:
+        return "带货图文"
     if platforms == {"tiktok_shop"}:
         return "带货"
     if platforms == {"tiktok"}:

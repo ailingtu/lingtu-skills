@@ -23,7 +23,10 @@ sys.path.insert(0, str(_shared_scripts_dir()))
 # lingtu_auth is used via .api.require_api_key
 
 from .api import (
+    creator_can_publish_photo,
     create_post,
+    extract_permissions,
+    is_tiktok_shop_auth_source,
     list_creator_accounts,
     list_shop_products,
     require_api_key,
@@ -32,13 +35,19 @@ from .api import (
 )
 from .config import (
     DEFAULT_DESKTOP,
+    DEFAULT_PHOTO_POST_TYPE,
+    IMAGE_EXTENSIONS,
+    PHOTO_MAX_IMAGES,
+    PHOTO_SHOPPABLE_PERMISSION,
     PLATFORM_LABELS,
     PRODUCT_TITLE_MAX_LENGTH,
     POST_TITLE_MAX_LENGTH,
     PUBLISH_RECORDS_URL,
     REGION_TIMEZONE_MAP,
+    SUPPORTED_MEDIA_TYPES,
     SUPPORTED_PLATFORMS,
 )
+from .image_utils import format_photo_constraints_help, validate_photo_files
 from .excel_utils import (
     COLUMN_LABELS,
     COLUMN_LABEL_TO_KEY,
@@ -48,11 +57,13 @@ from .excel_utils import (
     parse_date_for_filename,
     parse_datetime_to_epoch_ms,
     parse_excel_or_csv,
+    parse_media_type,
     parse_timezone,
     read_csv_columns,
     has_unsupported_plain_text,
     sanitize_post_title,
     sanitize_product_title,
+    split_media_filenames,
     write_csv_schedule,
 )
 from .report import format_creators, format_products, format_publish_results
@@ -68,6 +79,7 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
     from collections import defaultdict
 
     is_shop = rows_data[0].get("platform") == "tiktok_shop"
+    is_photo = parse_media_type(rows_data[0].get("media_type")) == "photo"
 
     # 按日期+达人分组统计
     by_day_creator: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -77,8 +89,15 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
         c = r["creator_username"]
         by_day_creator[d][c] += 1
 
+    if is_photo:
+        type_label = "带货图文"
+    elif is_shop:
+        type_label = "带货视频"
+    else:
+        type_label = "养号视频"
+
     lines = ["📋 排期预览：", ""]
-    lines.append(f"类型：{'带货视频' if is_shop else '养号视频'}")
+    lines.append(f"类型：{type_label}")
     lines.append(f"时区：{tz}")
     lines.append(f"默认基础时间段：{' / '.join(times)}（达人间按分钟错峰）")
     if is_shop:
@@ -94,10 +113,15 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
 
     lines.append("")
     all_creators = set(r["creator_username"] for r in rows_data)
-    lines.append(f"共 {len(dates)} 天 · {len(rows_data)} 条视频 · {len(all_creators)} 个达人")
+    unit = "条图文" if is_photo else "条视频"
+    lines.append(f"共 {len(dates)} 天 · {len(rows_data)} {unit} · {len(all_creators)} 个达人")
     lines.append("")
     lines.append("确认后生成 CSV，你只需补充：")
-    if is_shop:
+    if is_photo:
+        lines.append("  · 购物车标题 · 视频文案内容 · 图片文件名（多图用逗号分隔）")
+        lines.append(f"  · {format_photo_constraints_help()}")
+        lines.append("  · （可选）音乐ID / 音乐标题 / 音乐作者 / 音乐时长")
+    elif is_shop:
         lines.append("  · 购物车标题 · 视频文案内容 · 视频文件名")
     else:
         lines.append("  · 视频文案内容 · 视频文件名")
@@ -105,15 +129,30 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
     return "\n".join(lines)
 
 
-def _csv_columns_for_platform(platform: str) -> tuple[str, ...]:
+def _csv_columns_for_platform(platform: str, media_type: str = "video") -> tuple[str, ...]:
+    is_photo = parse_media_type(media_type) == "photo"
     if platform == "tiktok":
         return (
-            "creator_username", "platform",
+            "creator_username", "platform", "media_type",
             "title", "timezone",
             "scheduled_at", "video_file",
         )
-    return CSV_ALL_COLUMNS
-
+    if is_photo:
+        return (
+            "creator_username", "platform", "media_type",
+            "product_id", "product_title", "product_source",
+            "title", "timezone", "scheduled_at",
+            "image_files",
+            "music_id", "music_title", "music_author", "music_duration",
+        )
+    # 带货视频也带「媒体类」列，默认填 video；用户可改成 photo
+    return (
+        "creator_username", "platform", "media_type",
+        "product_id", "product_title",
+        "product_source", "title",
+        "timezone", "scheduled_at",
+        "video_file",
+    )
 
 def _timezone_from_creator_info(creator_info: dict[str, Any]) -> str:
     for key in (
@@ -188,6 +227,9 @@ def _parse_daily_counts(raw: str, start_year: int) -> dict[str, int]:
 
 def command_gen_csv(args: argparse.Namespace) -> None:
     platform = args.platform
+    media_type = parse_media_type(getattr(args, "media_type", None) or "video")
+    if media_type == "photo" and platform != "tiktok_shop":
+        raise SystemExit("带货图文 (media-type=photo) 仅支持 --platform tiktok_shop")
     date_str = parse_date_for_filename(args.date)
     tz_iana = parse_timezone(args.timezone) if args.timezone else ""
     region_hint = _normalize_region(getattr(args, "region", ""))
@@ -225,6 +267,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
             timezone_by_creator={creator.lower(): preview_tz for creator in creator_list},
             count=count,
             count_by_date=count_by_date,
+            media_type=media_type,
         )
         print(_format_preview_table(rows_data, times, preview_tz, dates))
         return
@@ -232,16 +275,31 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     # ── 正式生成：调 API 验证达人 ──
     require_api_key()
 
+    photo_filter = True if media_type == "photo" else None
+
     if raw_creators:
         creator_list = raw_creators
     else:
         selection_region = region_hint if platform == "tiktok_shop" and region_hint else None
-        result = list_creator_accounts(platform=platform, selection_region=selection_region)
+        result = list_creator_accounts(
+            platform=platform,
+            selection_region=selection_region,
+            has_photo_permission=photo_filter,
+        )
         data = result.get("data") or {}
         items = data.get("list") or []
+        # 服务端 hasPhotoPermission 为主；客户端再兜底一次
+        if media_type == "photo":
+            items = [item for item in items if _item_can_publish_photo(item)]
         creator_list = [item.get("username", "") for item in items if item.get("username")]
         if not creator_list:
             region_msg = f"、地区 {region_hint}" if selection_region else ""
+            if media_type == "photo":
+                raise SystemExit(
+                    f"该平台（{PLATFORM_LABELS.get(platform, platform)}{region_msg}）下没有可发带货图文的达人。"
+                    f"需 TikTok Shop 授权且 permissions 含 {PHOTO_SHOPPABLE_PERMISSION}（可传 hasPhotoPermission=true 筛选）。"
+                    "请先打开 https://app.ailingtu.com/video-post 授权后再重试。"
+                )
             raise SystemExit(
                 f"该平台（{PLATFORM_LABELS.get(platform, platform)}{region_msg}）下没有已授权的达人。"
                 "请先打开 https://app.ailingtu.com/video-post 授权达人后再重试。"
@@ -250,12 +308,40 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     # 验证指定的达人是否存在
     creator_info_by_username: dict[str, dict[str, Any]] = {}
     if raw_creators:
-        found, not_found = resolve_creator_batch(creator_list, platform=platform)
+        found, not_found = resolve_creator_batch(
+            creator_list,
+            platform=platform,
+            has_photo_permission=photo_filter,
+        )
         if not_found:
-            print(f"⚠ 以下达人未找到或未授权：{', '.join(not_found)}", file=sys.stderr)
+            if media_type == "photo":
+                print(
+                    f"⚠ 以下达人未找到、未授权，或无图文权限（hasPhotoPermission）：{', '.join(not_found)}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"⚠ 以下达人未找到或未授权：{', '.join(not_found)}", file=sys.stderr)
+        if media_type == "photo" and found:
+            photo_ok: dict[str, dict[str, Any]] = {}
+            photo_blocked: list[str] = []
+            for uname, info in found.items():
+                ok, reason = creator_can_publish_photo(info)
+                if ok:
+                    photo_ok[uname] = info
+                else:
+                    photo_blocked.append(reason or uname)
+            if photo_blocked:
+                print(
+                    "⚠ 以下达人不可发带货图文（需 TikTok Shop + "
+                    f"{PHOTO_SHOPPABLE_PERMISSION}）：\n  - "
+                    + "\n  - ".join(photo_blocked),
+                    file=sys.stderr,
+                )
+            found = photo_ok
         if not found:
             raise SystemExit(
-                "所有指定的达人均未找到或未授权。"
+                "所有指定的达人均未找到、未授权，或不可发带货图文。"
+                f"{'图文需 TikTok Shop 授权且 permissions 含 ' + PHOTO_SHOPPABLE_PERMISSION + '。' if media_type == 'photo' else ''}"
                 "请先打开 https://app.ailingtu.com/video-post 授权达人后再重试。"
             )
         creator_list = list(found.keys())
@@ -270,6 +356,8 @@ def command_gen_csv(args: argparse.Namespace) -> None:
                 "selectionRegion": item.get("selectionRegion") or "",
                 "oauthRegion": item.get("oauthRegion") or "",
                 "registerRegion": item.get("registerRegion") or "",
+                "authSource": item.get("authSource") or "",
+                "permissions": extract_permissions(item),
             }
             for item in items
             if item.get("username")
@@ -286,15 +374,17 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         timezone_by_creator=timezone_by_creator,
         count=count,
         count_by_date=count_by_date,
+        media_type=media_type,
     )
 
     # 生成文件夹和 CSV
     first_date = dates[0]
     last_date = dates[-1]
+    folder_prefix = "图文发布" if media_type == "photo" else "视频发布"
     if len(dates) == 1:
-        folder_name = f"视频发布_{first_date}"
+        folder_name = f"{folder_prefix}_{first_date}"
     else:
-        folder_name = f"视频发布_{first_date}_to_{last_date}"
+        folder_name = f"{folder_prefix}_{first_date}_to_{last_date}"
     output_dir = args.output_dir or str(DEFAULT_DESKTOP / folder_name)
     output_dir = str(Path(output_dir).expanduser())
     csv_path = str(Path(output_dir) / "schedule.csv")
@@ -302,7 +392,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     generated = generate_csv_template(
         output_path=csv_path,
         rows_data=rows_data,
-        columns=_csv_columns_for_platform(platform),
+        columns=_csv_columns_for_platform(platform, media_type),
     )
 
     output = {
@@ -310,6 +400,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         "csv": generated,
         "schedule": generated,
         "platform": platform,
+        "media_type": media_type,
         "date": first_date,
         "days": len(dates),
         "dates": dates,
@@ -328,11 +419,13 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         print_json(output)
         return
 
+    media_label = "图片" if media_type == "photo" else "视频"
     print(f"已在桌面创建排期文件夹：{output_dir}")
     print(f"  ├── schedule.csv  ← 排期表（已预填达人、时间）")
-    print(f"  └── （请将视频文件拖入此文件夹）")
+    print(f"  └── （请将{media_label}文件拖入此文件夹）")
     print()
     print(f"达人数量：{len(creator_list)}")
+    print(f"媒体类型：{'带货图文' if media_type == 'photo' else '视频'}")
     print(f"日期范围：{first_date} ~ {last_date}（{len(dates)} 天）")
     if count_by_date:
         print("每达人每日：" + "，".join(f"{d} {n} 条" for d, n in count_by_date.items()))
@@ -351,12 +444,20 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     print(f"总排期行数：{len(rows_data)}")
     print()
     print("下一步：")
-    if platform == "tiktok":
-        print(f"  1. 打开 schedule.csv，填写 title 和 video_file（填文件名即可）")
+    if media_type == "photo":
+        print("  1. 打开 schedule.csv，填写 product_title、title 和 image_files（多图逗号分隔）")
+        print(f"  2. 图片约束：{format_photo_constraints_help()}")
+        print("  3. （可选）填写 music_id / music_title / music_author / music_duration")
+        print("  4. 将所有图片文件复制到文件夹内")
+        print(f"  5. 运行：lingtu_video_publish.py publish --folder {output_dir} --confirm")
+    elif platform == "tiktok":
+        print("  1. 打开 schedule.csv，填写 title 和 video_file（填文件名即可）")
+        print("  2. 将所有视频文件复制到文件夹内")
+        print(f"  3. 运行：lingtu_video_publish.py publish --folder {output_dir} --confirm")
     else:
-        print(f"  1. 打开 schedule.csv，填写 product_title、title 和 video_file（填文件名即可）")
-    print(f"  2. 将所有视频文件复制到文件夹内")
-    print(f"  3. 运行：lingtu_video_publish.py publish --folder {output_dir} --confirm")
+        print("  1. 打开 schedule.csv，填写 product_title、title 和 video_file（填文件名即可）")
+        print("  2. 将所有视频文件复制到文件夹内")
+        print(f"  3. 运行：lingtu_video_publish.py publish --folder {output_dir} --confirm")
 
 
 # ── creators ─────────────────────────────────────────────────
@@ -365,10 +466,16 @@ def command_creators(args: argparse.Namespace) -> None:
     platform = args.platform or None
     region = _normalize_region(getattr(args, "region", ""))
     selection_region = region if platform == "tiktok_shop" and region else None
+    has_photo = getattr(args, "has_photo_permission", False) or None
+    if has_photo:
+        has_photo = True
+    else:
+        has_photo = None
     result = list_creator_accounts(
         platform=platform,
         page_size=args.page_size,
         selection_region=selection_region,
+        has_photo_permission=has_photo,
     )
     data = result.get("data") or {}
     items = data.get("list") or []
@@ -376,6 +483,15 @@ def command_creators(args: argparse.Namespace) -> None:
     if args.username:
         keyword = args.username.strip().lower()
         items = [i for i in items if keyword in (i.get("username") or "").lower()]
+
+    # 标注图文能力，便于筛选（服务端 hasPhotoPermission 筛过则均为 true）
+    for item in items:
+        can_photo, _ = creator_can_publish_photo({
+            "username": item.get("username") or "",
+            "authSource": item.get("authSource") or "",
+            "permissions": extract_permissions(item),
+        })
+        item["canPublishPhoto"] = can_photo if not has_photo else True
 
     if args.format == "json":
         print_json({"creators": items, "total": len(items)})
@@ -425,6 +541,46 @@ def command_publish(args: argparse.Namespace) -> None:
         if rows_with_empty_time and args.date:
             valid_rows = auto_assign_schedule(valid_rows, parse_date_for_filename(args.date))
 
+    # 图文：校验达人须 TikTok Shop + PHOTO_SHOPPABLE_PERMISSION_PRODUCT
+    row_index_by_id = {id(row): idx + 2 for idx, row in enumerate(rows)}
+    photo_rows = [r for r in valid_rows if _row_media_type(r) == "photo"]
+    if photo_rows:
+        require_api_key()
+        photo_usernames = list({r["creator_username"].strip() for r in photo_rows if r.get("creator_username")})
+        photo_creator_map, _ = resolve_creator_batch(
+            photo_usernames,
+            platform="tiktok_shop",
+            has_photo_permission=True,
+        )
+        still_valid: list[dict[str, Any]] = []
+        for row in valid_rows:
+            if _row_media_type(row) != "photo":
+                still_valid.append(row)
+                continue
+            username = (row.get("creator_username") or "").strip()
+            info = photo_creator_map.get(username.lower())
+            excel_index = row_index_by_id.get(id(row), 0)
+            if not info:
+                validation_errors.append({
+                    "index": excel_index,
+                    "row": row,
+                    "errors": [
+                        f"未找到可发图文的 TikTok Shop 达人：{username}"
+                        f"（需 authSource=TikTok Shop 且 hasPhotoPermission / {PHOTO_SHOPPABLE_PERMISSION}）"
+                    ],
+                })
+                continue
+            ok, reason = creator_can_publish_photo(info)
+            if not ok:
+                validation_errors.append({
+                    "index": excel_index,
+                    "row": row,
+                    "errors": [reason],
+                })
+                continue
+            still_valid.append(row)
+        valid_rows = still_valid
+
     # dry-run
     if not args.confirm:
         results = _build_validation_results(rows, valid_rows, validation_errors, mode="dry-run")
@@ -444,9 +600,21 @@ def command_publish(args: argparse.Namespace) -> None:
             print(format_publish_results(results))
         return
 
-    # 批量查 creatorId
+    # 批量查 creatorId（图文优先按 TikTok Shop 源解析）
     usernames = list({r["creator_username"].strip() for r in valid_rows})
     creator_map, not_found = resolve_creator_batch(usernames)
+    photo_usernames = list({
+        r["creator_username"].strip()
+        for r in valid_rows
+        if _row_media_type(r) == "photo"
+    })
+    if photo_usernames:
+        shop_map, _ = resolve_creator_batch(
+            photo_usernames,
+            platform="tiktok_shop",
+            has_photo_permission=True,
+        )
+        creator_map.update(shop_map)
 
     results: dict[str, Any] = {
         "mode": "live",
@@ -463,12 +631,16 @@ def command_publish(args: argparse.Namespace) -> None:
             time.sleep(args.sleep_ms / 1000.0)
 
         username = row["creator_username"].strip()
+        media_type = _row_media_type(row)
+        media_names = _row_media_filenames(row)
         entry: dict[str, Any] = {
             "index": idx + 2,
             "creator_username": username,
             "platform": row.get("platform", ""),
+            "media_type": media_type,
             "title": row.get("title", ""),
             "video_file": row.get("video_file", ""),
+            "image_files": row.get("image_files", ""),
             "scheduled_at": row.get("scheduled_at", ""),
             "status": "failed",
             "post_id": None,
@@ -482,21 +654,27 @@ def command_publish(args: argparse.Namespace) -> None:
             if not creator_info:
                 raise SystemExit(f"未找到创作者账号：{username}。请确认该账号已授权。")
 
-            # 上传视频
-            video_name = row.get("video_file", "").strip()
-            video_path = folder / video_name
-            if not video_path.exists():
-                video_path_candidates = list(folder.glob(video_name))
-                if video_path_candidates:
-                    video_path = video_path_candidates[0]
-                else:
-                    raise SystemExit(f"视频文件不存在：{video_path}")
+            if media_type == "photo":
+                ok, reason = creator_can_publish_photo(creator_info)
+                if not ok:
+                    raise SystemExit(reason)
 
-            print(f"[{idx + 2}/{len(valid_rows)}] 上传：{video_name}", file=sys.stderr)
-            upload_result = upload_file(str(video_path))
-            file_id = upload_result.get("id", "")
-            video_url = upload_result.get("url", "")
-            entry["video_url"] = video_url
+            # 上传媒体（视频 1 个 / 图文多张）。
+            # 图文：严格按 image_files 用户填写顺序上传；
+            # businessId=首图 fileId，businessIds=全部 fileId（同序）。
+            file_ids: list[str] = []
+            last_url = ""
+            for media_name in media_names:
+                media_path = _resolve_media_path(folder, media_name)
+                print(f"[{idx + 2}/{len(valid_rows)}] 上传：{media_name}", file=sys.stderr)
+                default_ct = "image/jpeg" if media_type == "photo" else "video/mp4"
+                upload_result = upload_file(str(media_path), default_content_type=default_ct)
+                file_id = str(upload_result.get("id", "") or "")
+                if not file_id:
+                    raise SystemExit(f"上传成功但未返回 fileId：{media_name}")
+                file_ids.append(file_id)
+                last_url = upload_result.get("url", "") or last_url
+            entry["video_url"] = last_url
 
             # 构建发布请求
             platform = row.get("platform", "tiktok_shop")
@@ -511,11 +689,12 @@ def command_publish(args: argparse.Namespace) -> None:
             clean_title = sanitize_post_title(row.get("title", "") or "Untitled")
             raw_product_title = row.get("product_title") or ""
             clean_product_title = sanitize_product_title(raw_product_title) if raw_product_title else ""
+            music_info = _row_music_info(row)
 
             post_result = create_post(
                 creator_id=creator_info["creatorId"],
                 title=clean_title or "Untitled",
-                business_id=file_id,
+                business_id=file_ids[0],
                 platform=platform,
                 scheduled_at=scheduled_at,
                 scheduled_tz=scheduled_tz,
@@ -523,6 +702,10 @@ def command_publish(args: argparse.Namespace) -> None:
                 product_id=row.get("product_id") or None,
                 product_title=clean_product_title,
                 product_source=row.get("product_source") or "SHOP",
+                media_type="PHOTO" if media_type == "photo" else "VIDEO",
+                business_ids=file_ids if media_type == "photo" else None,
+                photo_post_type=DEFAULT_PHOTO_POST_TYPE,
+                music_info=music_info,
             )
 
             entry["status"] = "success"
@@ -575,8 +758,10 @@ def _build_validation_results(
             "index": idx + 2,
             "creator_username": row.get("creator_username", ""),
             "platform": row.get("platform", ""),
+            "media_type": _row_media_type(row),
             "title": row.get("title", ""),
             "video_file": row.get("video_file", ""),
+            "image_files": row.get("image_files", ""),
             "scheduled_at": row.get("scheduled_at", ""),
             "status": "dry-run",
         })
@@ -585,13 +770,77 @@ def _build_validation_results(
             "index": ve["index"],
             "creator_username": ve["row"].get("creator_username", ""),
             "platform": ve["row"].get("platform", ""),
+            "media_type": _row_media_type(ve["row"]),
             "title": ve["row"].get("title", ""),
             "video_file": ve["row"].get("video_file", ""),
+            "image_files": ve["row"].get("image_files", ""),
             "scheduled_at": ve["row"].get("scheduled_at", ""),
             "status": "needs-edit",
             "errors": ve["errors"],
         })
     return results
+
+
+def _item_can_publish_photo(item: dict[str, Any]) -> bool:
+    """pageList 原始 item 是否可发带货图文。"""
+    summary = {
+        "username": item.get("username") or "",
+        "authSource": item.get("authSource") or item.get("auth_source") or "",
+        "permissions": extract_permissions(item),
+    }
+    ok, _ = creator_can_publish_photo(summary)
+    return ok
+
+
+def _row_media_type(row: dict[str, Any]) -> str:
+    """推断行媒体类型：显式 media_type，或根据 image_files / 文件扩展名。"""
+    raw = (row.get("media_type") or "").strip()
+    if raw:
+        try:
+            return parse_media_type(raw)
+        except SystemExit:
+            return "video"
+    image_files = (row.get("image_files") or "").strip()
+    if image_files:
+        return "photo"
+    video_file = (row.get("video_file") or "").strip()
+    names = split_media_filenames(video_file)
+    if names and all(Path(n).suffix.lower() in IMAGE_EXTENSIONS for n in names):
+        return "photo"
+    return "video"
+
+
+def _row_media_filenames(row: dict[str, Any]) -> list[str]:
+    """取出该行需要上传的媒体文件名列表。"""
+    media_type = _row_media_type(row)
+    if media_type == "photo":
+        names = split_media_filenames(row.get("image_files"))
+        if not names:
+            names = split_media_filenames(row.get("video_file"))
+        return names
+    return split_media_filenames(row.get("video_file"))
+
+
+def _resolve_media_path(folder: Path, name: str) -> Path:
+    path = folder / name
+    if path.exists():
+        return path
+    candidates = list(folder.glob(name))
+    if candidates:
+        return candidates[0]
+    raise SystemExit(f"媒体文件不存在：{name}")
+
+
+def _row_music_info(row: dict[str, Any]) -> dict[str, str] | None:
+    music_id = (row.get("music_id") or "").strip()
+    if not music_id:
+        return None
+    return {
+        "id": music_id,
+        "title": (row.get("music_title") or "").strip(),
+        "author": (row.get("music_author") or "").strip(),
+        "duration": (row.get("music_duration") or "").strip(),
+    }
 
 
 def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
@@ -606,6 +855,19 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     if platform not in SUPPORTED_PLATFORMS:
         errors.append(f"platform 无效：{platform}（可选：{', '.join(SUPPORTED_PLATFORMS)}）")
 
+    raw_media = (row.get("media_type") or "").strip()
+    if raw_media:
+        try:
+            media_type = parse_media_type(raw_media)
+        except SystemExit as exc:
+            errors.append(str(exc))
+            media_type = "video"
+    else:
+        media_type = _row_media_type(row)
+
+    if media_type == "photo" and platform and platform != "tiktok_shop":
+        errors.append("带货图文仅支持 platform=tiktok_shop")
+
     title = (row.get("title") or "").strip()
     if not title:
         errors.append("title 为空")
@@ -615,10 +877,10 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     if platform == "tiktok_shop":
         product_id = (row.get("product_id") or "").strip()
         if not product_id:
-            errors.append("带货视频 (tiktok_shop) 必须填写 产品ID")
+            errors.append("带货 (tiktok_shop) 必须填写 产品ID")
         product_title = (row.get("product_title") or "").strip()
         if not product_title:
-            errors.append("带货视频 (tiktok_shop) 必须填写 购物车标题")
+            errors.append("带货 (tiktok_shop) 必须填写 购物车标题")
         elif has_unsupported_plain_text(product_title, PRODUCT_TITLE_MAX_LENGTH):
             errors.append(f"购物车标题不能超过 {PRODUCT_TITLE_MAX_LENGTH} 字符，且不能包含表情、标点或特殊符号")
 
@@ -637,21 +899,44 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     elif scheduled_at:
         errors.append("scheduled_at 已填写时，timezone 不能为空")
 
-    video_file = (row.get("video_file") or "").strip()
-    if not video_file:
-        errors.append("video_file 为空")
+    media_names = _row_media_filenames(row)
+    if not media_names:
+        if media_type == "photo":
+            errors.append(
+                f"image_files 为空（至少 1 张、最多 {PHOTO_MAX_IMAGES} 张，多图用逗号分隔，如 a.jpg,b.jpg）"
+            )
+        else:
+            errors.append("video_file 为空")
+    elif media_type == "photo":
+        resolved: list[Path] = []
+        missing = False
+        for name in media_names:
+            try:
+                resolved.append(_resolve_media_path(folder, name))
+            except SystemExit:
+                errors.append(f"图片文件不存在：{name}")
+                missing = True
+        if not missing:
+            errors.extend(validate_photo_files(resolved))
     else:
-        vp = folder / video_file
-        if not vp.exists():
-            candidates = list(folder.glob(video_file))
-            if not candidates:
-                errors.append(f"视频文件不存在：{video_file}")
+        for name in media_names:
+            try:
+                _resolve_media_path(folder, name)
+            except SystemExit:
+                errors.append(f"视频文件不存在：{name}")
+
+    music_id = (row.get("music_id") or "").strip()
+    if music_id and media_type != "photo":
+        errors.append("music_id 仅用于带货图文 (media_type=photo)")
 
     return errors
 
 
 def _video_type_from_rows(rows: list[dict[str, Any]]) -> str:
+    media_types = {_row_media_type(row) for row in rows}
     platforms = {row.get("platform") for row in rows if row.get("platform")}
+    if media_types == {"photo"} and platforms == {"tiktok_shop"}:
+        return "带货图文"
     if platforms == {"tiktok_shop"}:
         return "带货"
     if platforms == {"tiktok"}:
@@ -855,6 +1140,12 @@ def build_parser() -> argparse.ArgumentParser:
     # gen-csv
     p = subparsers.add_parser("gen-csv", help="生成排期 CSV 模板（桌面文件夹）。")
     p.add_argument("--platform", choices=SUPPORTED_PLATFORMS, required=True, help="发布平台。")
+    p.add_argument(
+        "--media-type",
+        choices=SUPPORTED_MEDIA_TYPES,
+        default="video",
+        help="媒体类型：video=视频（默认），photo=带货图文（仅 tiktok_shop）。",
+    )
     p.add_argument("--creators", default=None, help="逗号分隔的达人用户名，不传则取全部已授权。")
     p.add_argument("--date", required=True, help="起始日期 YYYY-MM-DD。")
     p.add_argument("--days", type=int, default=1, help="连续发布天数，默认 1。")
@@ -863,7 +1154,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--product-id", default="", help="产品 ID（仅 tiktok_shop）。")
     p.add_argument("--timezone", default="", help="时区简码或 IANA，如 EST、PST、CN、America/New_York。不传则按达人区域自动推断。")
     p.add_argument("--region", "--country", dest="region", default="", help="目标地区/国家，如 US。tiktok_shop 列表可按地区筛选；tiktok 普通视频仅用于默认时区。")
-    p.add_argument("--output-dir", default=None, help="自定义输出目录，默认 ~/Desktop/视频发布_{date}/。")
+    p.add_argument("--output-dir", default=None, help="自定义输出目录，默认 ~/Desktop/视频发布_{date}/ 或 图文发布_{date}/。")
     p.add_argument("--dry-run", action="store_true", help="仅预览排期表，不生成文件。")
     add_format_argument(p, default="text")
     p.set_defaults(func=command_gen_csv)
@@ -873,6 +1164,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--platform", choices=SUPPORTED_PLATFORMS, default=None, help="筛选平台。")
     p.add_argument("--username", default="", help="按用户名搜索。")
     p.add_argument("--region", "--country", dest="region", default="", help="地区筛选，仅 tiktok_shop 带货达人列表支持。")
+    p.add_argument(
+        "--has-photo-permission",
+        action="store_true",
+        help="仅拉取有带货图文权限的账号（查询参数 hasPhotoPermission=true）。",
+    )
     p.add_argument("--page-size", type=int, default=200, help="每页数量。")
     add_format_argument(p, default="text")
     p.set_defaults(func=command_creators)

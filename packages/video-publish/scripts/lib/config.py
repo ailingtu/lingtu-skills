@@ -18,6 +18,22 @@ PRODUCT_SHOWCASE_LIST_PATH = "/v1/creator/tiktokshop/product/listByShowcase"
 SUPPORTED_PLATFORMS = ("tiktok_shop", "tiktok")
 PLATFORM_LABELS = {"tiktok_shop": "TikTok Shop (带货)", "tiktok": "TikTok (养号)"}
 
+# VIDEO = 视频；PHOTO = 带货图文（仅 tiktok_shop）
+SUPPORTED_MEDIA_TYPES = ("video", "photo")
+MEDIA_TYPE_API_MAP = {"video": "VIDEO", "photo": "PHOTO"}
+DEFAULT_PHOTO_POST_TYPE = "MULTI_PHOTO_ONE_ANCHOR"
+# 带货图文：账号须来自 TikTok Shop，且 permissions 含该权限
+PHOTO_SHOPPABLE_PERMISSION = "PHOTO_SHOPPABLE_PERMISSION_PRODUCT"
+
+# 官方支持格式：JPG / JPEG / PNG / WEBP / HEIC / BMP
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".heic", ".bmp")
+PHOTO_MIN_IMAGES = 1
+PHOTO_MAX_IMAGES = 15
+PHOTO_MAX_FILE_BYTES = 10 * 1024 * 1024  # 10MB
+# 宽高比 w/h：竖版 9:16 ～ 横版 16:9（含边界）
+PHOTO_ASPECT_RATIO_MIN = 9 / 16
+PHOTO_ASPECT_RATIO_MAX = 16 / 9
+
 PLATFORM_API_MAP = {"tiktok_shop": "TIKTOK_SHOP", "tiktok": "TIKTOK"}
 AUTH_SOURCE_MAP = {"tiktok_shop": "TIKTOK_SHOP_CREATOR", "tiktok": "TIKTOK_LOGIN_KIT"}
 
@@ -107,15 +123,18 @@ DEFAULT_SCHEDULE_TIMES = (9, 14, 19)
 CSV_REQUIRED_COLUMNS = ("creator_username", "platform", "title", "video_file")
 CSV_ALL_COLUMNS = (
     "creator_username", "platform",
+    "media_type",
     "product_id", "product_title",
     "product_source", "title",
     "timezone", "scheduled_at",
-    "video_file",
+    "video_file", "image_files",
+    "music_id", "music_title", "music_author", "music_duration",
 )
 
 COLUMN_LABELS: dict[str, str] = {
     "creator_username": "达人用户名",
     "platform": "平台",
+    "media_type": "媒体类",
     "product_id": "产品ID",
     "product_title": "购物车标题",
     "product_source": "商品来源",
@@ -123,9 +142,16 @@ COLUMN_LABELS: dict[str, str] = {
     "timezone": "时区",
     "scheduled_at": "发布时间",
     "video_file": "视频文件名",
+    "image_files": "图片文件名",
+    "music_id": "音乐ID",
+    "music_title": "音乐标题",
+    "music_author": "音乐作者",
+    "music_duration": "音乐时长",
 }
 
 COLUMN_LABEL_TO_KEY: dict[str, str] = {v: k for k, v in COLUMN_LABELS.items()}
+# 兼容旧表头 / 完整写法
+COLUMN_LABEL_TO_KEY["媒体类型"] = "media_type"
 
 PRODUCT_SOURCE_OPTIONS = ("SHOP", "SHOWCASE")
 

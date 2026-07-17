@@ -1,14 +1,14 @@
 ---
 name: lingtu-video-publish
-version: 0.1.0
-description: 灵途批量视频发布 — 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频。支持生成 CSV 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、CSV/XLSX 通用读取、dry-run 预览。
+version: 0.2.0
+description: 灵途批量视频/图文发布 — 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频或带货图文。支持生成 CSV 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、CSV/XLSX 通用读取、dry-run 预览。
 ---
 
-# 灵途批量视频发布
+# 灵途批量视频 / 带货图文发布
 
 ## 适用场景
 
-当用户在群里说"帮我发布带货视频"、"批量发布视频"、"我要发视频"、"生成排期表"等需求时调用本技能。
+当用户在群里说"帮我发布带货视频"、"批量发布视频"、"我要发视频"、"发布图文"、"带货图文"、"多图带货"、"生成排期表"等需求时调用本技能。
 
 ## Bot 调用指南
 
@@ -26,6 +26,15 @@ python3 scripts/lingtu_video_publish.py creators \
   --region US
 ```
 
+仅可发带货图文的达人（服务端 `hasPhotoPermission=true`）：
+
+```bash
+python3 scripts/lingtu_video_publish.py creators \
+  --platform tiktok_shop \
+  --region US \
+  --has-photo-permission
+```
+
 普通视频 / 养号视频示例查询：
 
 ```bash
@@ -36,10 +45,10 @@ python3 scripts/lingtu_video_publish.py creators \
 拿到列表后再**一次性引导**收集信息：
 
 ```
-收到，生成视频发布排期表需要以下信息：
+收到，生成发布排期表需要以下信息：
 
 ① 发布类型
-   A. TikTok 带货视频   B. TikTok 不带货视频
+   A. TikTok 带货视频   B. TikTok 不带货视频   C. TikTok Shop 带货图文（多图挂车）
 
 ② 要发布的达人名字，以及带货的话每个达人带什么产品
    示例：达人 <从你的授权列表里取 2-3 个用户名> 带产品 176118111232433423
@@ -70,6 +79,7 @@ python3 scripts/lingtu_video_publish.py creators \
 用户补齐信息后调用 gen-csv（不足的用默认值：每达人每天 3 条、全部已授权达人）：
 
 ```bash
+# 带货视频
 python3 scripts/lingtu_video_publish.py gen-csv \
   --platform tiktok_shop \
   --region US \
@@ -77,6 +87,16 @@ python3 scripts/lingtu_video_publish.py gen-csv \
   --date 2026-07-05 \
   --days 3 \
   --count 2 \
+  --product-id 176118111232433423
+
+# 带货图文（多图挂车）
+python3 scripts/lingtu_video_publish.py gen-csv \
+  --platform tiktok_shop \
+  --media-type photo \
+  --region US \
+  --creators "<授权列表里的达人A>" \
+  --date 2026-07-05 \
+  --count 1 \
   --product-id 176118111232433423
 ```
 
@@ -108,6 +128,13 @@ python3 scripts/lingtu_video_publish.py gen-csv \
   · 购物车标题 — 产品展示名，最多 30 字符，不支持表情、标点或特殊符号
   · 视频文案内容 — 视频的 caption，最多 4000 字符，不支持表情、标点或特殊符号；`#` 可用于 hashtag
   · 视频文件名 — 拖进来的视频文件名，如 video1.mp4
+
+如果是 TikTok Shop 带货图文，打开 schedule.csv，你需要填：
+  · 购物车标题 — 产品展示名，最多 30 字符
+  · 视频文案内容 — caption，最多 4000 字符；`#` 可用于 hashtag
+  · 图片文件名 — 多图用英文逗号分隔，如 a.jpg,b.jpg,c.png（顺序即发布顺序）
+  · 图片约束 — 1～15 张；单张 ≤10MB；JPG/JPEG/PNG/WEBP/HEIC/BMP；宽高比 9:16～16:9
+  · 音乐（可选）— 音乐ID / 音乐标题 / 音乐作者 / 音乐时长
 
 然后我帮你填表，不用自己手动改 CSV。
 ```
@@ -154,20 +181,25 @@ python3 scripts/lingtu_video_publish.py fill \
   --folder ~/Desktop/... --col title --row 0 --value "第一条文案"
 ```
 
-**3. 视频文件名 — 用户告知后填：**
+**3. 媒体文件名 — 用户告知后填：**
 
 ```
-视频文件拖进文件夹了吗？告诉我文件名对应哪行就行。
+视频/图片拖进文件夹了吗？告诉我文件名对应哪行就行。
+图文多图用逗号：a.jpg,b.jpg
 ```
 
 ```bash
-# 按达人填
+# 视频：按达人填
 python3 scripts/lingtu_video_publish.py fill \
   --folder ~/Desktop/... --col video_file --creator <授权列表里的达人A> --value "video1.mp4"
 
-# 按行填
+# 视频：按行填
 python3 scripts/lingtu_video_publish.py fill \
   --folder ~/Desktop/... --col video_file --row 0 --value "video1.mp4"
+
+# 图文：按行填多图
+python3 scripts/lingtu_video_publish.py fill \
+  --folder ~/Desktop/... --col image_files --row 0 --value "a.jpg,b.jpg"
 ```
 
 全部填完后展示最终排期表，用户确认即发布。
@@ -196,7 +228,7 @@ python3 scripts/lingtu_video_publish.py publish \
 发布完成后必须给用户这段信息，并且必须包含发布记录链接：
 
 ```
-发布完成，发布 X 条 XX 视频。
+发布完成，发布 X 条 XX 视频/图文。
 发布基本信息：类型、达人、发布时间范围、成功/失败数量。
 请前往发布记录确认发布内容：
 https://app.ailingtu.com/video-center?tab=records
@@ -210,12 +242,14 @@ https://app.ailingtu.com/video-center?tab=records
 
 在桌面创建文件夹，内含 `schedule.csv`。
 `tiktok_shop` 带货视频会生成带货字段，用户需补「购物车标题」「视频文案内容」「视频文件名」。
+`tiktok_shop --media-type photo` 带货图文会生成「图片文件名」与可选音乐列，用户需补「购物车标题」「视频文案内容」「图片文件名」。
 `tiktok` 不带货视频不会生成「产品ID」「购物车标题」「商品来源」三列，用户只需补「视频文案内容」「视频文件名」。
 购物车标题最多 30 字符，不支持表情、标点或特殊符号；视频文案内容最多 4000 字符，不支持表情、标点或特殊符号，但 `#` 可用于 hashtag。
 
 ```
 python3 scripts/lingtu_video_publish.py gen-csv \
   --platform {tiktok_shop,tiktok} \
+  [--media-type video|photo] \
   --date YYYY-MM-DD \
   [--timezone EST|PST|CN|...] \
   [--region US|GB|JP|...] \
@@ -230,6 +264,7 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | --platform | 是 | tiktok_shop（带货）或 tiktok（养号） |
+| --media-type | 否 | video（默认）或 photo（带货图文，仅 tiktok_shop） |
 | --date | 是 | 起始日期 YYYY-MM-DD |
 | --timezone | 否 | 时区短码或 IANA。不传则按达人授权区域推断；美国默认美西 |
 | --region / --country | 否 | 目标地区。`tiktok_shop` 且不指定达人时用于筛选带货达人列表；`tiktok` 普通/养号视频不筛选列表，仅用于默认时区 |
@@ -322,12 +357,24 @@ python3 scripts/lingtu_video_publish.py products search \
 | 发布时间 | YYYY-MM-DD HH:MM；默认早/中/晚并按达人错峰 | 可改 |
 | 视频文件名 | 空 | **用户填** |
 
+### 媒体类（可写）
+
+排期表列名：**媒体类**（兼容旧表头 **媒体类型**）。
+
+| 可写值 | 含义 |
+|--------|------|
+| `video` / `视频` / `带货视频` / 空 | 视频（默认） |
+| `photo` / `图文` / `图片` / `带货图文` | 带货图文 |
+
+同一张 `tiktok_shop` 表里可混排：某行写 `photo` + 图片文件名，某行写 `video` + 视频文件名。
+
 ### TikTok Shop 带货视频
 
 | 列 | 预填 | 用户操作 |
 |----|------|----------|
 | 达人用户名 | 达人用户名 | 不改 |
 | 平台 | tiktok_shop | 不改 |
+| 媒体类 | video | 可改为 photo |
 | 产品ID | 产品 ID | 可改 |
 | 购物车标题 | 空 | **用户填**；最多 30 字符，不支持表情、标点或特殊符号 |
 | 商品来源 | SHOP | 可改为 SHOWCASE |
@@ -335,6 +382,47 @@ python3 scripts/lingtu_video_publish.py products search \
 | 时区 | 如 America/Los_Angeles | 可改 |
 | 发布时间 | YYYY-MM-DD HH:MM；默认早/中/晚并按达人错峰 | 可改 |
 | 视频文件名 | 空 | **用户填** |
+
+### TikTok Shop 带货图文（media-type=photo）
+
+| 列 | 预填 | 用户操作 |
+|----|------|----------|
+| 达人用户名 | 达人用户名 | 不改 |
+| 平台 | tiktok_shop | 不改 |
+| 媒体类 | photo | 可改 |
+| 产品ID | 产品 ID | 可改 |
+| 购物车标题 | 空 | **用户填** |
+| 商品来源 | SHOP | 可改为 SHOWCASE |
+| 视频文案内容 | 空 | **用户填** caption |
+| 时区 | 如 America/Los_Angeles | 可改 |
+| 发布时间 | YYYY-MM-DD HH:MM | 可改 |
+| 图片文件名 | 空 | **用户填**；多图逗号分隔，如 `a.jpg,b.jpg`；1～15 张 |
+| 音乐ID | 空 | 可选 |
+| 音乐标题 | 空 | 可选 |
+| 音乐作者 | 空 | 可选 |
+| 音乐时长 | 空 | 可选（秒） |
+
+图片硬性约束（publish dry-run / confirm 会校验）：
+
+- 张数：至少 1 张，最多 15 张
+- 单张大小：≤ 10MB
+- 格式：JPG, JPEG, PNG, WEBP, HEIC, BMP
+- 宽高比：9:16 ～ 16:9（含边界）
+
+达人资格（发图文必须同时满足）：
+
+- 账号来自 **TikTok Shop** 授权（`authSource` 含 TIKTOK_SHOP），不能用 Login Kit 养号号发图文
+- `permissions` 中包含 **`PHOTO_SHOPPABLE_PERMISSION_PRODUCT`**
+
+`creators` 列表会标注是否可发图文；`gen-csv --media-type photo` 只排可发图文的达人。
+
+API 映射（多图单挂车）：
+
+- `businessId` = **首图** fileId（CSV `图片文件名` 逗号列表第 1 个）
+- `tiktokShopPhoto.businessIds` = **全部**图片 fileId，**按用户填写/上传顺序**
+- `tiktokShopPhoto.productLinks` = **有且仅有 1 个产品**（CSV 一行一个 product_id）
+- `postType` = `MULTI_PHOTO_ONE_ANCHOR`
+- 可选 `musicInfo`
 
 ---
 

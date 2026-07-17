@@ -50,8 +50,12 @@ def build_schedule_rows(
     timezone_by_creator: dict[str, str],
     count: int,
     count_by_date: dict[str, int] | None = None,
+    media_type: str = "video",
 ) -> list[dict[str, str]]:
     """构建带默认错峰时间的发布行。"""
+    normalized_media = (media_type or "video").strip().lower()
+    if normalized_media not in ("video", "photo"):
+        normalized_media = "video"
     rows: list[dict[str, str]] = []
     for date in dates:
         day_count = max(1, count_by_date.get(date, count)) if count_by_date else count
@@ -62,6 +66,7 @@ def build_schedule_rows(
                 rows.append({
                     "creator_username": creator,
                     "platform": platform,
+                    "media_type": normalized_media,
                     "product_id": product_id,
                     "product_title": "",
                     "product_source": "SHOP" if platform == "tiktok_shop" else "",
@@ -69,6 +74,11 @@ def build_schedule_rows(
                     "timezone": timezone_by_creator.get(creator.lower(), ""),
                     "scheduled_at": f"{date} {scheduled_time}",
                     "video_file": "",
+                    "image_files": "",
+                    "music_id": "",
+                    "music_title": "",
+                    "music_author": "",
+                    "music_duration": "",
                 })
     return rows
 
