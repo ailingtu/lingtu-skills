@@ -792,32 +792,41 @@ def _item_can_publish_photo(item: dict[str, Any]) -> bool:
     return ok
 
 
+def _looks_like_image_filenames(names: list[str]) -> bool:
+    """文件名是否全部为支持的图片扩展名。"""
+    if not names:
+        return False
+    return all(Path(n).suffix.lower() in IMAGE_EXTENSIONS for n in names)
+
+
 def _row_media_type(row: dict[str, Any]) -> str:
-    """推断行媒体类型：显式 media_type，或根据 image_files / 文件扩展名。"""
+    """解析行媒体类（刻意不做激进推断）。
+
+    优先级：
+    1. 显式「媒体类」列（video / photo / 中文别名）
+    2. 仅当媒体类为空且「图片文件名」有值 → photo
+    3. 默认 video
+
+    不会因为「视频文件名」是 .jpg 等就当成图文，避免填错列却进图文链路。
+    """
     raw = (row.get("media_type") or "").strip()
     if raw:
         try:
             return parse_media_type(raw)
         except SystemExit:
             return "video"
-    image_files = (row.get("image_files") or "").strip()
-    if image_files:
-        return "photo"
-    video_file = (row.get("video_file") or "").strip()
-    names = split_media_filenames(video_file)
-    if names and all(Path(n).suffix.lower() in IMAGE_EXTENSIONS for n in names):
+    if (row.get("image_files") or "").strip():
         return "photo"
     return "video"
 
 
 def _row_media_filenames(row: dict[str, Any]) -> list[str]:
-    """取出该行需要上传的媒体文件名列表。"""
-    media_type = _row_media_type(row)
-    if media_type == "photo":
-        names = split_media_filenames(row.get("image_files"))
-        if not names:
-            names = split_media_filenames(row.get("video_file"))
-        return names
+    """取出该行需要上传的媒体文件名列表。
+
+    图文只认「图片文件名」；视频只认「视频文件名」。互不顶替，方便报「列填错了」。
+    """
+    if _row_media_type(row) == "photo":
+        return split_media_filenames(row.get("image_files"))
     return split_media_filenames(row.get("video_file"))
 
 
@@ -899,14 +908,38 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     elif scheduled_at:
         errors.append("scheduled_at 已填写时，timezone 不能为空")
 
+    image_names = split_media_filenames(row.get("image_files"))
+    video_names = split_media_filenames(row.get("video_file"))
+
+    # 列填错时直接说清楚，避免被当成权限/图片规格问题
+    if media_type == "video":
+        if image_names:
+            errors.append(
+                "媒体类为视频时不要填「图片文件名」；发图文请把媒体类改为 photo/图文，图片写在「图片文件名」"
+            )
+        if video_names and _looks_like_image_filenames(video_names):
+            errors.append(
+                "「视频文件名」看起来是图片（"
+                + ", ".join(video_names[:3])
+                + ("…" if len(video_names) > 3 else "")
+                + "）。发图文请：媒体类=photo/图文，并把文件写到「图片文件名」列"
+            )
+    elif media_type == "photo":
+        if video_names and not image_names:
+            errors.append(
+                "带货图文请把图片写在「图片文件名」列（可多图逗号分隔），不要写在「视频文件名」"
+            )
+        elif video_names and image_names:
+            errors.append("带货图文只需填「图片文件名」，请清空「视频文件名」避免混淆")
+
     media_names = _row_media_filenames(row)
     if not media_names:
         if media_type == "photo":
             errors.append(
-                f"image_files 为空（至少 1 张、最多 {PHOTO_MAX_IMAGES} 张，多图用逗号分隔，如 a.jpg,b.jpg）"
+                f"图片文件名为空（至少 1 张、最多 {PHOTO_MAX_IMAGES} 张，多图用逗号分隔，如 a.jpg,b.jpg）"
             )
         else:
-            errors.append("video_file 为空")
+            errors.append("视频文件名为空")
     elif media_type == "photo":
         resolved: list[Path] = []
         missing = False
@@ -927,7 +960,7 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
 
     music_id = (row.get("music_id") or "").strip()
     if music_id and media_type != "photo":
-        errors.append("music_id 仅用于带货图文 (media_type=photo)")
+        errors.append("music_id 仅用于带货图文（媒体类=photo）")
 
     return errors
 

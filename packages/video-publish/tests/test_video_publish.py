@@ -15,7 +15,13 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from lib import api as api_module  # noqa: E402
 from lib import cli as cli_module  # noqa: E402
 from lib.api import creator_can_publish_photo, is_tiktok_shop_auth_source, normalize_permission_list  # noqa: E402
-from lib.cli import _timezone_from_creator_info, _validate_row, command_fill, command_gen_csv  # noqa: E402
+from lib.cli import (  # noqa: E402
+    _row_media_type,
+    _timezone_from_creator_info,
+    _validate_row,
+    command_fill,
+    command_gen_csv,
+)
 from lib.config import (  # noqa: E402
     PHOTO_MAX_FILE_BYTES,
     PHOTO_MAX_IMAGES,
@@ -410,6 +416,64 @@ class UploadFileTests(unittest.TestCase):
         put_file.assert_called_once()
         self.assertEqual(request_json.call_count, 2)
         self.assertEqual(result["id"], "123")
+
+
+class MediaTypeInferenceTests(unittest.TestCase):
+    def test_image_suffix_in_video_file_does_not_imply_photo(self) -> None:
+        row = {
+            "platform": "tiktok_shop",
+            "video_file": "cover.jpg",
+            "image_files": "",
+            "media_type": "",
+        }
+        self.assertEqual(_row_media_type(row), "video")
+
+    def test_image_files_without_media_type_implies_photo(self) -> None:
+        row = {
+            "platform": "tiktok_shop",
+            "video_file": "",
+            "image_files": "a.jpg,b.png",
+            "media_type": "",
+        }
+        self.assertEqual(_row_media_type(row), "photo")
+
+    def test_validate_video_row_with_image_in_video_file_column_is_clear(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / "cover.jpg").write_bytes(b"x")
+            row = {
+                "creator_username": "alice",
+                "platform": "tiktok_shop",
+                "media_type": "video",
+                "product_id": "pid",
+                "product_title": "Good Product",
+                "title": "caption",
+                "timezone": "America/New_York",
+                "scheduled_at": "2026-07-05 09:00",
+                "video_file": "cover.jpg",
+                "image_files": "",
+            }
+            errors = _validate_row(row, 0, folder)
+        self.assertTrue(any("看起来是图片" in e and "图片文件名" in e for e in errors))
+
+    def test_validate_photo_requires_image_files_column_not_video_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            _write_png(folder / "a.png", 100, 100)
+            row = {
+                "creator_username": "alice",
+                "platform": "tiktok_shop",
+                "media_type": "photo",
+                "product_id": "pid",
+                "product_title": "Good Product",
+                "title": "caption",
+                "timezone": "America/New_York",
+                "scheduled_at": "2026-07-05 09:00",
+                "video_file": "a.png",
+                "image_files": "",
+            }
+            errors = _validate_row(row, 0, folder)
+        self.assertTrue(any("图片文件名" in e and "不要写在「视频文件名」" in e for e in errors))
 
 
 class PhotoPermissionTests(unittest.TestCase):
