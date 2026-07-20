@@ -6,6 +6,15 @@ Use this workflow when a user provides a viral product video, competitor ad, or 
 
 Recreate the selling structure and pacing of a successful video without copying protected creative elements verbatim. Keep the user's product, target market, and reference images as the source of truth.
 
+## Source video inputs
+
+Accept any of these as the source to analyze, then remake:
+
+- Public URL: **TikTok, Douyin (抖音), YouTube, or Instagram** (full or short share links, e.g. `v.douyin.com`).
+- Local video file or already-uploaded Lingtu material/file.
+
+When the user pastes a link (including 抖音/Douyin), first run `packages/video-understand` (`scripts/lingtu_video_understand.py replicate --url ...`) to obtain the replication prompt / structure brief. Do not scrape the page yourself. Use that brief as the Analysis Pass input below, then generate remake videos via `scripts/lingtu_content_task.py`.
+
 ## Analysis Pass
 
 Before generating, summarize the source video into reusable structure:

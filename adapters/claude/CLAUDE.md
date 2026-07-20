@@ -48,7 +48,7 @@ Use `packages/social-monitor/scripts/lingtu_social_monitor.py` for deterministic
 Read `packages/video-understand/SKILL.md` when the user asks for:
 
 - summarizing, tagging, or breaking down a single local video
-- summarizing, tagging, or breaking down a TikTok / YouTube / Instagram URL
+- summarizing, tagging, or breaking down a TikTok / Douyin / YouTube / Instagram URL
 - remix planning or replication prompts
 
 If the user also asks for metrics or comments, fetch them first with `packages/social-monitor`.

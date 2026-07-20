@@ -9,7 +9,7 @@ Use this repository as a reusable Lingtu AI capability kit.
 
 ## Routing
 
-- For turning a video file (uploaded material) or a TikTok/YouTube/Instagram URL into a natural-language replication prompt (for 二创 generation or video tagging/understanding), read `packages/video-understand/SKILL.md`.
+- For turning a video file (uploaded material) or a TikTok/Douyin/YouTube/Instagram URL into a natural-language replication prompt (for 二创 generation or video tagging/understanding), read `packages/video-understand/SKILL.md`.
 - For image generation, product reference optimization, ecommerce videos, and viral-remake media workflows, read `packages/content-create/SKILL.md`.
 - For TK shop data lookup, daily reports, shop lists, and operations analysis, read `packages/tkshop-query/SKILL.md`.
 - For TikTok/Instagram creator or competitor monitoring, recent-video lookups, single-video metric refreshes, video comment exports/downloads, comment feedback summaries, and content intelligence reports, read `packages/social-monitor/SKILL.md`.

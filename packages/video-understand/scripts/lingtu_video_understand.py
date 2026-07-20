@@ -126,7 +126,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     rep_parser = subparsers.add_parser("replicate", help="Generate a replication prompt from a video URL, local file, or uploaded material.")
-    rep_parser.add_argument("--url", help="Public TikTok, YouTube, or Instagram URL.")
+    rep_parser.add_argument("--url", help="Public TikTok, Douyin, YouTube, or Instagram URL.")
     rep_parser.add_argument("--file", help="Local video file path. Uploaded via /v1/file/upload, then replicated as businessType=FILE.")
     rep_parser.add_argument("--business-id", help="Uploaded material/file id (skip upload).")
     rep_parser.add_argument("--business-type", choices=["FILE", "MATERIAL"], help="Business type when using --business-id.")

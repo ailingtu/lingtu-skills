@@ -17,7 +17,7 @@ For TK shop-data requests, follow `packages/tkshop-query/SKILL.md` and call `scr
 
 For TikTok/Instagram creator or competitor monitoring, account video lists, single-video metric refresh, video comment export/download, or comment feedback summary requests, follow `packages/social-monitor/SKILL.md` and call `scripts/lingtu_social_monitor.py`.
 
-For single-video understanding, tagging, breakdown, or replication-prompt requests (local file or TikTok/YouTube/Instagram URL), follow `packages/video-understand/SKILL.md` and call `scripts/lingtu_video_understand.py`.
+For single-video understanding, tagging, breakdown, or replication-prompt requests (local file or TikTok/Douyin/YouTube/Instagram URL), follow `packages/video-understand/SKILL.md` and call `scripts/lingtu_video_understand.py`.
 
 For batch TikTok / TikTok Shop video publishing, schedule CSV generation, creator/product lookup, dry-run, or confirmed publish requests, follow `packages/video-publish/SKILL.md` and call `scripts/lingtu_video_publish.py`.
 
