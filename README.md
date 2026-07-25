@@ -26,7 +26,7 @@
 - **`packages/content-create`** — 生成商品图、AI 视频参考图、电商卖货视频、爆款复刻视频等。
 - **`packages/tkshop-query`** — 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。
 - **`packages/social-monitor`** — TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据、评论导出和近期视频情报报告。
-- **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/抖音/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、爆款复刻和视频拆解。
+- **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、爆款复刻和视频拆解。
 - **`packages/video-publish`** — TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。
 - **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询 TK 达人黑名单记录。
 
@@ -164,12 +164,16 @@ python3 scripts/lingtu_social_monitor.py add \
 ```bash
 cd packages/video-understand
 
-# 解析 TikTok / 抖音 / YouTube / Instagram 链接，流式返回复刻提示词
+# 解析 TikTok / 抖音 / 小红书 / 视频号 / YouTube / Instagram 链接，流式返回复刻提示词
 python3 scripts/lingtu_video_understand.py replicate \
   --url "https://www.tiktok.com/@user/video/1234567890"
-# 抖音示例：
+# 抖音 / 小红书 / 视频号示例：
 # python3 scripts/lingtu_video_understand.py replicate \
 #   --url "https://www.douyin.com/video/7123456789012345678"
+# python3 scripts/lingtu_video_understand.py replicate \
+#   --url "https://www.xiaohongshu.com/explore/64abcdef0123456789abcdef"
+# python3 scripts/lingtu_video_understand.py replicate \
+#   --url "https://channels.weixin.qq.com/web/pages/feed?eid=..."
 
 # 解析本地视频文件（自动上传后再复刻）
 python3 scripts/lingtu_video_understand.py replicate --file ./clip.mp4

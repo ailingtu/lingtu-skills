@@ -1,7 +1,7 @@
 ---
 name: lingtu-content-create
 version: 0.3.1
-description: 灵途 AI 内容生成。通过灵途 AI 的任务化接口生成商品主图、AI 视频参考图、电商带货视频、爆款视频复刻等媒体内容。用户提到"生成图片/视频"、"商品图优化"、"参考图三件套"、"带货视频"、"UGC 短视频"、"爆款复刻"（含抖音/Douyin 源视频），或需要把提示词与多张参考图传给灵途 AI 并轮询任务结果时使用。
+description: 灵途 AI 内容生成。通过灵途 AI 的任务化接口生成商品主图、AI 视频参考图、电商带货视频、爆款视频复刻等媒体内容。用户提到"生成图片/视频"、"商品图优化"、"参考图三件套"、"带货视频"、"UGC 短视频"、"爆款复刻"（含 TikTok/抖音/小红书/视频号/YouTube/Instagram 源视频），或需要把提示词与多张参考图传给灵途 AI 并轮询任务结果时使用。
 ---
 
 # 灵途 AI 内容生成（图片 / 视频 / 爆款复刻）
@@ -19,7 +19,7 @@ This skill also covers product-content workflows around the API:
 
 - Optimizing messy product photos into a standard 3-image AI video reference pack. Read `references/product-reference-workflow.md` when the user gives product images and asks to choose, clean up, optimize, or prepare references for AI video.
 - Generating ecommerce selling videos from product references. Read `references/ecommerce-video-workflow.md` when the user asks for selling videos, UGC-style videos, target-market scripts, multiple variants, or short product ads.
-- Remaking viral product videos. Read `references/viral-remake-workflow.md` when the user provides a viral video (TikTok / Douyin / YouTube / Instagram URL or local file), asks to copy a structure, or wants "爆款复刻". For URL sources, run `packages/video-understand` first to get the replication brief.
+- Remaking viral product videos. Read `references/viral-remake-workflow.md` when the user provides a viral video (TikTok / Douyin / Xiaohongshu / WeChat Channels / YouTube / Instagram URL or local file), asks to copy a structure, or wants "爆款复刻". For URL sources, run `packages/video-understand` first to get the replication brief.
 
 Use only the workflow references needed for the request; do not load all of them by default.
 
@@ -64,7 +64,7 @@ For product content requests, select the narrowest workflow before calling the A
 
 - **User provides raw product images and asks what to use or improve**: inspect the images first, classify them by role, ask for missing angles only when necessary, then follow `references/product-reference-workflow.md`.
 - **User already has 3 optimized reference images and asks for videos**: follow `references/ecommerce-video-workflow.md`.
-- **User gives a competitor/viral video (including 抖音/Douyin links) or asks to recreate a popular style**: follow `references/viral-remake-workflow.md` (analyze via `packages/video-understand` when a URL is given).
+- **User gives a competitor/viral video (including TikTok / 抖音 / 小红书 / 视频号 / YouTube / Instagram links) or asks to recreate a popular style**: follow `references/viral-remake-workflow.md` (analyze via `packages/video-understand` when a URL is given).
 
 When using generated reference images for video, preserve this order unless the user gives another order: product main image, selling-point/detail image, lifestyle scene image.
 

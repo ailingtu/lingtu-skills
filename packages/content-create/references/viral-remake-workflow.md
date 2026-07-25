@@ -10,10 +10,10 @@ Recreate the selling structure and pacing of a successful video without copying 
 
 Accept any of these as the source to analyze, then remake:
 
-- Public URL: **TikTok, Douyin (抖音), YouTube, or Instagram** (full or short share links, e.g. `v.douyin.com`).
+- Public URL: **TikTok, Douyin (抖音), Xiaohongshu (小红书), WeChat Channels (视频号), YouTube, or Instagram** (full or short share links, e.g. `v.douyin.com`, `xhslink.com`, `channels.weixin.qq.com`).
 - Local video file or already-uploaded Lingtu material/file.
 
-When the user pastes a link (including 抖音/Douyin), first run `packages/video-understand` (`scripts/lingtu_video_understand.py replicate --url ...`) to obtain the replication prompt / structure brief. Do not scrape the page yourself. Use that brief as the Analysis Pass input below, then generate remake videos via `scripts/lingtu_content_task.py`.
+When the user pastes a link (including 抖音 / 小红书 / 视频号), first run `packages/video-understand` (`scripts/lingtu_video_understand.py replicate --url ...`) to obtain the replication prompt / structure brief. Do not scrape the page yourself. Use that brief as the Analysis Pass input below, then generate remake videos via `scripts/lingtu_content_task.py`.
 
 ## Analysis Pass
 

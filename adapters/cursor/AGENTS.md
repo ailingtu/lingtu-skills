@@ -21,7 +21,7 @@ Use for TikTok/Instagram creator links, usernames, creator/competitor monitoring
 
 ## Use `packages/video-understand`
 
-Use for single local videos, TikTok URLs, Douyin (抖音) URLs, YouTube URLs, or Instagram URLs that need summarization, tagging, breakdown, remix planning, viral remake, or a replication prompt. If the user also asks for metrics or comments on TikTok/Instagram, fetch them first with `packages/social-monitor`.
+Use for single local videos, or TikTok / Douyin (抖音) / Xiaohongshu (小红书) / WeChat Channels (视频号) / YouTube / Instagram URLs that need summarization, tagging, breakdown, remix planning, viral remake, or a replication prompt. If the user also asks for metrics or comments on TikTok/Instagram, fetch them first with `packages/social-monitor`.
 
 ## Use `packages/video-publish`
 

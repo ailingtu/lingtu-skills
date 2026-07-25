@@ -12,7 +12,7 @@ Use Lingtu AI packages from this repository when the user requests media generat
 - `packages/content-create`: product images, optimized product reference images, ecommerce videos, UGC videos, viral remakes, and other Lingtu AI media-generation tasks.
 - `packages/tkshop-query`: shop lists, shop daily reports, store metrics, merchant metrics, product metrics, order metrics, customer metrics, and shop operations analysis.
 - `packages/social-monitor`: TikTok/Instagram creator links, usernames, creator or competitor monitoring, account video lists, single-video material metrics, video comment exports/downloads, group-level monitoring lists, daily digest subscriptions, and yesterday-vs-today reports.
-- `packages/video-understand`: single local videos, TikTok / Douyin / YouTube / Instagram URLs that need summarization, tagging, breakdown, remix planning, viral remake, or a replication prompt.
+- `packages/video-understand`: single local videos, TikTok / Douyin / Xiaohongshu / WeChat Channels / YouTube / Instagram URLs that need summarization, tagging, breakdown, remix planning, viral remake, or a replication prompt.
 - `packages/video-publish`: batch TikTok / TikTok Shop video publishing, schedule CSV generation, authorized creator/product lookup, dry-run preview, and confirmed publishing.
 - `packages/tk-blacklist`: TK blacklist lookup and batch uniqueId checks.
 

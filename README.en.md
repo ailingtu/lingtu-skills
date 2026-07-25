@@ -13,7 +13,7 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 - **`packages/content-create`** — generate product images, AI video reference packs, ecommerce/UGC selling videos, and viral-remake media through Lingtu AI.
 - **`packages/tkshop-query`** — query TK shop data: daily reports, shop lists, and AI-powered operations Q&A.
 - **`packages/social-monitor`** — monitor TikTok/Instagram creators or competitor accounts, fetch account video lists and single-video material metrics, export video comments, and generate recent-video intelligence reports.
-- **`packages/video-understand`** — turn a local video file or a TikTok/Douyin/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, viral remake, or video breakdown.
+- **`packages/video-understand`** — turn a local video file or a TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, viral remake, or video breakdown.
 - **`packages/video-publish`** — batch TikTok / TikTok Shop video publishing, schedule CSV generation, creator/product lookup, and dry-run validation.
 - **`packages/tk-blacklist`** — batch query TK blacklist records by TikTok uniqueId.
 
@@ -149,12 +149,16 @@ python3 scripts/lingtu_social_monitor.py add \
 ```bash
 cd packages/video-understand
 
-# Parse a TikTok / Douyin / YouTube / Instagram URL and stream a replication prompt
+# Parse a TikTok / Douyin / Xiaohongshu / WeChat Channels / YouTube / Instagram URL and stream a replication prompt
 python3 scripts/lingtu_video_understand.py replicate \
   --url "https://www.tiktok.com/@user/video/1234567890"
-# Douyin example:
+# Douyin / Xiaohongshu / WeChat Channels examples:
 # python3 scripts/lingtu_video_understand.py replicate \
 #   --url "https://www.douyin.com/video/7123456789012345678"
+# python3 scripts/lingtu_video_understand.py replicate \
+#   --url "https://www.xiaohongshu.com/explore/64abcdef0123456789abcdef"
+# python3 scripts/lingtu_video_understand.py replicate \
+#   --url "https://channels.weixin.qq.com/web/pages/feed?eid=..."
 
 # Parse a local video file (auto-upload + replicate)
 python3 scripts/lingtu_video_understand.py replicate --file ./clip.mp4

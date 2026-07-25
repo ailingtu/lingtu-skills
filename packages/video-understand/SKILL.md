@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-understand
-version: 0.7.0
-description: 视频理解、视频内容分析与复刻提示词生成。任何关于"一个视频/一条视频/这个视频/这条 TikTok/这条抖音/这条 Douyin/这条 YouTube/这条 Instagram"的内容性问题——包括"分析这个视频"、"这个视频讲了什么/在讲什么/在干嘛"、"这条视频内容是什么"、"看一下这个视频"、"理解视频"、"视频拆解"、"视频复刻"、"爆款复刻"、"视频打标"、"把视频改写成提示词"、"二创这个视频"——都用本技能。把一个本地视频文件、已上传的素材，或一个 TikTok/抖音/YouTube/Instagram 链接交给灵途 AI 解析，流式返回一段自然语言的视频复刻提示词（标题、主体、场景、分镜脚本、制作笔记）；再根据用户的问题在该提示词之上做相应解读（概括/打标/二创建议），用户只要"复刻提示词"时则原样返回。本地文件会先经 /v1/file/upload 上传再复刻。批量任务并发上限为 10。处理时只调脚本，不抓视频链接的网页/搜索引擎快照。
+version: 0.8.0
+description: 视频理解、视频内容分析与复刻提示词生成。任何关于"一个视频/一条视频/这个视频/这条 TikTok/这条抖音/这条 Douyin/这条小红书/这条视频号/这条 YouTube/这条 Instagram"的内容性问题——包括"分析这个视频"、"这个视频讲了什么/在讲什么/在干嘛"、"这条视频内容是什么"、"看一下这个视频"、"理解视频"、"视频拆解"、"视频复刻"、"爆款复刻"、"视频打标"、"把视频改写成提示词"、"二创这个视频"——都用本技能。把一个本地视频文件、已上传的素材，或一个 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接交给灵途 AI 解析，流式返回一段自然语言的视频复刻提示词（标题、主体、场景、分镜脚本、制作笔记）；再根据用户的问题在该提示词之上做相应解读（概括/打标/二创建议），用户只要"复刻提示词"时则原样返回。本地文件会先经 /v1/file/upload 上传再复刻。批量任务并发上限为 10。处理时只调脚本，不抓视频链接的网页/搜索引擎快照。
 ---
 
 # 视频理解与复刻提示词生成
@@ -17,7 +17,7 @@ Use this skill to turn a video into a natural-language replication prompt.
 
 Supported inputs:
 
-- A public TikTok, Douyin (抖音), YouTube, or Instagram URL.
+- A public TikTok, Douyin (抖音), Xiaohongshu (小红书), WeChat Channels (视频号), YouTube, or Instagram URL.
 - A local video file (the script uploads it through `/v1/file/upload` first, then replicates by file id).
 - A material/file already uploaded to Lingtu, referenced by `businessId` + `businessType`.
 
@@ -48,7 +48,7 @@ Use `https://api.ailingtu.com` as the default base URL unless a future API refer
 
 ## Do Not
 
-- **Do not** call WebFetch / WebSearch / `curl` against the user-provided video URL (TikTok / Douyin / YouTube / Instagram / etc.) to pull web snapshots, search-engine cached pages, OG meta, or third-party metadata sites. The replication endpoint already ingests the source video; adding a web lookup just adds latency and is the wrong data path.
+- **Do not** call WebFetch / WebSearch / `curl` against the user-provided video URL (TikTok / Douyin / Xiaohongshu / WeChat Channels / YouTube / Instagram / etc.) to pull web snapshots, search-engine cached pages, OG meta, or third-party metadata sites. The replication endpoint already ingests the source video; adding a web lookup just adds latency and is the wrong data path.
 - Exception: only fetch external pages when the user explicitly asks ("先去搜一下这个视频的背景再分析" / "go look up the background first").
 
 ## Interpreting the output
@@ -64,7 +64,7 @@ The replication prompt the script returns is the source of truth for what's in t
 ## Workflow
 
 1. Decide the input shape.
-   - If the user provides a TikTok, Douyin, YouTube, or Instagram URL, send `{ type: "REPLICATION", url }`. Accept full share links and short links (e.g. `v.douyin.com`, `www.douyin.com`).
+   - If the user provides a TikTok, Douyin, Xiaohongshu, WeChat Channels, YouTube, or Instagram URL, send `{ type: "REPLICATION", url }`. Accept full share links and short links (e.g. `v.douyin.com`, `www.douyin.com`, `xhslink.com`, `www.xiaohongshu.com`, `channels.weixin.qq.com`).
    - If the user provides a local video file path, upload it first through `POST /v1/file/upload` (form field `file`), then send `{ type: "REPLICATION", businessId: <data.id>, businessType: "FILE" }`.
    - If the user references an already-uploaded material/file, send `{ type: "REPLICATION", businessId, businessType }` where `businessType` is `MATERIAL` or `FILE`.
 2. Always send `type: "REPLICATION"` for now. The `ANALYSIS` mode is reserved and not used by this skill.
@@ -73,7 +73,7 @@ The replication prompt the script returns is the source of truth for what's in t
 5. Downstream usage:
    - For 二创/生成/爆款复刻, hand the prompt to `lingtu-content-create` (see `packages/content-create/references/viral-remake-workflow.md`).
    - For 打标/检索, keep the prompt as-is or extract tags from it.
-   - For "结合数据分析这个 TikTok/Instagram 视频" / "为什么爆" / "看评论区反馈", first call `lingtu-social-monitor` `material` and optionally `comments` for real-time metrics and comment context, then use those results together with this skill's replication prompt to answer. (Social-monitor metrics/comments are TikTok/Instagram only; Douyin sources still use this skill for structure/replication.)
+   - For "结合数据分析这个 TikTok/Instagram 视频" / "为什么爆" / "看评论区反馈", first call `lingtu-social-monitor` `material` and optionally `comments` for real-time metrics and comment context, then use those results together with this skill's replication prompt to answer. (Social-monitor metrics/comments are TikTok/Instagram only; Douyin / Xiaohongshu / WeChat Channels sources still use this skill for structure/replication.)
 
 ## Batch / Concurrency Limit
 
@@ -93,12 +93,16 @@ cat urls.txt | xargs -I{} -P 5 \
 
 ## Script Usage
 
-Parse a TikTok, Douyin, YouTube, or Instagram URL:
+Parse a supported public video URL (TikTok / Douyin / Xiaohongshu / WeChat Channels / YouTube / Instagram):
 
 ```bash
 python3 scripts/lingtu_video_understand.py replicate --url "https://www.tiktok.com/@user/video/1234567890"
 # Douyin example:
 python3 scripts/lingtu_video_understand.py replicate --url "https://www.douyin.com/video/7123456789012345678"
+# Xiaohongshu example:
+python3 scripts/lingtu_video_understand.py replicate --url "https://www.xiaohongshu.com/explore/64abcdef0123456789abcdef"
+# WeChat Channels example:
+python3 scripts/lingtu_video_understand.py replicate --url "https://channels.weixin.qq.com/web/pages/feed?eid=..."
 ```
 
 Parse a local video file (auto-upload + replicate):
