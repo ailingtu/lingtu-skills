@@ -15,7 +15,6 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 - **`packages/social-monitor`** — monitor TikTok/Instagram creators or competitor accounts, fetch account video lists and single-video material metrics, export video comments, and generate recent-video intelligence reports.
 - **`packages/video-understand`** — turn a local video file or a TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, viral remake, or video breakdown.
 - **`packages/video-publish`** — batch TikTok / TikTok Shop video publishing, schedule CSV generation, creator/product lookup, and dry-run validation.
-- **`packages/tk-blacklist`** — batch query TK blacklist records by TikTok uniqueId.
 
 ## Repository Layout
 
@@ -26,7 +25,6 @@ packages/
   social-monitor/   # Social creator monitoring, material metrics, comment export
   video-understand/ # Video understanding & replication-prompt generation
   video-publish/    # Batch video publishing and schedules
-  tk-blacklist/     # TK blacklist query
 adapters/
   codex/            # Codex skill installation
   claude/           # Claude Code CLAUDE.md
@@ -73,7 +71,7 @@ Or specify a target and packages explicitly:
 
 ```bash
 ./install.sh codex all
-./install.sh codex content-create tkshop-query social-monitor video-understand video-publish tk-blacklist
+./install.sh codex content-create tkshop-query social-monitor video-understand video-publish
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
 ./install.sh openclaw /path/to/project all
@@ -187,15 +185,6 @@ python3 scripts/lingtu_video_publish.py publish \
 python3 scripts/lingtu_video_publish.py publish \
   --folder ~/Desktop/video_publish_2026-07-05 \
   --confirm
-```
-
-## Quick Start — TK Blacklist
-
-```bash
-cd packages/tk-blacklist
-
-# Batch check whether creators are in the blacklist
-python3 scripts/lingtu_tk_blacklist.py search vexbolts xochitlklepper --format text
 ```
 
 ## Delivery

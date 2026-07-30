@@ -2,7 +2,7 @@
 
 Video Understand turns a video into a natural-language replication prompt. The output is a Markdown-style brief (title, subjects, scene, scripted shots, production notes) that can feed downstream video generation or be used as a tagging/understanding source.
 
-Current package version: `0.8.0`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
+Current package version: `0.8.1`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
 
 ## What It Does
 
@@ -25,10 +25,14 @@ export LINGTU_API_KEY=xxx
 If you don't have an API key yet, generate a `/binduser` URL:
 
 ```bash
-python3 ../../shared/scripts/user_keys.py single bind
+python3 scripts/lingtu_video_understand.py bind
 ```
 
 Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as `x-api-key: <key>`. Do not commit API keys.
+
+This package can be installed as a directory by itself. It uses the repository's
+`shared/scripts` helpers when available and automatically falls back to its bundled
+standalone runtime when they are absent.
 
 ## Script Usage
 

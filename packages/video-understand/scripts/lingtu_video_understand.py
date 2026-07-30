@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -8,20 +10,31 @@ import urllib.request
 from pathlib import Path
 
 
-def _shared_scripts_dir() -> Path:
+def _shared_scripts_dir() -> Path | None:
     current = Path(__file__).resolve()
     for parent in current.parents:
         candidate = parent / "shared" / "scripts"
         if candidate.is_dir():
             return candidate
-    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+    return None
 
 
-sys.path.insert(0, str(_shared_scripts_dir()))
-
-from lingtu_auth import require_api_key
-from lingtu_http import base_url as shared_base_url
-from lingtu_upload import multipart_upload
+shared_scripts_dir = _shared_scripts_dir()
+if shared_scripts_dir is not None:
+    sys.path.insert(0, str(shared_scripts_dir))
+    from lingtu_auth import build_single_user_bind_url, require_api_key
+    from lingtu_http import base_url as shared_base_url
+    from lingtu_upload import multipart_upload
+else:
+    # A single skill directory may be installed without the repository-level
+    # shared/ tree. Keep that supported with the bundled minimal runtime.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from lingtu_standalone import (
+        base_url as shared_base_url,
+        build_single_user_bind_url,
+        multipart_upload,
+        require_api_key,
+    )
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -121,6 +134,10 @@ def replicate(args):
     stream_replication(payload, raw=args.raw)
 
 
+def bind_user(args):
+    print(build_single_user_bind_url(args.channel, args.user_id, args.remark))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Lingtu video understanding (replication prompt).")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -135,12 +152,19 @@ def main():
     upload_parser = subparsers.add_parser("upload", help="Upload a local file to /v1/file/upload and print the file id.")
     upload_parser.add_argument("path", help="Local file path to upload.")
 
+    bind_parser = subparsers.add_parser("bind", help="Generate a /binduser URL for obtaining an API key.")
+    bind_parser.add_argument("--channel", default="local", help="Source channel.")
+    bind_parser.add_argument("--user-id", default="", help="User id. A temporary local id is generated when omitted.")
+    bind_parser.add_argument("--remark", default="", help="Optional binding remark.")
+
     args = parser.parse_args()
     if args.command == "replicate":
         replicate(args)
     elif args.command == "upload":
         result = upload_file(args.path)
         print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif args.command == "bind":
+        bind_user(args)
 
 
 if __name__ == "__main__":

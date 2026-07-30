@@ -1,6 +1,6 @@
 ---
 name: lingtu-video-understand
-version: 0.8.0
+version: 0.8.1
 description: 视频理解、视频内容分析与复刻提示词生成。任何关于"一个视频/一条视频/这个视频/这条 TikTok/这条抖音/这条 Douyin/这条小红书/这条视频号/这条 YouTube/这条 Instagram"的内容性问题——包括"分析这个视频"、"这个视频讲了什么/在讲什么/在干嘛"、"这条视频内容是什么"、"看一下这个视频"、"理解视频"、"视频拆解"、"视频复刻"、"爆款复刻"、"视频打标"、"把视频改写成提示词"、"二创这个视频"——都用本技能。把一个本地视频文件、已上传的素材，或一个 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接交给灵途 AI 解析，流式返回一段自然语言的视频复刻提示词（标题、主体、场景、分镜脚本、制作笔记）；再根据用户的问题在该提示词之上做相应解读（概括/打标/二创建议），用户只要"复刻提示词"时则原样返回。本地文件会先经 /v1/file/upload 上传再复刻。批量任务并发上限为 10。处理时只调脚本，不抓视频链接的网页/搜索引擎快照。
 ---
 
@@ -39,12 +39,16 @@ export LINGTU_API_KEY=xxx
 If the user doesn't have an API key yet, generate a `/binduser` URL:
 
 ```bash
-python3 shared/scripts/user_keys.py single bind
+python3 scripts/lingtu_video_understand.py bind
 ```
 
 Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as the `x-api-key` header. Do not commit API keys.
 
 Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
+
+The package is self-contained when installed as a single skill directory. In a full
+repository installation it reuses `shared/scripts`; otherwise it automatically
+falls back to the bundled `scripts/lingtu_standalone.py` runtime.
 
 ## Do Not
 

@@ -9,9 +9,8 @@ Recommended setup:
 3. Create one workflow or agent for social monitoring using `packages/social-monitor/SKILL.md`.
 4. Create one workflow or agent for video understanding using `packages/video-understand/SKILL.md`.
 5. Create one workflow or agent for video publishing using `packages/video-publish/SKILL.md`.
-6. Create one workflow or agent for TK blacklist lookup using `packages/tk-blacklist/SKILL.md`.
-7. Expose scripts through your preferred tool executor or wrap the Lingtu API endpoints directly.
-8. Set your API key and run `python3 shared/scripts/user_keys.py single bind` if you need a `/binduser` URL:
+6. Expose scripts through your preferred tool executor or wrap the Lingtu API endpoints directly.
+7. Set your API key and run `python3 shared/scripts/user_keys.py single bind` if you need a `/binduser` URL:
 
 ```bash
 export LINGTU_API_KEY=xxx

@@ -27,10 +27,6 @@ Use for single local videos, or TikTok / Douyin (抖音) / Xiaohongshu (小红�
 
 Use for batch publishing TikTok / TikTok Shop videos, generating a publishing schedule CSV/Excel, looking up authorized publishing creators or products, dry-run / preview of a schedule, or confirming a publish batch. Start with `packages/video-publish/SKILL.md`.
 
-## Use `packages/tk-blacklist`
-
-Use for TK 达人黑名单查询, TikTok influencer blacklist lookup, and batch uniqueId blacklist checks. Start with `packages/tk-blacklist/SKILL.md`.
-
 ## Authentication
 
 Set your API key before use. Run `python3 shared/scripts/user_keys.py single bind` if you need a `/binduser` URL:

@@ -30,12 +30,6 @@
       "sourceType": "github",
       "skillPath": "packages/video-publish/SKILL.md",
       "computedHash": "87398ab853c8d8ce6b9af5ceb4ba2cc37b707115c7651e3cf9758af91cca359d"
-    },
-    "lingtu-tk-blacklist": {
-      "source": "ailingtu/lingtu-skills",
-      "sourceType": "github",
-      "skillPath": "packages/tk-blacklist/SKILL.md",
-      "computedHash": "1ba0cf40d71ec18981ddec3119aba083caaab19b0d45549b082bc7b59cfa5770"
     }
   }
 }

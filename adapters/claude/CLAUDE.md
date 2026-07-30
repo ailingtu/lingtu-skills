@@ -64,16 +64,6 @@ Read `packages/video-publish/SKILL.md` when the user asks for:
 
 Use `packages/video-publish/scripts/lingtu_video_publish.py` for deterministic API calls.
 
-## TK Blacklist
-
-Read `packages/tk-blacklist/SKILL.md` when the user asks for:
-
-- TK 达人黑名单查询
-- checking whether TikTok uniqueIds are blacklisted
-- influencer risk-control lookup by uniqueId
-
-Use `packages/tk-blacklist/scripts/lingtu_tk_blacklist.py` for deterministic API calls.
-
 ## Authentication
 
 Authentication uses the `LINGTU_API_KEY` environment variable. Standalone CLI users must `export LINGTU_API_KEY=xxx`. If the user doesn't have a key yet, run `python3 shared/scripts/user_keys.py single bind` to generate a `/binduser` URL. Scripts send the key as the `x-api-key` header. Never write API keys into source files.
