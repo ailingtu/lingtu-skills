@@ -7,7 +7,7 @@ import http.client
 import json
 import mimetypes
 import os
-import secrets
+import platform
 import sys
 import urllib.parse
 import uuid
@@ -15,9 +15,21 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
-DEFAULT_SITE_URL = "https://app.ailingtu.com"
 UPLOAD_CHUNK_SIZE = 64 * 1024
 UPLOAD_TIMEOUT = 600
+
+
+def api_key_setup_instructions() -> str:
+    if platform.system() == "Windows":
+        return (
+            'Set it in PowerShell with `$env:LINGTU_API_KEY = "your-api-key"` for the current session, '
+            'or `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` '
+            "and then open a new terminal."
+        )
+    return (
+        "Set it in Terminal with `export LINGTU_API_KEY='your-api-key'`. "
+        "To keep it across sessions on macOS, add that line to `~/.zshrc` and run `source ~/.zshrc`."
+    )
 
 
 def require_api_key() -> str:
@@ -25,33 +37,13 @@ def require_api_key() -> str:
     if not key:
         raise SystemExit(
             "LINGTU_API_KEY environment variable is not set. "
-            "Run `python3 scripts/lingtu_video_understand.py bind` "
-            "to generate a bind URL, or export LINGTU_API_KEY=xxx."
+            f"{api_key_setup_instructions()}"
         )
     return key
 
 
 def base_url(default: str = DEFAULT_BASE_URL) -> str:
     return os.environ.get("LINGTU_AI_BASE_URL", default).rstrip("/")
-
-
-def build_single_user_bind_url(
-    channel: str = "local",
-    user_id: str = "",
-    remark: str = "",
-) -> str:
-    platform = (channel or "local").strip().lower()
-    uid = (user_id or "").strip()
-    if not uid:
-        uid = f"local_{secrets.token_urlsafe(18).replace('-', '_')}"
-    params = {
-        "token": secrets.token_urlsafe(16),
-        "platform": platform,
-        "userid": uid,
-    }
-    if remark:
-        params["remark"] = remark
-    return f"{DEFAULT_SITE_URL}/binduser?{urllib.parse.urlencode(params)}"
 
 
 def _parse_upload_payload(payload: Any, require_id: bool) -> dict[str, Any]:

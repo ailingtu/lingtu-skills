@@ -8,10 +8,10 @@
 
 ## Platform Status
 
-| Platform | Creator video list | Single video data | Comments |
-|----------|--------------------|-------------------|----------|
-| TikTok | Implemented | Implemented | Implemented |
-| Instagram | Implemented | Implemented | Implemented |
+| Platform | Creator video list | Single video data |
+|----------|--------------------|-------------------|
+| TikTok | Implemented | Implemented |
+| Instagram | Implemented | Implemented |
 
 Before implementing a new platform endpoint, document its path, request fields, response envelope, field semantics, pagination, and error codes here first. Script output should normalize platform-specific responses into the shared shape used by `scripts/lingtu_social_monitor.py`.
 
@@ -341,80 +341,6 @@ Response envelope: `{ code, message, data, timestamp }`.
 | `duration` | Video length. | **Milliseconds.** Divide by 1000 for seconds. |
 | `releaseAt` | Publish time. | **Unix seconds, UTC.** |
 
-## Fetch TikTok Material Comments
-
-Endpoint: `POST /v1/material/tiktok/fetchComments`
-
-Request body:
-
-| Name | Required | Type | Description |
-|------|----------|------|-------------|
-| `videoUrl` | yes | string | Public TikTok video URL. |
-| `cursor` | no | string/null | Pagination cursor. Omit or pass `null` on the first request; pass back the cursor returned by the previous response for the next page. |
-
-Response envelope: `{ code, message, data, timestamp }`.
-
-### Success response shape
-
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "cursor": "1779085557000",
-    "hasMore": true,
-    "comments": [
-      {
-        "author_pin": false,
-        "aweme_id": "7624922739500993822",
-        "collect_stat": 0,
-        "comment_language": "en",
-        "create_time": 1779085557,
-        "digg_count": 28,
-        "is_author_digged": false,
-        "no_show": false,
-        "reply_comment": null,
-        "reply_id": "0",
-        "text": "That dog is so patient",
-        "user": {
-          "nickname": "Mama_Caye",
-          "uid": "6904573909506688001",
-          "unique_id": "mama_caye.v",
-          "user_tags": null
-        },
-        "user_digged": 0
-      }
-    ]
-  },
-  "timestamp": 1781491112143
-}
-```
-
-The script's `comments` command follows `cursor` automatically and aggregates all pages by default. Use `--first-page` to keep the old single-request behavior, `--cursor` to resume from a known cursor, or `--max-pages` to cap a large export.
-
-### Field semantics
-
-`data.comments[]`:
-
-| Field | Meaning |
-|-------|---------|
-| `aweme_id` | TikTok video id. |
-| `text` | Comment text. |
-| `comment_language` | Detected comment language. |
-| `create_time` | Comment publish time, Unix seconds UTC. |
-| `digg_count` | Comment like count. |
-| `author_pin` | Whether the creator pinned the comment. |
-| `is_author_digged` | Whether the creator liked the comment. |
-| `reply_id` / `reply_comment` | Reply relationship fields from upstream. |
-| `no_show` | Hidden / not shown flag. |
-| `user.uid` / `user.unique_id` / `user.nickname` | Comment author fields. |
-
-Pagination fields:
-
-| Field | Meaning |
-|-------|---------|
-| `cursor` | Cursor for the next request. Return it unchanged as request `cursor`. Empty or missing means there is no known next page. |
-| `hasMore` | Whether more comments are available. Some backend versions may omit it; in that case a non-empty new `cursor` indicates another page. |
 
 ## Instagram Fetch Recent Posts
 
@@ -574,84 +500,3 @@ Response envelope: `{ code, message, data, timestamp }`.
 | `musicInfo.audioId` / `musicInfo.songName` | `video.music_id` / `video.music_title` | |
 
 `shares`, `saves`, `downloads`, `forwards` are not exposed by Instagram — the normalized output sets them to `0` for shape compatibility with TikTok.
-
-## Instagram Material Comments
-
-Endpoint: `POST /v1/material/ins/fetchComments`
-
-Request body:
-
-| Name | Required | Type | Description |
-|------|----------|------|-------------|
-| `videoUrl` | yes | string | Public Instagram reel/post/video URL. |
-| `sortOrder` | yes | string | `popular` for hot comments (default), `newest` for latest comments. |
-| `cursor` | no | object | Pagination cursor. On follow-up requests, pass back the response cursor object exactly as returned. Do not modify, decode, or escape it manually. |
-
-Request interface:
-
-```ts
-export interface Request {
-  /**
-   * 首次为空，后续拿响应里的 cursor 一个字也别改，也别转义。
-   * Instagram 返回的是一个对象，例如 { cached_comments_cursor, bifilter_token }。
-   */
-  cursor?: object;
-  /** popular = 热门（默认）；newest = 最新。 */
-  sortOrder: string;
-  videoUrl: string;
-}
-```
-
-Response envelope: `{ code, message, data, timestamp }`.
-
-### Success response
-
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "commentCount": 8752,
-    "comments": [
-      {
-        "pk": "18056740655551890",
-        "text": "Who wants Neymar to win the world cup 👉",
-        "createdAt": 1780323377,
-        "createdAtUtc": 1780323377,
-        "user": {
-          "pk": "77068861459",
-          "username": "dn_return_07",
-          "fullName": "",
-          "isVerified": false
-        },
-        "commentLikeCount": 3754,
-        "childCommentCount": 5,
-        "previewChildComments": [],
-        "isLikedByMediaOwner": null,
-        "hasTranslation": null
-      }
-    ],
-    "cursor": {
-      "cached_comments_cursor": "18118045603761793",
-      "bifilter_token": "GgYY..."
-    },
-    "hasMore": true
-  },
-  "timestamp": 1781771400583
-}
-```
-
-### Field semantics
-
-| Field | Maps to | Notes |
-|-------|---------|-------|
-| `pk` | — | Comment id (kept in raw output, not surfaced in normalized shape). |
-| `text` | `comment.text` | |
-| `createdAt` / `createdAtUtc` | `comment.created_at` | Unix seconds, UTC. |
-| `commentLikeCount` | `comment.like_count` | |
-| `childCommentCount` | `comment.child_comment_count` | |
-| `isLikedByMediaOwner` | `comment.author_liked` | |
-| `previewChildComments` | `comment.reply_comment` | Not normalized recursively. |
-| `user.pk` / `user.username` / `user.fullName` | `comment.user.uid` / `unique_id` / `nickname` | |
-
-`cursor` is a JSON object — pass it back verbatim to fetch the next page. The script handles this automatically; when calling the CLI manually, supply `--cursor` as a JSON string and it will be parsed before being sent. Instagram does not return `comment_language`, so `comment.language` is always `null`.

@@ -17,11 +17,15 @@ Use for shop list lookup, daily reports, merchant/store metrics, and business-op
 
 ## Use `packages/social-monitor`
 
-Use for TikTok/Instagram creator links, usernames, creator/competitor monitoring, account video lists, single-video material metrics, video comment exports/downloads, comment feedback summaries, group-level monitoring lists, daily digest subscriptions, and yesterday-vs-today reports. Start with `packages/social-monitor/SKILL.md`.
+Use for TikTok/Instagram creator links, usernames, creator/competitor monitoring, account video lists, single-video material metrics, group-level monitoring lists, daily digest subscriptions, and yesterday-vs-today reports. Start with `packages/social-monitor/SKILL.md`.
+
+## Use `packages/social-comments`
+
+Use for downloading or exporting comments from one TikTok, Instagram, Douyin, WeChat Channels, or Xiaohongshu video, or obtaining comment data for feedback summaries. Start with `packages/social-comments/SKILL.md`.
 
 ## Use `packages/video-understand`
 
-Use for single local videos, or TikTok / Douyin (抖音) / Xiaohongshu (小红书) / WeChat Channels (视频号) / YouTube / Instagram URLs that need summarization, tagging, breakdown, remix planning, viral remake, or a replication prompt. If the user also asks for metrics or comments on TikTok/Instagram, fetch them first with `packages/social-monitor`.
+Use for single local videos, or TikTok / Douyin (抖音) / Xiaohongshu (小红书) / WeChat Channels (视频号) / YouTube / Instagram URLs that need summarization, tagging, breakdown, remix planning, viral remake, or a replication prompt. Fetch TikTok/Instagram metrics with `packages/social-monitor`; fetch supported-platform comments with `packages/social-comments`.
 
 ## Use `packages/video-publish`
 
@@ -29,10 +33,18 @@ Use for batch publishing TikTok / TikTok Shop videos, generating a publishing sc
 
 ## Authentication
 
-Set your API key before use. Run `python3 shared/scripts/user_keys.py single bind` if you need a `/binduser` URL:
+If the API key is missing, give the user the matching command and ask them to run it locally. Never ask them to paste the real key into chat.
+
+macOS:
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
+```
+
+Windows PowerShell:
+
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
 Scripts read `LINGTU_API_KEY` from the environment and send it as the `x-api-key` header.

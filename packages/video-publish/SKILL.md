@@ -1,7 +1,12 @@
 ---
 name: lingtu-video-publish
+slug: lingtu-video-publish
 version: 0.2.0
+displayName: 灵途批量视频发布
+summary: 按 CSV 排期批量发布 TikTok Shop 带货视频、图文和养号内容。
 description: 灵途批量视频/图文发布 — 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频或带货图文。支持生成 CSV 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、CSV/XLSX 通用读取、dry-run 预览。
+license: Apache-2.0
+homepage: https://ailingtu.com/skills/video-publish
 ---
 
 # 灵途批量视频 / 带货图文发布
@@ -434,19 +439,23 @@ API 映射（多图单挂车）：
 
 ## 配置
 
-认证通过 `LINGTU_API_KEY` 环境变量。OpenClaw 启动子进程时自动注入，本地 CLI 自行 export：
+认证只使用 `LINGTU_API_KEY` 环境变量。缺少 Key 时，直接给用户对应系统的命令，让用户在自己的电脑上执行；不要要求用户把真实 Key 发到聊天中。
+
+macOS（当前终端会话）：
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-用户没有 API Key 时，生成 `/binduser` 链接：
+macOS 如需永久生效，把同一行加入 `~/.zshrc`，然后执行 `source ~/.zshrc`。
 
-```bash
-python3 shared/scripts/user_keys.py single bind
+Windows PowerShell（当前窗口）：
+
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-打开返回的链接在网站上完成绑定，然后设置 `LINGTU_API_KEY`。
+Windows 如需永久生效，执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`，然后重新打开终端。
 
 环境变量：
 

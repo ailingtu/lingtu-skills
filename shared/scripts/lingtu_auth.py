@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 """Shared auth helper for Lingtu skills.
 
-Reads LINGTU_API_KEY from the environment. OpenClaw injects this
-automatically; standalone CLI users export it themselves.
+Reads LINGTU_API_KEY from the environment. Users must configure the key
+manually before running a skill.
 """
 
 from __future__ import annotations
 
 import os
-import secrets
-import urllib.parse
+import platform
 
-DEFAULT_SITE_URL = "https://app.ailingtu.com"
+
+def api_key_setup_instructions() -> str:
+    if platform.system() == "Windows":
+        return (
+            'Set it in PowerShell with `$env:LINGTU_API_KEY = "your-api-key"` for the current session, '
+            'or `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` '
+            "and then open a new terminal."
+        )
+    return (
+        "Set it in Terminal with `export LINGTU_API_KEY='your-api-key'`. "
+        "To keep it across sessions on macOS, add that line to `~/.zshrc` and run `source ~/.zshrc`."
+    )
 
 
 def require_api_key() -> str:
@@ -19,27 +29,6 @@ def require_api_key() -> str:
     if not key:
         raise SystemExit(
             "LINGTU_API_KEY environment variable is not set. "
-            "Run `python3 shared/scripts/user_keys.py single bind` "
-            "to generate a bind URL, or export LINGTU_API_KEY=xxx."
+            f"{api_key_setup_instructions()}"
         )
     return key
-
-
-def build_single_user_bind_url(
-    channel: str = "local",
-    user_id: str = "",
-    remark: str = "",
-) -> str:
-    platform = (channel or "local").strip().lower()
-    uid = (user_id or "").strip()
-    if not uid:
-        uid = f"local_{secrets.token_urlsafe(18).replace('-', '_')}"
-    token = secrets.token_urlsafe(16)
-    params: dict[str, str] = {
-        "token": token,
-        "platform": platform,
-        "userid": uid,
-    }
-    if remark:
-        params["remark"] = remark
-    return f"{DEFAULT_SITE_URL}/binduser?{urllib.parse.urlencode(params)}"

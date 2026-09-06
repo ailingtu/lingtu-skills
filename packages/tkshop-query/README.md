@@ -14,19 +14,23 @@ Current package version: `0.2.0`. Remote installers can compare the `version` fi
 
 ## Requirements
 
-Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use:
+Authentication uses the `LINGTU_API_KEY` environment variable. Configure it locally and do not paste the real key into chat.
+
+macOS:
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-If you don't have an API key yet, generate a `/binduser` URL:
+Windows PowerShell:
 
-```bash
-python3 ../../shared/scripts/user_keys.py single bind
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as `x-api-key: <key>`. Do not commit API keys or private business data.
+For persistent setup, add the export to `~/.zshrc` on macOS, or run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` on Windows and open a new terminal.
+
+The key is sent as `x-api-key: <key>`. Do not commit API keys or private business data.
 
 ## Script Usage
 

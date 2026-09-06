@@ -12,10 +12,8 @@ DEFAULT_BASE_URL = "https://api.ailingtu.com"
 
 FETCH_POSTS_PATH = "/v1/influencer/fetchPosts"
 FETCH_MATERIAL_PATH = "/v1/material/tiktok/fetch"
-FETCH_MATERIAL_COMMENTS_PATH = "/v1/material/tiktok/fetchComments"
 INS_FETCH_POSTS_PATH = "/v1/influencer/ins/fetchPosts"
 INS_FETCH_MATERIAL_PATH = "/v1/material/ins/fetch"
-INS_FETCH_MATERIAL_COMMENTS_PATH = "/v1/material/ins/fetchComments"
 
 DEFAULT_PLATFORM = "tiktok"
 SUPPORTED_PLATFORMS = ("tiktok", "instagram")

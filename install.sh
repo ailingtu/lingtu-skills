@@ -3,10 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PACKAGE_IDS=("content-create" "tkshop-query" "social-monitor" "video-understand" "video-publish")
-PACKAGE_NAMES=("Content Create - 商品图、参考图、电商视频、爆款复刻" "TKShop Query - TK 店铺数据查询和经营分析" "Social Monitor - TikTok/Instagram 达人竞品监控、素材数据和评论导出" "Video Understand - 视频理解、内容分析与复刻提示词生成" "Video Publish - TikTok/TikTok Shop 批量视频发布和排期")
-PACKAGE_DIRS=("packages/content-create" "packages/tkshop-query" "packages/social-monitor" "packages/video-understand" "packages/video-publish")
-CODEX_NAMES=("lingtu-content-create" "lingtu-tkshop-query" "lingtu-social-monitor" "lingtu-video-understand" "lingtu-video-publish")
+PACKAGE_IDS=("content-create" "tkshop-query" "social-monitor" "social-comments" "video-understand" "video-publish")
+PACKAGE_NAMES=("Content Create - 商品图、参考图、电商视频、爆款复刻" "TKShop Query - TK 店铺数据查询和经营分析" "Social Monitor - TikTok/Instagram 达人竞品监控和素材数据" "Social Comments - TikTok/Instagram/抖音/视频号/小红书评论下载" "Video Understand - 视频理解、内容分析与复刻提示词生成" "Video Publish - TikTok/TikTok Shop 批量视频发布和排期")
+PACKAGE_DIRS=("packages/content-create" "packages/tkshop-query" "packages/social-monitor" "packages/social-comments" "packages/video-understand" "packages/video-publish")
+CODEX_NAMES=("lingtu-content-create" "lingtu-tkshop-query" "lingtu-social-monitor" "lingtu-social-comments" "lingtu-video-understand" "lingtu-video-publish")
 
 usage() {
   cat <<'USAGE'
@@ -45,6 +45,7 @@ Packages:
   content-create
   tkshop-query
   social-monitor
+  social-comments
   video-understand
   video-publish
 USAGE
@@ -219,8 +220,9 @@ generate_agent_doc() {
     echo
     echo "## Authentication (single-user mode)"
     echo
-    echo "- Before first use, set \`LINGTU_API_KEY\` (OpenClaw injects it automatically when spawning skill subprocesses)."
-    echo "- If the user doesn't have a key yet, run \`python3 .lingtu-agent-kit/shared/scripts/user_keys.py single bind\` to generate a \`/binduser\` URL."
+    echo "- If \`LINGTU_API_KEY\` is missing, give the user the matching local command and ask them to run it themselves; never ask them to paste the real key into chat."
+    echo "- macOS: \`export LINGTU_API_KEY='your-api-key'\`. For persistence, add it to \`~/.zshrc\` and run \`source ~/.zshrc\`."
+    echo '- Windows PowerShell: `$env:LINGTU_API_KEY = "your-api-key"`. For persistence, run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` and open a new terminal.'
     echo "- For TikTok Shop binding or empty shop/product lists, ask the user to bind their shop at https://app.ailingtu.com/teamshop."
     echo "- For missing or unauthorized video-publishing creators, ask the user to authorize creators at https://app.ailingtu.com/video-post."
     echo "- Scripts read \`LINGTU_API_KEY\` from the environment and send it as the \`x-api-key\` header."
@@ -237,7 +239,10 @@ generate_agent_doc() {
           echo "- \`tkshop-query\`: shop lists, daily reports, merchant/store metrics, operations Q&A."
           ;;
         social-monitor)
-          echo "- \`social-monitor\`: TikTok/Instagram creator monitoring, material metrics, comment export, digests."
+          echo "- \`social-monitor\`: TikTok/Instagram creator monitoring, material metrics, digests."
+          ;;
+        social-comments)
+          echo "- \`social-comments\`: TikTok/Instagram/Douyin/WeChat Channels/Xiaohongshu comment download and JSON export."
           ;;
         video-understand)
           echo "- \`video-understand\`: local or TikTok/YouTube/Instagram video understanding and replication prompts."

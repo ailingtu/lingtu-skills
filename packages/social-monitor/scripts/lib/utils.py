@@ -42,7 +42,7 @@ def require_api_key() -> str:
     try:
         return shared_require_api_key()
     except SystemExit as exc:
-        raise SystemExit(f"{exc}\n请先设置 LINGTU_API_KEY 环境变量，或运行 python3 shared/scripts/user_keys.py single bind 生成绑定链接。") from exc
+        raise SystemExit(str(exc)) from exc
 
 
 def base_url() -> str:
@@ -186,13 +186,3 @@ def seconds_from_duration(value: Any) -> float:
     if numeric > 1000:
         numeric = numeric / 1000
     return round(numeric, 2)
-
-
-def cursor_is_empty(cursor: Any) -> bool:
-    if cursor is None:
-        return True
-    if isinstance(cursor, str):
-        return cursor == ""
-    if isinstance(cursor, (dict, list)):
-        return not cursor
-    return False

@@ -2,7 +2,7 @@
 
 Lingtu Content Create is a reusable agent package for product-content generation with Lingtu AI. It supports image generation, optimized product reference images, ecommerce/UGC-style selling videos, viral-remake workflows, and direct Lingtu AI task submission through a schedule API.
 
-Current package version: `0.3.1`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
+Current package version: `0.3.3`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
 
 ## What It Does
 
@@ -23,35 +23,43 @@ The main package instruction file is [`SKILL.md`](./SKILL.md). Codex can read it
 
 ## Requirements
 
-Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use:
+Authentication uses the `LINGTU_API_KEY` environment variable. Configure it locally and do not paste the real key into chat.
+
+macOS:
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-If you don't have an API key yet, generate a `/binduser` URL:
+Windows PowerShell:
 
-```bash
-python3 ../../shared/scripts/user_keys.py single bind
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as `x-api-key: <key>`. Do not commit API keys or generated private media.
+For persistent setup, add the export to `~/.zshrc` on macOS, or run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` on Windows and open a new terminal.
+
+The key is sent as `x-api-key: <key>`. Do not commit API keys or generated private media.
 
 ## Script Usage
 
-Create a 10-second vertical ecommerce video:
+Create a 15-second vertical ecommerce video with the default video model:
 
 ```bash
 python3 scripts/lingtu_content_task.py \
   --kind video \
-  --model gemini-omni-video \
-  --seconds 10 \
+  --model wan3.0-video \
+  --seconds 15 \
   --size 720x1280 \
-  --prompt "10s vertical realistic phone video..." \
+  --prompt "15s vertical realistic phone video..." \
   --reference-image ./ref-1.png \
   --reference-image ./ref-2.png \
-  --reference-image ./ref-3.png
+  --reference-image ./ref-3.png \
+  --reference-video ./motion-reference.mp4 \
+  --reference-audio ./voice-reference.mp3
 ```
+
+For `wan3.0-video`, `--reference-video` and `--reference-audio` (also available as `--reference-dubbing`) accept either a local media path or an existing positive Lingtu file id. Repeat either flag to preserve multiple references in order.
 
 Create an optimized product reference image:
 

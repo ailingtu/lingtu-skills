@@ -51,6 +51,7 @@ IMAGE_MODELS = {
 }
 # model -> (default_seconds, allowed_seconds, allowed_sizes)
 VIDEO_MODELS: dict[str, tuple[int, set[int], set[str]]] = {
+    "wan3.0-video": (15, {-1, *range(1, 31)}, {"480x854", "854x480", "720x1280", "1280x720"}),
     "gemini-omni-video": (10, {6, 8, 10}, {"720x1280", "1280x720", "1080x1920", "1920x1080"}),
     "veo3.1-lite-extend": (8, {8}, {"720x1280", "1280x720"}),
     "veo3.1-extend": (8, {8}, {"720x1280", "1280x720"}),
@@ -130,6 +131,43 @@ def resolve_reference_image(path_or_url: str, base_url: str, api_key: str) -> st
     if path_or_url.startswith(("http://", "https://")):
         return path_or_url
     return upload_reference_image(path_or_url, base_url, api_key)
+
+
+def upload_reference_file_id(path: str, base_url: str, api_key: str, label: str) -> int:
+    try:
+        result = multipart_upload(
+            path,
+            base=base_url,
+            api_key=api_key,
+            stream=True,
+            allow_null_code=True,
+            require_id=True,
+        )
+    except LingtuHttpError as exc:
+        raise RuntimeError(str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Reference {label} not found: {path}") from exc
+    file_id = result.get("id")
+    try:
+        normalized = int(file_id)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"Upload response contains invalid data.id for {path}: {file_id!r}") from exc
+    if normalized <= 0:
+        raise RuntimeError(f"Upload response contains invalid data.id for {path}: {file_id!r}")
+    return normalized
+
+
+def resolve_reference_file_id(value: str, base_url: str, api_key: str, label: str) -> int:
+    path = Path(value).expanduser()
+    if path.is_file():
+        return upload_reference_file_id(str(path), base_url, api_key, label)
+    try:
+        file_id = int(value)
+    except ValueError as exc:
+        raise ValueError(f"Reference {label} must be a local file path or a positive Lingtu file id: {value}") from exc
+    if file_id <= 0:
+        raise ValueError(f"Reference {label} file id must be positive: {value}")
+    return file_id
 
 
 def http_json(method: str, url: str, api_key: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -355,7 +393,12 @@ def format_path(path: str, **values: Any) -> str:
     return path.format(**quoted)
 
 
-def build_create_payload(args: argparse.Namespace, references: list[str]) -> dict[str, Any]:
+def build_create_payload(
+    args: argparse.Namespace,
+    references: list[str],
+    video_file_ids: list[int] | None = None,
+    audio_file_ids: list[int] | None = None,
+) -> dict[str, Any]:
     try:
         extra_payload = json.loads(args.payload_json)
     except json.JSONDecodeError as exc:
@@ -390,6 +433,11 @@ def build_create_payload(args: argparse.Namespace, references: list[str]) -> dic
     elif len(references) > 1:
         params["inputReferences"] = references
 
+    if kind == "video" and video_file_ids:
+        params["videoFileIds"] = video_file_ids
+    if kind == "video" and audio_file_ids:
+        params["audioFileIds"] = audio_file_ids
+
     payload: dict[str, Any] = {
         "type": task_type,
         "params": params,
@@ -409,12 +457,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        help="Lingtu AI model name. Video: gemini-omni-video (default), veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
+        help="Lingtu AI model name. Video: wan3.0-video (default), gemini-omni-video, veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
     )
     parser.add_argument(
         "--seconds",
         type=int,
-        help="Video duration in seconds. Defaults: gemini-omni-video=10, veo3.1-*=8, grok-imagine-1.5=15, seedance2.0*=10.",
+        help="Video duration in seconds. wan3.0-video accepts -1 (adaptive) or 1-30 and defaults to 15; other defaults vary by model.",
     )
     parser.add_argument("--size", default="720x1280", help="Video size, such as 720x1280 or 1280x720.")
     parser.add_argument("--aspect-ratio", default="1:1", help="Image aspect ratio, such as 1:1 or 9:16.")
@@ -425,6 +473,20 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         help="Reference image as a remote http(s) url, or a local path that will be uploaded to /v1/file/upload first. Repeat for multiple images; order is preserved.",
+    )
+    parser.add_argument(
+        "--reference-video",
+        action="append",
+        default=[],
+        help="wan3.0-video reference video as a local file path or positive Lingtu file id. Repeat for multiple videos.",
+    )
+    parser.add_argument(
+        "--reference-audio",
+        "--reference-dubbing",
+        dest="reference_audio",
+        action="append",
+        default=[],
+        help="wan3.0-video reference voiceover as a local audio path or positive Lingtu file id. Repeat for multiple audio files.",
     )
     parser.add_argument("--payload-json", default="{}", help="Additional top-level JSON fields merged into the create request.")
     parser.add_argument(
@@ -508,6 +570,10 @@ def validate_model_args(args: argparse.Namespace) -> None:
             raise ValueError(
                 f"Model '{model}' does not support --size {args.size}. Allowed: {allowed}."
             )
+        if model != "wan3.0-video" and (
+            getattr(args, "reference_video", []) or getattr(args, "reference_audio", [])
+        ):
+            raise ValueError("Reference video and reference audio are currently supported only by wan3.0-video.")
         return
     raise ValueError(f"Unsupported kind '{args.kind}'. Use image or video.")
 
@@ -769,7 +835,7 @@ def main() -> int:
     if args.model:
         args.model = resolve_model_name(args.model)
     elif not poll_only:
-        args.model = "gpt-image-2" if args.kind.lower() == "image" else "gemini-omni-video"
+        args.model = "gpt-image-2" if args.kind.lower() == "image" else "wan3.0-video"
     if args.model and not poll_only:
         try:
             validate_model_args(args)
@@ -806,7 +872,20 @@ def main() -> int:
             resolve_reference_image(path_or_url, args.base_url, api_key)
             for path_or_url in args.reference_image
         ]
-        payload = build_create_payload(args, reference_images)
+        reference_video_file_ids = [
+            resolve_reference_file_id(value, args.base_url, api_key, "video")
+            for value in args.reference_video
+        ]
+        reference_audio_file_ids = [
+            resolve_reference_file_id(value, args.base_url, api_key, "audio")
+            for value in args.reference_audio
+        ]
+        payload = build_create_payload(
+            args,
+            reference_images,
+            reference_video_file_ids,
+            reference_audio_file_ids,
+        )
     except (OSError, ValueError, RuntimeError) as exc:
         print_error({"error": str(exc)}, stderr=True)
         return 2

@@ -25,7 +25,8 @@
 
 - **`packages/content-create`** — 生成商品图、AI 视频参考图、电商卖货视频、爆款复刻视频等。
 - **`packages/tkshop-query`** — 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。
-- **`packages/social-monitor`** — TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据、评论导出和近期视频情报报告。
+- **`packages/social-monitor`** — TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据和近期视频情报报告。
+- **`packages/social-comments`** — 下载和导出 TikTok、Instagram、抖音、视频号及小红书单条视频评论，支持自动分页和 JSON 保存。
 - **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、爆款复刻和视频拆解。
 - **`packages/video-publish`** — TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。
 
@@ -35,7 +36,8 @@
 packages/
   content-create/   # 图片与视频生成
   tkshop-query/     # TK 店铺数据查询
-  social-monitor/   # 社媒达人/竞品监控、素材数据、评论导出
+  social-monitor/   # 社媒达人/竞品监控、素材数据
+  social-comments/  # 社交媒体视频评论下载
   video-understand/ # 视频理解与复刻提示词生成
   video-publish/    # 批量视频发布和排期
 adapters/
@@ -50,19 +52,29 @@ install.sh          # 一键安装脚本
 
 ## 环境准备
 
-认证使用 `LINGTU_API_KEY` 环境变量。OpenClaw 启动 skill 子进程时自动注入。本地 CLI 自行 export：
+认证只使用 `LINGTU_API_KEY` 环境变量。请在自己的电脑上执行对应命令，不要把真实 Key 发到聊天中。
+
+macOS 当前终端：
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-用户没有 API Key 时，生成 `/binduser` 链接：
+macOS 永久配置：把同一行加入 `~/.zshrc`，然后执行 `source ~/.zshrc`。
 
-```bash
-python3 shared/scripts/user_keys.py single bind
+Windows PowerShell 当前窗口：
+
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-打开返回的链接在网站上完成绑定，获取 API Key 后设为环境变量即可。
+Windows 永久配置：
+
+```powershell
+[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")
+```
+
+执行后重新打开终端。
 
 如果用户需要绑定 TikTok Shop 店铺，或店铺/店铺商品列表为空，让用户打开以下链接完成店铺绑定/授权后再继续：
 
@@ -84,7 +96,7 @@ cd lingtu-skills
 
 ```bash
 ./install.sh codex all
-./install.sh codex content-create tkshop-query social-monitor video-understand video-publish
+./install.sh codex content-create tkshop-query social-monitor social-comments video-understand video-publish
 ./install.sh claude /path/to/project content-create
 ./install.sh cursor /path/to/project all
 ./install.sh openclaw /path/to/project all
@@ -93,6 +105,18 @@ cd lingtu-skills
 ```
 
 不指定能力包时，安装脚本会显示选择引导。客户可以输入 `all`、能力包名称，或输入 `1,2` 这样的编号多选。
+
+### 分别上传到 SkillHub
+
+为每项能力生成一个自包含目录和一个 ZIP：
+
+```bash
+python3 scripts/build_skillhub_packages.py
+```
+
+产物位于 `dist/skillhub/`。每个 ZIP 解压后的根目录直接包含
+`SKILL.md`，可分别上传；不要把整个仓库作为一个 Skill 上传。详细结构和检查方式见
+[`docs/skillhub-packaging.md`](docs/skillhub-packaging.md)。
 
 ## 快速开始
 
@@ -156,6 +180,16 @@ python3 scripts/lingtu_social_monitor.py add \
 ```
 
 `group_id` 是隔离键：飞书可用群 ID；本地 / Cursor / Codex 可用 `local_default` 等稳定标识。
+
+### 社交媒体评论下载（Social Comments）
+
+```bash
+cd packages/social-comments
+
+python3 scripts/lingtu_social_comments.py download \
+  --video-url "https://www.tiktok.com/@user/video/1234567890" \
+  --output ./comments.json
+```
 
 ### 视频理解（Video Understand）
 

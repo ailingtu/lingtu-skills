@@ -15,17 +15,12 @@ from typing import Any
 # lingtu_auth is used via .utils.require_api_key
 
 from .analysis import analyze_with_focus
-from .api import fetch_material, fetch_material_comments, fetch_posts
+from .api import fetch_material, fetch_posts
 from .config import DEFAULT_PLATFORM, FOCUS_CHOICES, SUPPORTED_PLATFORMS
 from .digest import build_digest, check_alerts
-from .normalize import (
-    normalize_comments_response,
-    normalize_material_response,
-    normalize_response,
-)
+from .normalize import normalize_material_response, normalize_response
 from .report import (
     TUTORIAL_TEXT,
-    build_comments_text,
     build_material_text,
     build_report_text,
 )
@@ -391,36 +386,6 @@ def command_material(args: argparse.Namespace) -> None:
     normalized = normalize_material_response(raw, platform=platform)
     if args.format == "text":
         print(build_material_text(normalized["video"]))
-    else:
-        print_json(normalized)
-
-
-def command_comments(args: argparse.Namespace) -> None:
-    platform = normalize_platform(args.platform)
-    max_pages = args.max_pages
-    if max_pages is not None and max_pages < 1:
-        raise SystemExit("--max-pages 必须大于等于 1")
-    cursor: Any = args.cursor
-    if isinstance(cursor, str) and cursor and cursor.lstrip().startswith(("{", "[")):
-        try:
-            cursor = json.loads(cursor)
-        except json.JSONDecodeError:
-            raise SystemExit("--cursor 看起来是 JSON 但解析失败，请检查转义。")
-    raw = fetch_material_comments(
-        args.video_url,
-        platform=platform,
-        sort_order=args.sort_order,
-        cursor=cursor,
-        max_pages=max_pages,
-        fetch_all=not args.first_page,
-    )
-    if args.raw:
-        print_json(raw)
-        return
-
-    normalized = normalize_comments_response(raw, platform=platform)
-    if args.format == "text":
-        print(build_comments_text(normalized, platform=platform))
     else:
         print_json(normalized)
 
@@ -872,17 +837,6 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--raw", action="store_true", help="输出原始 fetch 响应而非 normalize 结果。")
     add_format_argument(p, default="json")
     p.set_defaults(func=command_material)
-
-    p = subparsers.add_parser("comments", help="获取单条视频素材评论数据。")
-    add_platform_argument(p)
-    p.add_argument("--video-url", required=True, help="视频 URL。")
-    p.add_argument("--cursor", default=None, help="评论分页游标；首次请求不传，后续请求传接口返回的 cursor。Instagram 返回的是 JSON 对象，可直接以 JSON 字符串形式传入。")
-    p.add_argument("--sort-order", choices=("popular", "newest"), default="popular", help="Instagram 评论排序：popular=热门（默认），newest=最新。TikTok 会忽略该参数。")
-    p.add_argument("--first-page", action="store_true", help="只请求一页评论，不自动翻页。")
-    p.add_argument("--max-pages", type=int, default=None, help="最多请求多少页；默认不限制，直到接口没有下一页。")
-    p.add_argument("--raw", action="store_true", help="输出原始 fetchComments 响应而非 normalize 结果。")
-    add_format_argument(p, default="json")
-    p.set_defaults(func=command_comments)
 
     p = subparsers.add_parser("analyze", help="分析一份 fetchPosts JSON（原始或 normalize）。")
     add_platform_argument(p)

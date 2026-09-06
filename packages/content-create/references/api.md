@@ -10,11 +10,13 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 - Creation model: create a schedule, receive a schedule id and optional task ids, poll until completion.
 - The script sends a caller-generated 8-character `taskId` by default. In schedule mode, query task lists with `scheduleId`; if the create response returns `taskIds`, use them as an additional precise match.
 - Reference images must be remote CDN URLs. Local files must be uploaded through `POST /v1/file/upload` first; use the returned `data.url` as the reference. Base64 / `data:` URLs are no longer accepted by the create API. Image generation uses `params.inputReferences` as an array; video generation uses `params.inputReference` for one reference or `params.inputReferences` for multiple references.
+- `wan3.0-video` also accepts reference videos and reference voiceovers. Send their Lingtu file ids as integer arrays in `params.videoFileIds` and `params.audioFileIds`. Local video/audio files may be uploaded through `POST /v1/file/upload`; use the returned `data.id`.
 - Intended media types: image and video now; music or other content types may use the same pattern later.
 - Video duration defaults (user-specified duration always wins):
 
 | model | allowed seconds | default |
 |---|---|---|
+| `wan3.0-video` | -1 (adaptive), or any integer from 1 to 30 | 15 |
 | `gemini-omni-video` | 6, 8, 10 | 10 |
 | `veo3.1-lite-extend` | 8 (fixed) | 8 |
 | `veo3.1-extend` | 8 (fixed) | 8 |
@@ -39,15 +41,7 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 
 ## API Key Configuration
 
-Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use, `export LINGTU_API_KEY=xxx`.
-
-If you don't have an API key yet, generate a `/binduser` URL:
-
-```bash
-python3 shared/scripts/user_keys.py single bind
-```
-
-Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`.
+Authentication uses the `LINGTU_API_KEY` environment variable. Configure it locally with `export LINGTU_API_KEY='your-api-key'` on macOS or `$env:LINGTU_API_KEY = "your-api-key"` in Windows PowerShell.
 
 ## Endpoints
 
@@ -91,18 +85,22 @@ Video request:
   "type": "VIDEO_GENERATION",
   "params": {
     "prompt": "text prompt",
-    "model": "gemini-omni-video",
-    "seconds": 10,
-    "size": "720x1280",
+    "model": "wan3.0-video",
+    "seconds": 15,
+    "size": "480x854",
     "inputReference": "https://static.ailingtu.com/ai-images/<id>.jpg",
     "inputReferences": ["https://static.ailingtu.com/ai-images/<id>.jpg"],
+    "videoFileIds": [1710086],
+    "audioFileIds": [1444573],
     "watermark": false
   },
   "nums": 1
 }
 ```
 
-For model `gemini-omni-video`, the default video request should use `"seconds": 10` unless the user specified another duration.
+The default video request uses `wan3.0-video` with `"seconds": 15` unless the user specifies another duration. For model `gemini-omni-video`, the model-specific default is `"seconds": 10`.
+
+For model `wan3.0-video`, `videoFileIds` supplies reference videos and `audioFileIds` supplies reference voiceovers. Both fields are optional integer arrays and may be used together with image references.
 
 Image request:
 
@@ -132,6 +130,7 @@ Image aspect ratios seen in app.ailingtu:
 
 | model | formMode | default seconds | allowed seconds | resolution |
 |---|---|---|---|---|
+| `wan3.0-video` | wan | 15 | -1 (adaptive), or any integer from 1 to 30 | 480p, 720p |
 | `gemini-omni-video` | veo | 10 | 6, 8, 10 | 720p, 1080p |
 | `veo3.1-lite-extend` | veo | 8 | 8 (fixed) | 720p |
 | `veo3.1-extend` | veo | 8 | 8 (fixed) | 720p |
@@ -148,7 +147,7 @@ Image aspect ratios seen in app.ailingtu:
 | 720p | `720x1280` | `1280x720` |
 | 1080p | `1080x1920` | `1920x1080` |
 
-`gemini-omni-video` supports 720p and 1080p. Veo models support 720p only. Seedance supports 480p and 720p. Grok supports 720p only.
+`wan3.0-video` supports 480p and 720p. `gemini-omni-video` supports 720p and 1080p. Veo models support 720p only. Seedance supports 480p and 720p. Grok supports 720p only.
 
 ### Task Query
 

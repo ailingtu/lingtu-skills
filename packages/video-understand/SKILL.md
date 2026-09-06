@@ -1,7 +1,12 @@
 ---
 name: lingtu-video-understand
+slug: lingtu-video-understand
 version: 0.8.1
+displayName: 灵途视频拆解分析
+summary: 分析多平台视频，生成脚本结构、卖点和复刻提示词。
 description: 视频理解、视频内容分析与复刻提示词生成。任何关于"一个视频/一条视频/这个视频/这条 TikTok/这条抖音/这条 Douyin/这条小红书/这条视频号/这条 YouTube/这条 Instagram"的内容性问题——包括"分析这个视频"、"这个视频讲了什么/在讲什么/在干嘛"、"这条视频内容是什么"、"看一下这个视频"、"理解视频"、"视频拆解"、"视频复刻"、"爆款复刻"、"视频打标"、"把视频改写成提示词"、"二创这个视频"——都用本技能。把一个本地视频文件、已上传的素材，或一个 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接交给灵途 AI 解析，流式返回一段自然语言的视频复刻提示词（标题、主体、场景、分镜脚本、制作笔记）；再根据用户的问题在该提示词之上做相应解读（概括/打标/二创建议），用户只要"复刻提示词"时则原样返回。本地文件会先经 /v1/file/upload 上传再复刻。批量任务并发上限为 10。处理时只调脚本，不抓视频链接的网页/搜索引擎快照。
+license: Apache-2.0
+homepage: https://ailingtu.com/skills/video-understand
 ---
 
 # 视频理解与复刻提示词生成
@@ -30,19 +35,25 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 ## Configuration
 
-Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically when spawning skill subprocesses. For standalone CLI use, export it:
+Authentication uses the `LINGTU_API_KEY` environment variable. When it is missing, give the user the command for their operating system and ask them to run it locally. Do not ask them to paste the real key into chat.
+
+macOS (current Terminal session):
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-If the user doesn't have an API key yet, generate a `/binduser` URL:
+For persistent macOS configuration, add the same line to `~/.zshrc`, then run `source ~/.zshrc`.
 
-```bash
-python3 scripts/lingtu_video_understand.py bind
+Windows PowerShell (current session):
+
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as the `x-api-key` header. Do not commit API keys.
+For persistent Windows configuration, run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`, then open a new terminal.
+
+The key is sent as the `x-api-key` header. Do not commit API keys.
 
 Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
 
@@ -77,7 +88,7 @@ The replication prompt the script returns is the source of truth for what's in t
 5. Downstream usage:
    - For 二创/生成/爆款复刻, hand the prompt to `lingtu-content-create` (see `packages/content-create/references/viral-remake-workflow.md`).
    - For 打标/检索, keep the prompt as-is or extract tags from it.
-   - For "结合数据分析这个 TikTok/Instagram 视频" / "为什么爆" / "看评论区反馈", first call `lingtu-social-monitor` `material` and optionally `comments` for real-time metrics and comment context, then use those results together with this skill's replication prompt to answer. (Social-monitor metrics/comments are TikTok/Instagram only; Douyin / Xiaohongshu / WeChat Channels sources still use this skill for structure/replication.)
+   - For “结合数据分析这个 TikTok/Instagram 视频” / “为什么爆”, call `lingtu-social-monitor material` for real-time metrics. For “看评论区反馈”, call `lingtu-social-comments download` on TikTok, Instagram, Douyin, WeChat Channels, or Xiaohongshu. Then combine those results with this skill's replication prompt.
 
 ## Batch / Concurrency Limit
 

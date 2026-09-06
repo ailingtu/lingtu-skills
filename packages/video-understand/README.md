@@ -10,25 +10,29 @@ Current package version: `0.8.1`. Remote installers can compare the `version` fi
 - Local files are uploaded through `POST /v1/file/upload` (multipart form field `file`); the returned `data.id` is reused as `businessId` with `businessType: "FILE"`.
 - Streams a replication prompt from `POST /v1/material/analysisTask/stream` (`type: "REPLICATION"`).
 - Prints the assembled prompt to stdout, or raw SSE lines with `--raw` for debugging.
-- For TikTok/Instagram video analysis that needs real-time metrics or comment context, fetch those first with `packages/social-monitor` `material` / `comments`, then combine them with this replication prompt. Douyin / Xiaohongshu / WeChat Channels links are supported for replication / 爆款复刻 structure analysis via this package.
+- For TikTok/Instagram video analysis, fetch real-time metrics with `packages/social-monitor`. Fetch comment context for TikTok, Instagram, Douyin, WeChat Channels, or Xiaohongshu with `packages/social-comments`, then combine it with this replication prompt.
 
 This skill currently only sends `type: "REPLICATION"`. The `ANALYSIS` mode is reserved.
 
 ## Requirements
 
-Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically. For standalone CLI use:
+Authentication uses the `LINGTU_API_KEY` environment variable. Configure it locally and do not paste the real key into chat.
+
+macOS:
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-If you don't have an API key yet, generate a `/binduser` URL:
+Windows PowerShell:
 
-```bash
-python3 scripts/lingtu_video_understand.py bind
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as `x-api-key: <key>`. Do not commit API keys.
+For persistent setup, add the export to `~/.zshrc` on macOS, or run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` on Windows and open a new terminal.
+
+The key is sent as `x-api-key: <key>`. Do not commit API keys.
 
 This package can be installed as a directory by itself. It uses the repository's
 `shared/scripts` helpers when available and automatically falls back to its bundled

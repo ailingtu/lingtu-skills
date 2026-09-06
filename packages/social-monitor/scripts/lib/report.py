@@ -198,25 +198,6 @@ def build_material_text(video: dict[str, Any]) -> str:
     )
 
 
-def build_comments_text(normalized: dict[str, Any], platform: str = DEFAULT_PLATFORM) -> str:
-    summary = normalized.get("summary") or {}
-    top_languages = summary.get("top_languages") or []
-    language_line = "、".join(f"{item['language']}:{item['count']}" for item in top_languages) or "-"
-    top_lines = []
-    for item in summary.get("top_liked_comments") or []:
-        author = (item.get("user") or {}).get("unique_id") or (item.get("user") or {}).get("nickname") or "unknown"
-        text = item.get("text") or ""
-        top_lines.append(f"  - @{author}：{format_number(item.get('like_count'))} 赞，{text}")
-    if not top_lines:
-        top_lines.append("  - 暂无评论。")
-
-    return (
-        f"【{platform_label(platform)} 素材评论】共 {format_number(summary.get('comment_count'))} 条。\n"
-        f"语言分布：{language_line}\n"
-        f"高赞评论：\n" + "\n".join(top_lines)
-    )
-
-
 TUTORIAL_TEXT = """【如何添加社媒监控（TikTok / Instagram）】
 
 1. 找到对方的主页链接：

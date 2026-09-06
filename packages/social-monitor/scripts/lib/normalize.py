@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 from .config import DEFAULT_PLATFORM
@@ -251,80 +250,6 @@ def normalize_instagram_material_response(payload: dict[str, Any]) -> dict[str, 
             "play_url": str(data.get("videoUrl") or ""),
             "download_url": "",
             "hashtags": extract_hashtags(caption),
-        },
-        "timestamp": payload.get("timestamp"),
-    }
-
-
-def normalize_comment(item: dict[str, Any], platform: str = DEFAULT_PLATFORM) -> dict[str, Any]:
-    if platform == "instagram":
-        return normalize_instagram_comment(item)
-    user = item.get("user") or {}
-    return {
-        "platform": platform,
-        "video_id": str(item.get("aweme_id") or ""),
-        "text": item.get("text") or "",
-        "language": item.get("comment_language"),
-        "created_at": iso_utc_from_epoch_seconds(item.get("create_time")),
-        "like_count": int(item.get("digg_count") or 0),
-        "author_pinned": bool(item.get("author_pin")),
-        "author_liked": bool(item.get("is_author_digged")),
-        "reply_id": str(item.get("reply_id") or ""),
-        "reply_comment": item.get("reply_comment"),
-        "hidden": bool(item.get("no_show")),
-        "user": {
-            "uid": str(user.get("uid") or ""),
-            "unique_id": user.get("unique_id") or "",
-            "nickname": user.get("nickname") or "",
-            "tags": user.get("user_tags"),
-        },
-    }
-
-
-def normalize_instagram_comment(item: dict[str, Any]) -> dict[str, Any]:
-    user = item.get("user") or {}
-    return {
-        "platform": "instagram",
-        "video_id": "",
-        "text": str(item.get("text") or ""),
-        "language": None,
-        "created_at": iso_utc_from_epoch_seconds(item.get("createdAt") or item.get("createdAtUtc")),
-        "like_count": to_int(item.get("commentLikeCount")),
-        "author_pinned": False,
-        "author_liked": bool(item.get("isLikedByMediaOwner")),
-        "reply_id": "",
-        "reply_comment": item.get("previewChildComments"),
-        "hidden": False,
-        "child_comment_count": to_int(item.get("childCommentCount")),
-        "user": {
-            "uid": str(user.get("pk") or ""),
-            "unique_id": str(user.get("username") or ""),
-            "nickname": str(user.get("fullName") or ""),
-            "tags": None,
-        },
-    }
-
-
-def normalize_comments_response(payload: dict[str, Any], platform: str = DEFAULT_PLATFORM) -> dict[str, Any]:
-    platform = normalize_platform(platform)
-    data = payload.get("data") or payload
-    raw_comments = data.get("comments") or []
-    comments = [normalize_comment(item, platform=platform) for item in raw_comments if isinstance(item, dict)]
-    language_counts = Counter(c.get("language") or "unknown" for c in comments)
-    pages = data.get("pages") or []
-    top_languages = [
-        {"language": lang, "count": count}
-        for lang, count in language_counts.most_common(5)
-    ]
-    return {
-        "comments": comments,
-        "summary": {
-            "comment_count": len(comments),
-            "page_count": len(pages) if isinstance(pages, list) else 0,
-            "next_cursor": data.get("cursor"),
-            "has_more": bool(data.get("hasMore")),
-            "top_languages": top_languages,
-            "top_liked_comments": sorted(comments, key=lambda c: c["like_count"], reverse=True)[:5],
         },
         "timestamp": payload.get("timestamp"),
     }

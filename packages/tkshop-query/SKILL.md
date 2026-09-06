@@ -1,7 +1,12 @@
 ---
 name: lingtu-tkshop-query
+slug: lingtu-tkshop-query
 version: 0.2.0
+displayName: 灵途 TK 店铺数据查询
+summary: 查询 TikTok Shop 店铺日报、经营指标并分析业务问题。
 description: TK 店铺数据查询与日报。通过灵途 AI 接口查询 TK 店铺/商家/商品/订单/客户表现等经营数据，支持按日期或店铺名拉取单店日报、按日期拉取全部店铺汇总日报、列出店铺清单，以及向 AI 提问店铺经营相关问题。用户提到"店铺日报"、"店铺数据"、"经营情况"、"整体经营"、"全部店铺汇总"、"大盘"、"GMV/订单/客单价"等场景时使用。
+license: Apache-2.0
+homepage: https://ailingtu.com/skills/tkshop-query
 ---
 
 # TK 店铺数据查询与日报
@@ -26,19 +31,25 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 ## Configuration
 
-Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically when spawning skill subprocesses. For standalone CLI use, export it:
+Authentication uses the `LINGTU_API_KEY` environment variable. When it is missing, give the user the command for their operating system and ask them to run it locally. Do not ask them to paste the real key into chat.
+
+macOS (current Terminal session):
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-If the user doesn't have an API key yet, generate a `/binduser` URL:
+For persistent macOS configuration, add the same line to `~/.zshrc`, then run `source ~/.zshrc`.
 
-```bash
-python3 shared/scripts/user_keys.py single bind
+Windows PowerShell (current session):
+
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as the `x-api-key` header. Do not commit API keys.
+For persistent Windows configuration, run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`, then open a new terminal.
+
+The key is sent as the `x-api-key` header. Do not commit API keys.
 
 TikTok Shop 店铺绑定入口是 https://app.ailingtu.com/teamshop 。当用户想绑定 TikTok 店铺、查询不到店铺、或店铺列表为空时，明确让用户打开这个链接完成店铺绑定，然后再执行 `list-shops` 或日报查询。
 

@@ -61,14 +61,18 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 
 ## 配置
 
-认证通过 `LINGTU_API_KEY` 环境变量，OpenClaw 自动注入。本地 CLI 自行 export：
+认证只使用 `LINGTU_API_KEY` 环境变量。请在自己的电脑上执行对应命令，不要把真实 Key 发到聊天中。
+
+macOS：
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-没有 API Key 时生成绑定链接：
+Windows PowerShell：
 
-```bash
-python3 shared/scripts/user_keys.py single bind
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
+
+永久配置时，macOS 把 export 加入 `~/.zshrc`；Windows 执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` 后重新打开终端。

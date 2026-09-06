@@ -1,7 +1,12 @@
 ---
 name: lingtu-social-monitor
-version: 0.8.0
-description: 社媒达人/竞品监控、单条视频素材数据与评论抓取/导出/下载、日报、告警。当前已接入 TikTok 和 Instagram 的账号视频列表、单条视频数据、视频评论接口；Instagram 使用 `/v1/influencer/ins/fetchPosts`、`/v1/material/ins/fetch`、`/v1/material/ins/fetchComments`。支持单条/批量添加监控（可一键开启每日订阅）、视频评论导出、评论区反馈、单条视频实时数据、群级监控列表、即时分析（综合/发布策略/内容形式）、每日订阅、按"昨日 vs 今日"差异生成中文日报和结构化告警事件、本地快照单天/范围/最新查询、标签/备注/告警阈值（暂存）等监控元数据维护。
+slug: lingtu-social-monitor
+version: 0.9.0
+displayName: 灵途 TikTok 达人竞品监控
+summary: 监控 TikTok 和 Instagram 达人及竞品账号，生成日报与告警。
+description: TikTok 和 Instagram 达人/竞品账号监控、账号视频列表、单条视频实时指标、日报与告警。支持单条/批量添加监控、每日订阅、群级监控列表、即时分析、本地快照和“昨日 vs 今日”差异报告。用户要下载或导出单条视频评论时不要使用本技能，改用 `lingtu-social-comments`。
+license: Apache-2.0
+homepage: https://ailingtu.com/skills/social-monitor
 ---
 
 # 社媒达人 / 竞品监控与日报
@@ -13,11 +18,11 @@ description: 社媒达人/竞品监控、单条视频素材数据与评论抓取
 
 ## 适用场景
 
-当用户要求监控 TikTok / Instagram 达人、竞品、对标账号，查看群里的监控列表，订阅每日内容情报日报，导出/下载/获取某条视频评论，总结评论区反馈，更新一批视频实时数据，或基于已抓取的视频数据出报告时，调用本技能。每个群（`group_id`）的监控列表互相独立；同一群下不同平台的同名账号也会分开存储。
+当用户要求监控 TikTok / Instagram 达人、竞品、对标账号，查看群里的监控列表，订阅每日内容情报日报，更新一批视频实时数据，或基于已抓取的视频数据出报告时，调用本技能。每个群（`group_id`）的监控列表互相独立；同一群下不同平台的同名账号也会分开存储。
 
 `group_id` 是租户/会话隔离键，不限于飞书。飞书场景可用群 ID（如 `feishu_group_001`）；Cursor / Codex / 本地 CLI 可向用户确认一个稳定标识，或使用默认值如 `local_default` / `cursor_default`，同一对话内保持一致即可。
 
-如果用户要"分析某个视频内容/讲了什么/复刻/二创"，优先使用 `lingtu-video-understand`；若问题同时要求结合播放、点赞、评论或评论区反馈，先用本技能的 `material` / `comments` 获取数据，再把结果作为分析上下文交给视频理解流程。
+如果用户要“分析某个视频内容/讲了什么/复刻/二创”，优先使用 `lingtu-video-understand`。实时播放、点赞等指标用本技能的 `material`；评论下载与评论区反馈数据改用 `lingtu-social-comments`。
 
 ## 使用流程
 
@@ -42,19 +47,25 @@ description: 社媒达人/竞品监控、单条视频素材数据与评论抓取
 
 ## 配置
 
-认证通过 `LINGTU_API_KEY` 环境变量。OpenClaw 启动子进程时自动注入，本地 CLI 自行 export：
+认证只使用 `LINGTU_API_KEY` 环境变量。缺少 Key 时，直接给用户对应系统的命令，让用户在自己的电脑上执行；不要要求用户把真实 Key 发到聊天中。
+
+macOS（当前终端会话）：
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-用户没有 API Key 时，生成 `/binduser` 链接：
+macOS 如需永久生效，把同一行加入 `~/.zshrc`，然后执行 `source ~/.zshrc`。
 
-```bash
-python3 shared/scripts/user_keys.py single bind
+Windows PowerShell（当前窗口）：
+
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-打开返回的链接在网站上完成绑定，然后设置 `LINGTU_API_KEY`。请求头 `x-api-key` 发送。请勿提交密钥或私有监控数据。
+Windows 如需永久生效，执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`，然后重新打开终端。
+
+请求通过 `x-api-key` header 发送。请勿提交密钥或私有监控数据。
 
 可选环境变量：
 
@@ -72,8 +83,8 @@ API 字段、`code` 取值参见 `references/api.md`，改接口前先更新该�
 
 当前状态：
 
-- `--platform tiktok`：账号视频列表、单条视频素材数据、评论抓取、监控、日报均已接入。
-- `--platform instagram`：账号视频列表、单条视频素材数据、评论抓取、监控、日报均已接入；评论支持 `--sort-order popular|newest`。
+- `--platform tiktok`：账号视频列表、单条视频素材数据、监控、日报均已接入。
+- `--platform instagram`：账号视频列表、单条视频素材数据、监控、日报均已接入。
 - Instagram 的列表接口（fetchPosts）只返回 `commentCount` / `videoPlayCount`（非视频帖均为 null），没有 `likeCount` 之外的互动指标；爆款 / 互动率分析以 `material` 单条接口为准。
 
 ### 教程
@@ -249,7 +260,7 @@ python3 scripts/lingtu_social_monitor.py videos  --platform tiktok --input mrbea
 python3 scripts/lingtu_social_monitor.py analyze --input-json ./posts.json --format text
 ```
 
-### 单条素材数据 / 评论
+### 单条素材数据
 ```bash
 python3 scripts/lingtu_social_monitor.py material \
   --platform tiktok \
@@ -259,28 +270,9 @@ python3 scripts/lingtu_social_monitor.py material \
   --platform tiktok \
   --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
   --format text
-
-python3 scripts/lingtu_social_monitor.py comments \
-  --platform tiktok \
-  --video-url "https://www.tiktok.com/@user/video/7624922739500993822"
-
-python3 scripts/lingtu_social_monitor.py comments \
-  --platform tiktok \
-  --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
-  --max-pages 3
-
-python3 scripts/lingtu_social_monitor.py comments \
-  --platform tiktok \
-  --video-url "https://www.tiktok.com/@user/video/7624922739500993822" \
-  --raw
-
-python3 scripts/lingtu_social_monitor.py comments \
-  --platform instagram \
-  --video-url "https://www.instagram.com/reel/C0Example/" \
-  --sort-order newest
 ```
 
-`material` 用于更新单条或批量视频实时指标；批量时由编排层循环调用即可。`comments` 默认自动按 `cursor` 翻页并输出规范化评论 JSON，适合全量导出；加 `--raw` 可保留聚合后的原始字段，`--first-page` 可只拉第一页，`--max-pages` 可限制页数。Instagram 评论请求会把响应里的 cursor 原样传回下一页，不做解码或改写。
+`material` 用于更新单条或批量视频实时指标；批量时由编排层循环调用即可。评论数据由 `lingtu-social-comments` 独立处理。
 
 ## 编排层（bot/cron）建议
 

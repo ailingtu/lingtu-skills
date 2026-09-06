@@ -1,7 +1,12 @@
 ---
 name: lingtu-content-create
-version: 0.3.1
+slug: lingtu-content-create
+version: 0.3.3
+displayName: 灵途内容生成与爆款复刻
+summary: 生成跨境电商商品图、带货视频和爆款复刻素材。
 description: 灵途 AI 内容生成。通过灵途 AI 的任务化接口生成商品主图、AI 视频参考图、电商带货视频、爆款视频复刻等媒体内容。用户提到"生成图片/视频"、"商品图优化"、"参考图三件套"、"带货视频"、"UGC 短视频"、"爆款复刻"（含 TikTok/抖音/小红书/视频号/YouTube/Instagram 源视频），或需要把提示词与多张参考图传给灵途 AI 并轮询任务结果时使用。
+license: Apache-2.0
+homepage: https://ailingtu.com/skills/content-create
 ---
 
 # 灵途 AI 内容生成（图片 / 视频 / 爆款复刻）
@@ -25,29 +30,35 @@ Use only the workflow references needed for the request; do not load all of them
 
 ## Configuration
 
-Authentication uses the `LINGTU_API_KEY` environment variable. OpenClaw injects it automatically when spawning skill subprocesses. For standalone CLI use, export it:
+Authentication uses the `LINGTU_API_KEY` environment variable. When it is missing, give the user the command for their operating system and ask them to run it locally. Do not ask them to paste the real key into chat.
+
+macOS (current Terminal session):
 
 ```bash
-export LINGTU_API_KEY=xxx
+export LINGTU_API_KEY='your-api-key'
 ```
 
-If the user doesn't have an API key yet, generate a `/binduser` URL:
+For persistent macOS configuration, add the same line to `~/.zshrc`, then run `source ~/.zshrc`.
 
-```bash
-python3 shared/scripts/user_keys.py single bind
+Windows PowerShell (current session):
+
+```powershell
+$env:LINGTU_API_KEY = "your-api-key"
 ```
 
-Open the returned link, complete the binding on the website, then set `LINGTU_API_KEY`. The key is sent as the `x-api-key` header. Do not commit API keys.
+For persistent Windows configuration, run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`, then open a new terminal.
+
+The key is sent as the `x-api-key` header. Do not commit API keys.
 
 Use `https://api.ailingtu.com` as the default base URL. Read `references/api.md` before changing endpoint paths, request fields, response fields, or status mapping.
 
 ## Workflow
 
-1. Collect the generation intent: media kind (`image`, `video`, or another supported type), prompt, output requirements, and optional reference images.
-   - Video duration defaults by model: `gemini-omni-video`=10s, `veo3.1-extend`/`veo3.1-lite-extend`=8s, `grok-imagine-1.5`=15s, `seedance2.0-mini`/`seedance2.0`/`seedance2.0-fast`=10s. If the user specifies duration, use the user's value.
+1. Collect the generation intent: media kind (`image`, `video`, or another supported type), prompt, output requirements, and optional reference images, videos, or voiceovers.
+   - Video duration defaults by model: `wan3.0-video`=15s, `gemini-omni-video`=10s, `veo3.1-extend`/`veo3.1-lite-extend`=8s, `grok-imagine-1.5`=15s, `seedance2.0-mini`/`seedance2.0`/`seedance2.0-fast`=10s. For `wan3.0-video`, `-1` means adaptive duration and integers from 1 through 30 are supported. If the user specifies duration, use the user's value.
    - For AI video prompts, strictly use this field format in this exact order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`. Do not add other top-level fields or prose outside the format.
-2. Upload local reference image files to Lingtu first via `POST /v1/file/upload` (multipart `file` field) and use the returned `data.url`. The create API only accepts remote http(s) URLs — base64 / `data:` URLs are no longer supported. Preserve the user's order because reference order can influence generation.
-3. Create a Lingtu AI schedule using `scripts/lingtu_content_task.py`. The script auto-uploads any local path passed via `--reference-image` and accepts http(s) URLs as-is. Image generation sends references as `params.inputReferences`; video generation sends one reference as `params.inputReference` and multiple references as `params.inputReferences`. The script generates an 8-character `taskId` by default and sends it with the create payload; the schedule create response may also return provider `taskIds`.
+2. Upload local reference files to Lingtu first via `POST /v1/file/upload` (multipart `file` field). For images, use the returned `data.url`; the create API does not accept base64 / `data:` image URLs. For `wan3.0-video` reference videos and voiceovers, use the returned `data.id`. Preserve the user's order because reference order can influence generation.
+3. Create a Lingtu AI schedule using `scripts/lingtu_content_task.py`. The script auto-uploads local paths passed via `--reference-image`, `--reference-video`, or `--reference-audio`. Image references are sent as `params.inputReference` / `params.inputReferences`; `wan3.0-video` reference videos and voiceovers are sent as integer arrays in `params.videoFileIds` and `params.audioFileIds`. The media flags can also take existing Lingtu file ids for video/audio. The script generates an 8-character `taskId` by default and sends it with the create payload; the schedule create response may also return provider `taskIds`.
 4. Unless the user explicitly asks for multiple outputs, pass `--nums 1`, create only one schedule/task for the request, return the first successful asset, and stop. If the current task is pending, processing, or otherwise not explicitly failed or timed out, keep polling that same task and do not create a new one. Do not generate extra variants or rerun the same prompt after success. **Crucial: a script crash, network error, or non-zero exit during polling does NOT mean the task failed.** Always re-run poll-only with the existing id before considering a retry:
    ```bash
    python3 scripts/lingtu_content_task.py --kind video --poll-schedule-id <schedule_id>
@@ -76,11 +87,13 @@ The bundled script supports direct task creation only as an explicit compatibili
 python3 scripts/lingtu_content_task.py \
   --kind video \
   --prompt "A clean product reveal video for a smart desk lamp" \
-  --model gemini-omni-video \
-  --seconds 10 \
+  --model wan3.0-video \
+  --seconds 15 \
   --size 720x1280 \
   --reference-image ./ref-1.png \
-  --reference-image ./ref-2.jpg
+  --reference-image ./ref-2.jpg \
+  --reference-video ./motion-reference.mp4 \
+  --reference-audio ./voice-reference.mp3
 ```
 
 The script also reads endpoint paths from environment variables:
@@ -95,7 +108,9 @@ export LINGTU_AI_TASK_LIST_PATH="/v1/ai/task/listByScheduleId?scheduleId={schedu
 
 Use `--create-mode schedule` when you want to force schedule behavior explicitly. Use `--client-task-id abc12345` only when the caller needs a specific 8-character task id; otherwise let the script generate one.
 
-For `--kind video`, supported models: `gemini-omni-video` (default), `veo3.1-lite-extend`, `veo3.1-extend`, `grok-imagine-1.5`, `seedance2.0-mini`, `seedance2.0`, `seedance2.0-fast`. Each model has different allowed durations (see `references/api.md`). If a requested model returns "未知模型", do not keep retrying that model; report the provider response and ask for the supported model name or use a confirmed model.
+For `--kind video`, supported models: `wan3.0-video` (default), `gemini-omni-video`, `veo3.1-lite-extend`, `veo3.1-extend`, `grok-imagine-1.5`, `seedance2.0-mini`, `seedance2.0`, `seedance2.0-fast`. Each model has different allowed durations (see `references/api.md`). `wan3.0-video` supports 480p/720p and accepts `-1` for adaptive duration or any integer from 1 through 30. If a requested model returns "未知模型", do not keep retrying that model; report the provider response and ask for the supported model name or use a confirmed model.
+
+`wan3.0-video` also supports optional reference videos and reference voiceovers. Pass a local path or an existing positive Lingtu file id with repeated `--reference-video` and `--reference-audio` flags. `--reference-dubbing` is an alias for `--reference-audio`. The script sends the resolved ids as `params.videoFileIds` and `params.audioFileIds`.
 
 For `--kind image`, supported models: `gpt-image-2` (default), `nano-banana-2`, `nano-banana-2-2k`, `nano-banana-2-4k`, `seedream5.0-lite`.
 

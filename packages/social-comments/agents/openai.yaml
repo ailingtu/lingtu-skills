@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lingtu Social Comments"
+  short_description: "下载 TikTok、Instagram、抖音、视频号和小红书评论"
+  default_prompt: "Use $lingtu-social-comments to download comments from a supported social video."
