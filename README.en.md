@@ -2,11 +2,11 @@
 
 [中文版](README.md)
 
-Packages reusable Lingtu AI capabilities for different AI agents and platforms, including Codex, Claude Code, Cursor, OpenClaw, Dify, and OpenAI. Core packages are model-agnostic; adapters provide thin translation layers.
+Packages Lingtu AI capabilities as independently installable skills. Each capability is published and installed separately while remaining model-agnostic.
 
 Lingtu AI website: [www.ailingtu.com](https://www.ailingtu.com).
 
-Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills). When users ask to update, pull the latest version from this GitHub repository.
+Source repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills), for development and publishing only. Users must install and upgrade through the [official Lingtu Skills installation guide](https://ailingtu.com/install/skills.md), not GitHub.
 
 ## What's Inside
 
@@ -15,6 +15,7 @@ Repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills).
 - **`packages/social-monitor`** — monitor TikTok/Instagram creators or competitor accounts, fetch account video lists and single-video material metrics, and generate recent-video intelligence reports.
 - **`packages/social-comments`** — download and export comments from one TikTok, Instagram, Douyin, WeChat Channels, or Xiaohongshu video with automatic pagination and JSON output.
 - **`packages/video-understand`** — turn a local video file or a TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, viral remake, or video breakdown.
+- **`packages/video-remake`** — independently transcribe a long video, cut it into muted semantic segments of at most 15 seconds, regenerate and approve each segment with Wan3.0, then merge the approved results.
 - **`packages/video-publish`** — batch TikTok / TikTok Shop video publishing, schedule CSV generation, creator/product lookup, and dry-run validation.
 
 ## Repository Layout
@@ -26,44 +27,24 @@ packages/
   social-monitor/   # Social creator monitoring and material metrics
   social-comments/  # Social video comment downloads
   video-understand/ # Video understanding & replication-prompt generation
+  video-remake/     # Long-video segment remake, review, and merge
   video-publish/    # Batch video publishing and schedules
-adapters/
-  codex/            # Codex skill installation
-  claude/           # Claude Code CLAUDE.md
-  cursor/           # Cursor AGENTS.md
-  openclaw/         # OpenClaw AGENTS.md
-  dify/             # Dify workflow export
-  openai/           # OpenAI custom GPT prompt
-install.sh          # One-command installer
+shared/scripts/     # Common runtime copied into each built Skill
+scripts/            # Single-Skill build tooling
+docs/               # CDN package publishing instructions
 ```
 
-## Prerequisites
+## Account binding
 
-Authentication only uses the `LINGTU_API_KEY` environment variable. Run the matching command locally and never paste the real key into chat.
-
-macOS, current Terminal session:
+Installing a Skill does not require a key. Before the first Lingtu task, if
+`LINGTU_API_KEY` is unavailable, the agent runs this from the installed Skill root:
 
 ```bash
-export LINGTU_API_KEY='your-api-key'
+python3 shared/scripts/user_keys.py single bind
 ```
 
-For persistent macOS configuration, add the same line to `~/.zshrc`, then run `source ~/.zshrc`.
-
-Windows PowerShell, current session:
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-For persistent Windows configuration:
-
-```powershell
-[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")
-```
-
-Then open a new terminal.
-
-Requests send the key as the `x-api-key` header. Never commit API keys or business data.
+Open the generated authorization URL to complete binding. Never send, display,
+or save an API key in chat.
 
 To bind a TikTok Shop, or when the shop / shop-product list is empty, ask the user to open this link and finish shop authorization before retrying:
 
@@ -73,27 +54,28 @@ When video publishing has no authorized creators, or a creator is missing / unau
 
 https://app.ailingtu.com/video-post
 
-## Install
+## Install and upgrade
+
+Send this instruction to your agent:
+
+> Install Lingtu Skills by following [https://ailingtu.com/install/skills.md](https://ailingtu.com/install/skills.md).
+
+The agent reads the live Lingtu package index, chooses the Skill required for
+the task, then downloads, verifies, and installs each package separately from
+Lingtu TOS/CDN. Use the same guide for upgrades. Do not install from GitHub or
+another skill store.
+
+## Publish Skills separately to Lingtu CDN
+
+Build one self-contained Skill at a time:
 
 ```bash
-git clone https://github.com/ailingtu/lingtu-skills.git
-cd lingtu-skills
-./install.sh                               # Auto-detect platform, then ask which packages to install
+python3 scripts/build_package.py content-create
 ```
 
-Or specify a target and packages explicitly:
-
-```bash
-./install.sh codex all
-./install.sh codex content-create tkshop-query social-monitor social-comments video-understand video-publish
-./install.sh claude /path/to/project content-create
-./install.sh cursor /path/to/project all
-./install.sh openclaw /path/to/project all
-./install.sh openai /path/to/export/dir tkshop-query
-./install.sh dify /path/to/export/dir all
-```
-
-When no package is specified, the installer shows a selection guide. Customers can enter `all`, a package name, or package numbers such as `1,2`.
+The output is written to `dist/packages/`. See
+[`docs/distribution-packaging.md`](docs/distribution-packaging.md) for validation and
+publishing instructions.
 
 ## Quick Start — Content Create
 
@@ -213,11 +195,11 @@ python3 scripts/lingtu_video_publish.py publish \
 
 ## Delivery
 
-- Public GitHub repository [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills); customers `git clone` / `git pull` directly.
-- Versioned GitHub Releases (`v1.0.0`) as the contract.
-- Zip archive from a release tag.
-- Service or Docker deployment for private implementations.
+- **Lingtu TOS/CDN:** build, publish, and install each `packages/*` Skill separately.
+- **Installation entry point:** <https://ailingtu.com/install/skills.md>.
+- **Versions:** maintain each version in its `SKILL.md` frontmatter.
+- **GitHub:** keep source code, tests, and publishing tools in the public repository.
 
 ## Development
 
-Keep core logic in `packages/`. Keep adapters thin. When an API contract changes, update `references/api.md` first, then the script and adapter notes.
+Keep core logic in `packages/`; do not restore cross-platform adapters or a bulk installer. When an API contract changes, update `references/api.md` before the script. Every published Skill must be self-contained.

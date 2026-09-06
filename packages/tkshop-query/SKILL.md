@@ -11,10 +11,9 @@ homepage: https://ailingtu.com/skills/tkshop-query
 
 # TK 店铺数据查询与日报
 
-## Repository Source
+## Installation and upgrades
 
-- GitHub: https://github.com/ailingtu/lingtu-skills
-- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub.
 
 ## Overview
 
@@ -31,25 +30,10 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 ## Configuration
 
-Authentication uses the `LINGTU_API_KEY` environment variable. When it is missing, give the user the command for their operating system and ask them to run it locally. Do not ask them to paste the real key into chat.
-
-macOS (current Terminal session):
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-For persistent macOS configuration, add the same line to `~/.zshrc`, then run `source ~/.zshrc`.
-
-Windows PowerShell (current session):
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-For persistent Windows configuration, run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`, then open a new terminal.
-
-The key is sent as the `x-api-key` header. Do not commit API keys.
+Installation does not require authentication. If `LINGTU_API_KEY` is missing when
+running a task, execute `python3 shared/scripts/user_keys.py single bind` from this
+Skill root and give the generated authorization URL to the user. Never ask for,
+display, or store their API key.
 
 TikTok Shop 店铺绑定入口是 https://app.ailingtu.com/teamshop 。当用户想绑定 TikTok 店铺、查询不到店铺、或店铺列表为空时，明确让用户打开这个链接完成店铺绑定，然后再执行 `list-shops` 或日报查询。
 

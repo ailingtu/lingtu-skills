@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import platform
 import sys
 import time
 import urllib.error
@@ -47,18 +46,10 @@ PLATFORM_ALIASES = {
 def require_api_key() -> str:
     key = os.environ.get("LINGTU_API_KEY", "").strip()
     if not key:
-        if platform.system() == "Windows":
-            hint = (
-                '请在 PowerShell 执行 `$env:LINGTU_API_KEY = "your-api-key"`（当前窗口），'
-                '或执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` '
-                "后重新打开终端。"
-            )
-        else:
-            hint = (
-                "请在终端执行 `export LINGTU_API_KEY='your-api-key'`。"
-                "macOS 如需永久生效，请把该行加入 `~/.zshrc`，再执行 `source ~/.zshrc`。"
-            )
-        raise SystemExit(f"LINGTU_API_KEY 环境变量未设置。{hint}")
+        raise SystemExit(
+            "LINGTU_API_KEY 环境变量未设置。请从本 Skill 根目录运行 "
+            "`python3 shared/scripts/user_keys.py single bind`，并打开生成的授权链接。"
+        )
     return key
 
 

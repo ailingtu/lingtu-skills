@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Build self-contained Lingtu SkillHub folders and root-level ZIP archives."""
+"""Build one self-contained Lingtu CDN package and root-level ZIP archive."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import re
 import shutil
 import stat
@@ -16,19 +17,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGES_DIR = ROOT / "packages"
 SHARED_DIR = ROOT / "shared"
-DEFAULT_OUTPUT = ROOT / "dist" / "skillhub"
+DEFAULT_OUTPUT = ROOT / "dist" / "packages"
 
-PACKAGE_IDS = (
-    "content-create",
-    "tkshop-query",
-    "social-monitor",
-    "social-comments",
-    "video-understand",
-    "video-publish",
+PACKAGE_IDS = tuple(
+    sorted(path.parent.name for path in PACKAGES_DIR.glob("*/SKILL.md"))
 )
 
 EXCLUDED_NAMES = {
     ".DS_Store",
+    "README.md",
     "Thumbs.db",
 }
 EXCLUDED_DIRS = {
@@ -75,7 +72,7 @@ def validate_metadata(metadata: dict[str, str], skill_md: Path) -> None:
     required = ("name", "slug", "version", "displayName", "summary", "description", "license")
     missing = [key for key in required if not metadata.get(key)]
     if missing:
-        raise ValueError(f"{skill_md} 缺少 SkillHub 必填字段: {', '.join(missing)}")
+        raise ValueError(f"{skill_md} 缺少分发必填字段: {', '.join(missing)}")
 
     validate_skill_name(metadata["name"], skill_md)
     validate_skill_name(metadata["slug"], skill_md)
@@ -188,9 +185,14 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
         shutil.rmtree(destination)
     shutil.copytree(source, destination, ignore=ignore_entry)
 
+    if not (destination / "LICENSE").is_file():
+        shutil.copy2(ROOT / "LICENSE", destination / "LICENSE")
+
     # Existing package scripts search their ancestors for shared/scripts. Keeping
     # it inside each Skill makes the uploaded directory independent of this repo.
-    shutil.copytree(SHARED_DIR, destination / "shared", ignore=ignore_entry)
+    # video-remake intentionally contains its complete runtime in its own scripts.
+    if package_id != "video-remake":
+        shutil.copytree(SHARED_DIR, destination / "shared", ignore=ignore_entry)
 
     if package_id == "content-create":
         patch_content_create_artifact(destination)
@@ -209,12 +211,12 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="构建可分别上传到 skillhub.cn 的自包含 Skill 目录和 ZIP。"
+        description="构建可分别上传到灵途 TOS/CDN 的自包含 Skill 目录和 ZIP。"
     )
     parser.add_argument(
-        "packages",
-        nargs="*",
-        help="不指定时构建全部 Skill。",
+        "package",
+        choices=PACKAGE_IDS,
+        help="要构建的单个 Skill。每次只生成一个独立发布物。",
     )
     parser.add_argument(
         "--output",
@@ -224,26 +226,37 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    unknown = sorted(set(args.packages) - set(PACKAGE_IDS))
-    if unknown:
-        parser.error(f"未知 Skill: {', '.join(unknown)}")
-
     output = args.output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
-    selected = args.packages or list(PACKAGE_IDS)
+    directory, archive = build_package(args.package, output)
+    print(f"[ok] 目录: {directory}")
+    print(f"[ok] ZIP:  {archive}（根目录含 SKILL.md）")
 
-    for package_id in selected:
-        directory, archive = build_package(package_id, output)
-        print(f"[ok] 目录: {directory}")
-        print(f"[ok] ZIP:  {archive}（根目录含 SKILL.md）")
-
-    checksums = [
-        f"{sha256(archive)}  {archive.name}"
-        for archive in sorted(output.glob("lingtu-*.zip"))
-    ]
-    checksum_file = output / "SHA256SUMS"
-    checksum_file.write_text("\n".join(sorted(checksums)) + "\n", encoding="utf-8")
+    archive_sha256 = sha256(archive)
+    checksum_file = archive.with_suffix(".zip.sha256")
+    checksum_file.write_text(f"{archive_sha256}  {archive.name}\n", encoding="utf-8")
     print(f"[ok] 校验: {checksum_file}")
+
+    metadata = parse_frontmatter(directory / "SKILL.md")
+    metadata_file = archive.with_suffix(".metadata.json")
+    metadata_file.write_text(
+        json.dumps(
+            {
+                "name": metadata["name"],
+                "slug": metadata["slug"],
+                "displayName": metadata["displayName"],
+                "summary": metadata["summary"],
+                "version": metadata["version"],
+                "sha256": archive_sha256,
+                "bytes": archive.stat().st_size,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(f"[ok] 索引元数据: {metadata_file}")
     return 0
 
 

@@ -11,27 +11,17 @@ homepage: https://ailingtu.com/skills/social-comments
 
 # 社交媒体评论下载
 
+## 安装与升级
+
+按照 https://ailingtu.com/install/skills.md 操作，不要从 GitHub 安装或升级本 Skill。
+
 使用 `scripts/lingtu_social_comments.py` 获取单条 TikTok、Instagram、抖音、视频号或小红书视频的评论。不要抓取视频网页或调用第三方评论服务。
 
 ## 配置
 
-认证使用 `LINGTU_API_KEY` 环境变量。缺少 Key 时，直接给用户对应系统的命令，让用户在自己的电脑上执行；不要要求用户把真实 Key 发到聊天中。
-
-macOS（当前终端会话）：
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-macOS 如需永久生效，把同一行加入 `~/.zshrc`，然后执行 `source ~/.zshrc`。
-
-Windows PowerShell（当前窗口）：
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-Windows 如需永久生效，执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`，然后重新打开终端。请求头为 `x-api-key`。
+安装不要求认证。执行任务时如果缺少 `LINGTU_API_KEY`，从本 Skill 根目录运行
+`python3 shared/scripts/user_keys.py single bind`，并把生成的授权链接交给用户打开。
+不要索取、展示或保存用户的 API Key。
 
 默认 API 地址是 `https://api.ailingtu.com`；测试时可通过 `LINGTU_AI_BASE_URL` 覆盖。不要把密钥或下载的评论数据提交到仓库。
 

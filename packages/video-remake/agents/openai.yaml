@@ -1,0 +1,5 @@
+interface:
+  display_name: "Lingtu Video Remake"
+  short_description: "长视频转写、15秒切片、Wan3.0逐段确认与合成"
+  default_prompt: "Use $lingtu-video-remake to transcribe a long video, remake each muted segment with Wan3.0, ask me to approve every segment, and merge the approved results."
+

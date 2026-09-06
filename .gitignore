@@ -29,6 +29,3 @@ build/
 
 # Legacy / archive
 .legacy/
-
-# Local Lingtu workspace (venv, conversations, cache, output)
-.lingtu-workspace/

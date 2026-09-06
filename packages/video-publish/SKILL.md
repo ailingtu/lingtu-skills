@@ -11,6 +11,10 @@ homepage: https://ailingtu.com/skills/video-publish
 
 # 灵途批量视频 / 带货图文发布
 
+## 安装与升级
+
+按照 https://ailingtu.com/install/skills.md 操作，不要从 GitHub 安装或升级本 Skill。
+
 ## 适用场景
 
 当用户在群里说"帮我发布带货视频"、"批量发布视频"、"我要发视频"、"发布图文"、"带货图文"、"多图带货"、"生成排期表"等需求时调用本技能。
@@ -439,23 +443,9 @@ API 映射（多图单挂车）：
 
 ## 配置
 
-认证只使用 `LINGTU_API_KEY` 环境变量。缺少 Key 时，直接给用户对应系统的命令，让用户在自己的电脑上执行；不要要求用户把真实 Key 发到聊天中。
-
-macOS（当前终端会话）：
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-macOS 如需永久生效，把同一行加入 `~/.zshrc`，然后执行 `source ~/.zshrc`。
-
-Windows PowerShell（当前窗口）：
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-Windows 如需永久生效，执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`，然后重新打开终端。
+安装不要求认证。执行任务时如果缺少 `LINGTU_API_KEY`，从本 Skill 根目录运行
+`python3 shared/scripts/user_keys.py single bind`，并把生成的授权链接交给用户打开。
+不要索取、展示或保存用户的 API Key。
 
 环境变量：
 

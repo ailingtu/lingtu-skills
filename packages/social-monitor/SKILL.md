@@ -11,10 +11,9 @@ homepage: https://ailingtu.com/skills/social-monitor
 
 # 社媒达人 / 竞品监控与日报
 
-## Repository Source
+## Installation and upgrades
 
-- GitHub: https://github.com/ailingtu/lingtu-skills
-- When the user asks to update Lingtu AI skills, pull the latest version from this repository.
+Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub.
 
 ## 适用场景
 
@@ -47,25 +46,9 @@ homepage: https://ailingtu.com/skills/social-monitor
 
 ## 配置
 
-认证只使用 `LINGTU_API_KEY` 环境变量。缺少 Key 时，直接给用户对应系统的命令，让用户在自己的电脑上执行；不要要求用户把真实 Key 发到聊天中。
-
-macOS（当前终端会话）：
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-macOS 如需永久生效，把同一行加入 `~/.zshrc`，然后执行 `source ~/.zshrc`。
-
-Windows PowerShell（当前窗口）：
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-Windows 如需永久生效，执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")`，然后重新打开终端。
-
-请求通过 `x-api-key` header 发送。请勿提交密钥或私有监控数据。
+安装不要求认证。执行任务时如果缺少 `LINGTU_API_KEY`，从本 Skill 根目录运行
+`python3 shared/scripts/user_keys.py single bind`，并把生成的授权链接交给用户打开。
+不要索取、展示或保存用户的 API Key。
 
 可选环境变量：
 
