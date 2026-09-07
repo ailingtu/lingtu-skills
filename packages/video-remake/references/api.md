@@ -65,7 +65,6 @@
 此仓库目前没有确认的 Lingtu ASR 固定路径，因此不虚构默认端点。`prepare --asr-url` 接受用户明确提供的完整 HTTP 地址：
 
 - 请求：`POST multipart/form-data`，视频字段为 `file`，可选字段为 `model`、`language`。
-- 认证：优先使用 `ASR_API_KEY`，否则使用 `LINGTU_API_KEY`，请求头同为 `x-api-key`。
+- 认证：只使用 `LINGTU_API_KEY`，请求头为 `x-api-key`。不支持其他 Key 环境变量。
 - 响应：JSON，时间戳数组可位于根数组、`segments`、`data.segments`、`result.segments` 或 `data.result.segments`。
 - 每项需要 `start`、`end`、`text`；时间单位为秒。
-

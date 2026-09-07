@@ -24,6 +24,19 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
+def _shared_scripts_dir() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "shared" / "scripts"
+        if candidate.is_dir():
+            return candidate
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+
+
+sys.path.insert(0, str(_shared_scripts_dir()))
+from lingtu_auth import require_api_key
+
+
 SUCCESS_STATUSES = {"succeeded", "success", "completed", "complete", "done", "finished"}
 FAILURE_STATUSES = {"failed", "failure", "error", "cancelled", "canceled", "expired", "submit_failed"}
 PROCESSING_STATUSES = {"waiting_submit", "submitting", "pending", "processing", "queued", "running"}
@@ -241,7 +254,7 @@ def transcribe_http(source: Path, url: str, model: str | None, language: str | N
     result = request_json(
         "POST",
         url,
-        api_key=os.getenv("ASR_API_KEY") or os.getenv("LINGTU_API_KEY"),
+        api_key=require_lingtu_key(),
         body=body,
         content_type=f"multipart/form-data; boundary={boundary}",
         timeout=600,
@@ -467,13 +480,10 @@ def build_url(base: str, path: str) -> str:
 
 
 def require_lingtu_key() -> str:
-    key = os.getenv("LINGTU_API_KEY", "").strip()
-    if not key:
-        raise WorkflowError(
-            "缺少 LINGTU_API_KEY。请从本 Skill 根目录运行 "
-            "`python3 shared/scripts/user_keys.py single bind`，并打开生成的授权链接。"
-        )
-    return key
+    try:
+        return require_api_key()
+    except SystemExit as exc:
+        raise WorkflowError(str(exc)) from exc
 
 
 def upload_video(path: Path, base_url: str, upload_path: str, api_key: str) -> int:

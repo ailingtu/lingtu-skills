@@ -2,7 +2,7 @@
 
 Lingtu Content Create is a reusable agent package for product-content generation with Lingtu AI. It supports image generation, optimized product reference images, ecommerce/UGC-style selling videos, viral-remake workflows, and direct Lingtu AI task submission through a schedule API.
 
-Current package version: `0.3.3`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
+Current package version: `0.3.4`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
 
 ## What It Does
 
@@ -23,23 +23,7 @@ The main package instruction file is [`SKILL.md`](./SKILL.md). Codex can read it
 
 ## Requirements
 
-Authentication uses the `LINGTU_API_KEY` environment variable. Configure it locally and do not paste the real key into chat.
-
-macOS:
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-Windows PowerShell:
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-For persistent setup, add the export to `~/.zshrc` on macOS, or run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` on Windows and open a new terminal.
-
-The key is sent as `x-api-key: <key>`. Do not commit API keys or generated private media.
+All authenticated requests use only the `LINGTU_API_KEY` environment variable and send it as `x-api-key`. If it is missing, run `python3 shared/scripts/user_keys.py single bind` from this Skill root and open the generated authorization URL. Never paste the key into chat or commit it or generated private media.
 
 ## Script Usage
 

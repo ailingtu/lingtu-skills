@@ -10,8 +10,10 @@
 
 ## 包含哪些能力
 
+- **`packages/openapi-guide`** — 面向开发者查询灵途 OpenAPI 文档、说明 API Key 的获取与安全使用方式、选择接口、生成或审查接入代码和排查脱敏错误；Skill 本身不持有 API Key，也不调用线上业务接口。
 - **`packages/content-create`** — 生成商品图、AI 视频参考图、电商卖货视频、爆款复刻视频等。
 - **`packages/tkshop-query`** — 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。
+- **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询达人黑名单记录、反馈次数、最近反馈时间和原因。
 - **`packages/social-monitor`** — TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据和近期视频情报报告。
 - **`packages/social-comments`** — 下载和导出 TikTok、Instagram、抖音、视频号及小红书单条视频评论，支持自动分页和 JSON 保存。
 - **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、爆款复刻和视频拆解。
@@ -22,14 +24,16 @@
 
 ```text
 packages/
+  openapi-guide/    # OpenAPI 文档查询与开发者接入指导
   content-create/   # 图片与视频生成
   tkshop-query/     # TK 店铺数据查询
+  tk-blacklist/     # TK 达人黑名单查询
   social-monitor/   # 社媒达人/竞品监控、素材数据
   social-comments/  # 社交媒体视频评论下载
   video-understand/ # 视频理解与复刻提示词生成
   video-remake/     # 长视频分段重绘、确认与合成
   video-publish/    # 批量视频发布和排期
-shared/scripts/     # 构建时复制进每个 Skill 的公共运行时
+shared/scripts/     # 构建时复制进每个业务 API Skill 的公共运行时
 scripts/            # 单 Skill 构建工具
 docs/               # CDN 单包发布说明
 ```
@@ -44,6 +48,12 @@ python3 shared/scripts/user_keys.py single bind
 ```
 
 请打开生成的授权链接完成绑定。不要在聊天中发送、展示或保存 API Key。
+
+所有需要认证的灵途请求只读取 `LINGTU_API_KEY`，并通过 `x-api-key`
+请求头发送。每个会调用灵途业务 API 的独立分发包都内置
+`shared/scripts/user_keys.py`，不依赖本仓库的根目录。
+
+`openapi-guide` 仅访问公开文档，不执行账号绑定，也不读取或使用 API Key。开发者可在 <https://ailingtu.com/api-keys> 登录后创建和管理 API Key；实际运行接入代码时，应在自己的服务端环境中配置凭据。
 
 如果用户需要绑定 TikTok Shop 店铺，或店铺/店铺商品列表为空，让用户打开以下链接完成店铺绑定/授权后再继续：
 
@@ -63,6 +73,18 @@ Agent 会实时读取灵途官方索引，根据任务选择所需 Skill，并�
 逐个下载、校验和安装。升级也使用同一文档；不要通过 GitHub 或其他技能商店安装。
 
 ## 分别发布到灵途 CDN
+
+新建 Skill 时先用脚手架生成符合认证与分发规范的目录：
+
+```bash
+python3 scripts/create_package.py creator-insights \
+  --display-name "灵途达人洞察" \
+  --summary "分析达人数据并生成可执行的洞察建议。" \
+  --description "通过灵途 AI 业务接口查询达人数据并生成分析结果。"
+```
+
+默认生成 `auth: lingtu-api-key`；只读公开资料、不调用业务 API 的 Skill
+显式传入 `--auth none`。每个 `SKILL.md` 都必须声明其 `auth` 模式。
 
 为每项能力生成一个自包含目录和一个 ZIP：
 

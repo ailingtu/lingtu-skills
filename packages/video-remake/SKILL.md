@@ -1,7 +1,8 @@
 ---
 name: lingtu-video-remake
 slug: lingtu-video-remake
-version: 0.1.0
+version: 0.1.1
+auth: lingtu-api-key
 displayName: 灵途长视频分段复刻
 summary: 转写长视频，按语义切成15秒内片段，经Wan3.0逐段重绘确认后合成。
 description: 长视频分段复刻与重绘。将本地长视频识别为带时间戳文字，按语义边界切成不超过15秒的片段，消除原音频，逐段上传给 Wan3.0 生成；每一段都必须由用户预览确认或明确跳过，全部处理完成后再合成为最终视频。用户提到“长视频复刻”“分段重绘”“识别文字后切片生成”“Wan3.0逐段生成并合成”时使用。不用于普通文生视频、视频内容总结或仅提取字幕。
@@ -21,7 +22,7 @@ homepage: https://ailingtu.com/skills/video-remake
 
 - Python 3.10 或更高版本。
 - `ffmpeg` 与 `ffprobe` 必须在 `PATH` 中。
-- Wan3.0 生成使用 `LINGTU_API_KEY`。缺少时从本 Skill 根目录运行 `python3 shared/scripts/user_keys.py single bind`，把生成的授权链接交给用户打开；不要索取、展示或保存用户的 API Key。
+- Wan3.0 生成和 HTTP ASR 认证都只使用 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。缺少时从本 Skill 根目录运行 `python3 shared/scripts/user_keys.py single bind`，把生成的授权链接交给用户打开；不要索取、展示或保存用户的 API Key。
 - 转写需要带时间戳的数据。优先使用用户提供的 JSON、SRT 或 VTT；也可使用本机已安装的 Whisper CLI，或用户配置的 HTTP ASR 服务。
 
 修改 Lingtu 接口路径、任务字段或状态映射前，先读取 `references/api.md`。处理或恢复任务状态前，读取 `references/job-schema.md`。

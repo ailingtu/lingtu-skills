@@ -10,30 +10,20 @@ import urllib.request
 from pathlib import Path
 
 
-def _shared_scripts_dir() -> Path | None:
+def _shared_scripts_dir() -> Path:
     current = Path(__file__).resolve()
     for parent in current.parents:
         candidate = parent / "shared" / "scripts"
         if candidate.is_dir():
             return candidate
-    return None
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
 
 
 shared_scripts_dir = _shared_scripts_dir()
-if shared_scripts_dir is not None:
-    sys.path.insert(0, str(shared_scripts_dir))
-    from lingtu_auth import require_api_key
-    from lingtu_http import base_url as shared_base_url
-    from lingtu_upload import multipart_upload
-else:
-    # A single skill directory may be installed without the repository-level
-    # shared/ tree. Keep that supported with the bundled minimal runtime.
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from lingtu_standalone import (
-        base_url as shared_base_url,
-        multipart_upload,
-        require_api_key,
-    )
+sys.path.insert(0, str(shared_scripts_dir))
+from lingtu_auth import require_api_key
+from lingtu_http import base_url as shared_base_url
+from lingtu_upload import multipart_upload
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"

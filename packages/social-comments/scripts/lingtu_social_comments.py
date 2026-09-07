@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 import urllib.error
@@ -15,6 +14,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+
+
+def _shared_scripts_dir() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "shared" / "scripts"
+        if candidate.is_dir():
+            return candidate
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+
+
+sys.path.insert(0, str(_shared_scripts_dir()))
+from lingtu_auth import require_api_key
+from lingtu_http import base_url as shared_base_url
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -43,18 +56,8 @@ PLATFORM_ALIASES = {
 }
 
 
-def require_api_key() -> str:
-    key = os.environ.get("LINGTU_API_KEY", "").strip()
-    if not key:
-        raise SystemExit(
-            "LINGTU_API_KEY 环境变量未设置。请从本 Skill 根目录运行 "
-            "`python3 shared/scripts/user_keys.py single bind`，并打开生成的授权链接。"
-        )
-    return key
-
-
 def base_url() -> str:
-    return os.environ.get("LINGTU_AI_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    return shared_base_url(DEFAULT_BASE_URL)
 
 
 def infer_platform(video_url: str) -> str:

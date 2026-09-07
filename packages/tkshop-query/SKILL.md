@@ -1,7 +1,8 @@
 ---
 name: lingtu-tkshop-query
 slug: lingtu-tkshop-query
-version: 0.2.0
+version: 0.2.1
+auth: lingtu-api-key
 displayName: 灵途 TK 店铺数据查询
 summary: 查询 TikTok Shop 店铺日报、经营指标并分析业务问题。
 description: TK 店铺数据查询与日报。通过灵途 AI 接口查询 TK 店铺/商家/商品/订单/客户表现等经营数据，支持按日期或店铺名拉取单店日报、按日期拉取全部店铺汇总日报、列出店铺清单，以及向 AI 提问店铺经营相关问题。用户提到"店铺日报"、"店铺数据"、"经营情况"、"整体经营"、"全部店铺汇总"、"大盘"、"GMV/订单/客单价"等场景时使用。
@@ -30,6 +31,7 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 ## Configuration
 
+All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
 Installation does not require authentication. If `LINGTU_API_KEY` is missing when
 running a task, execute `python3 shared/scripts/user_keys.py single bind` from this
 Skill root and give the generated authorization URL to the user. Never ask for,

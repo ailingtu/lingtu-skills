@@ -2,6 +2,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -45,6 +46,21 @@ class TranscriptTests(unittest.TestCase):
             )
             segments = MODULE.load_transcript(path)
         self.assertEqual(segments[-1]["end"], 9.0)
+
+    def test_http_asr_uses_only_lingtu_api_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.mp4"
+            source.write_bytes(b"video")
+            response = {"segments": [{"start": 0, "end": 1, "text": "ok"}]}
+            with mock.patch.dict(
+                MODULE.os.environ,
+                {"LINGTU_API_KEY": "lingtu-key", "ASR_API_KEY": "legacy-key"},
+                clear=True,
+            ), mock.patch.object(MODULE, "request_json", return_value=response) as request:
+                segments = MODULE.transcribe_http(source, "https://example.test/asr", None, None)
+
+        self.assertEqual(segments[0]["text"], "ok")
+        self.assertEqual(request.call_args.kwargs["api_key"], "lingtu-key")
 
 
 class SegmentPlannerTests(unittest.TestCase):

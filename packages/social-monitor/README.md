@@ -2,7 +2,7 @@
 
 灵途 Social Monitor 是一个可复用的社媒达人监控和视频素材数据技能包：解析输入 → 按平台调用灵途接口拉达人最近视频或单条素材数据 → 写入群级监控列表 → 按"昨日 vs 今日"出每日中文日报。
 
-当前版本：`0.7.3`。远端安装器可读取 [`SKILL.md`](./SKILL.md) frontmatter 的 `version` 字段决定是否更新。
+当前版本：`0.9.1`。远端安装器可读取 [`SKILL.md`](./SKILL.md) frontmatter 的 `version` 字段决定是否更新。
 
 ## 能力
 
@@ -17,21 +17,7 @@
 
 ## 环境
 
-认证只使用 `LINGTU_API_KEY` 环境变量。请在自己的电脑上执行对应命令，不要把真实 Key 发到聊天中。
-
-macOS：
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-Windows PowerShell：
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-永久配置时，macOS 把 export 加入 `~/.zshrc`；Windows 执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` 后重新打开终端。
+所有需要认证的请求只使用 `LINGTU_API_KEY` 环境变量，并通过 `x-api-key` 请求头发送。如果缺少，从本 Skill 根目录运行 `python3 shared/scripts/user_keys.py single bind`，并打开生成的授权链接。不要在聊天中发送、展示或保存真实 Key。
 
 可选：
 
@@ -40,7 +26,7 @@ export LINGTU_SOCIAL_MONITOR_STORE="~/.lingtu/social-monitor/monitors.json"
 export LINGTU_SOCIAL_MONITOR_SNAPSHOTS="~/.lingtu/social-monitor/snapshots"
 ```
 
-请求头 `x-api-key`。请勿提交密钥或私有数据。
+请勿提交密钥或私有数据。
 
 ## 命令一览
 

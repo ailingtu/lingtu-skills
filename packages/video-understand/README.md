@@ -2,7 +2,7 @@
 
 Video Understand turns a video into a natural-language replication prompt. The output is a Markdown-style brief (title, subjects, scene, scripted shots, production notes) that can feed downstream video generation or be used as a tagging/understanding source.
 
-Current package version: `0.8.1`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
+Current package version: `0.8.2`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
 
 ## What It Does
 
@@ -16,27 +16,10 @@ This skill currently only sends `type: "REPLICATION"`. The `ANALYSIS` mode is re
 
 ## Requirements
 
-Authentication uses the `LINGTU_API_KEY` environment variable. Configure it locally and do not paste the real key into chat.
+All authenticated requests use only the `LINGTU_API_KEY` environment variable and send it as `x-api-key`. If it is missing, run `python3 shared/scripts/user_keys.py single bind` from this Skill root and open the generated authorization URL. Never paste the key into chat or commit it.
 
-macOS:
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-Windows PowerShell:
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-For persistent setup, add the export to `~/.zshrc` on macOS, or run `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` on Windows and open a new terminal.
-
-The key is sent as `x-api-key: <key>`. Do not commit API keys.
-
-This package can be installed as a directory by itself. It uses the repository's
-`shared/scripts` helpers when available and automatically falls back to its bundled
-standalone runtime when they are absent.
+The independently installed package includes `shared/scripts`, so authentication,
+account binding, HTTP, and upload behavior use the same runtime as the other Lingtu Skills.
 
 ## Script Usage
 

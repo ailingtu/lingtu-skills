@@ -14,6 +14,15 @@
 
 ## 构建一个 Skill
 
+新包应先通过 `scripts/create_package.py` 创建。`SKILL.md` 必须显式声明：
+
+- `auth: lingtu-api-key`：调用灵途业务 API，构建时自动内置统一认证与绑定运行时。
+- `auth: none`：不调用需要认证的灵途业务 API，构建产物不包含认证运行时。
+
+构建器会校验该声明。`lingtu-api-key` 包的 `SKILL.md` 还必须包含
+`LINGTU_API_KEY`、`x-api-key` 和 `python3 shared/scripts/user_keys.py single bind`
+引导。
+
 从仓库根目录运行：
 
 ```bash
@@ -48,8 +57,9 @@ references/
 `SKILL.md` 必须处于 ZIP 根目录，不能是
 `lingtu-content-create/SKILL.md` 这样的二级路径。
 
-需要公共运行时的产物会内置 `shared/scripts`，安装后不依赖原 monorepo；
-`video-remake` 的完整运行时直接位于自身 `scripts/`，不会打包无关公共代码。内容生成 Skill
+所有会调用灵途业务 API 的产物都内置 `shared/scripts`，以便统一读取
+`LINGTU_API_KEY` 并提供账号绑定入口；安装后不依赖原 monorepo。只读取公开文档的
+`openapi-guide` 不包含认证运行时。内容生成 Skill
 还内置了视频理解脚本，确保爆款视频 URL 的复刻流程不要求用户另外安装
 `lingtu-video-understand`。
 
@@ -58,7 +68,7 @@ references/
 上传最新版 ZIP 和带版本 ZIP 到灵途 TOS/CDN，然后更新官方索引中对应
 slug 的条目。索引必须包含：
 
-- `slug`、`displayName`、`summary`、`version`；
+- `slug`、`displayName`、`summary`、`version`、`auth`；
 - 最新版 `url` 和固定版本 `versionedUrl`；
 - 由本次 ZIP 产生的 `sha256` 和 `bytes`。
 

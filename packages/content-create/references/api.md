@@ -41,7 +41,7 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 
 ## API Key Configuration
 
-Authentication uses the `LINGTU_API_KEY` environment variable. Configure it locally with `export LINGTU_API_KEY='your-api-key'` on macOS or `$env:LINGTU_API_KEY = "your-api-key"` in Windows PowerShell.
+Authentication uses only the `LINGTU_API_KEY` environment variable. If it is missing, run `python3 shared/scripts/user_keys.py single bind` from the Skill root and open the generated authorization URL; never paste the key into chat.
 
 ## Endpoints
 

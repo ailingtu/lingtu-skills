@@ -1,7 +1,8 @@
 ---
 name: lingtu-social-monitor
 slug: lingtu-social-monitor
-version: 0.9.0
+version: 0.9.1
+auth: lingtu-api-key
 displayName: 灵途 TikTok 达人竞品监控
 summary: 监控 TikTok 和 Instagram 达人及竞品账号，生成日报与告警。
 description: TikTok 和 Instagram 达人/竞品账号监控、账号视频列表、单条视频实时指标、日报与告警。支持单条/批量添加监控、每日订阅、群级监控列表、即时分析、本地快照和“昨日 vs 今日”差异报告。用户要下载或导出单条视频评论时不要使用本技能，改用 `lingtu-social-comments`。
@@ -46,6 +47,7 @@ Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Sk
 
 ## 配置
 
+所有需要认证的请求只使用 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。
 安装不要求认证。执行任务时如果缺少 `LINGTU_API_KEY`，从本 Skill 根目录运行
 `python3 shared/scripts/user_keys.py single bind`，并把生成的授权链接交给用户打开。
 不要索取、展示或保存用户的 API Key。

@@ -61,18 +61,4 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 
 ## 配置
 
-认证只使用 `LINGTU_API_KEY` 环境变量。请在自己的电脑上执行对应命令，不要把真实 Key 发到聊天中。
-
-macOS：
-
-```bash
-export LINGTU_API_KEY='your-api-key'
-```
-
-Windows PowerShell：
-
-```powershell
-$env:LINGTU_API_KEY = "your-api-key"
-```
-
-永久配置时，macOS 把 export 加入 `~/.zshrc`；Windows 执行 `[Environment]::SetEnvironmentVariable("LINGTU_API_KEY", "your-api-key", "User")` 后重新打开终端。
+所有需要认证的请求只使用 `LINGTU_API_KEY` 环境变量，并通过 `x-api-key` 请求头发送。如果缺少，从本 Skill 根目录运行 `python3 shared/scripts/user_keys.py single bind`，并打开生成的授权链接。不要在聊天中发送、展示或保存真实 Key。

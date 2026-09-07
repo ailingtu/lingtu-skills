@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Shared auth helper for Lingtu skills.
 
-Reads LINGTU_API_KEY from the environment. Users must configure the key
-manually before running a skill.
+Reads only LINGTU_API_KEY from the environment. When it is missing, users are
+guided through the account-binding entry point bundled with every API Skill.
 """
 
 from __future__ import annotations

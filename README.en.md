@@ -10,8 +10,10 @@ Source repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-s
 
 ## What's Inside
 
+- **`packages/openapi-guide`** — search the public Lingtu OpenAPI documentation, explain API Key creation and safe use, choose operations, generate or review integration code, and diagnose sanitized errors without holding a key or calling protected business endpoints.
 - **`packages/content-create`** — generate product images, AI video reference packs, ecommerce/UGC selling videos, and viral-remake media through Lingtu AI.
 - **`packages/tkshop-query`** — query TK shop data: daily reports, shop lists, and AI-powered operations Q&A.
+- **`packages/tk-blacklist`** — batch-check TikTok creator uniqueIds against blacklist records, including feedback counts, latest feedback time, and reason.
 - **`packages/social-monitor`** — monitor TikTok/Instagram creators or competitor accounts, fetch account video lists and single-video material metrics, and generate recent-video intelligence reports.
 - **`packages/social-comments`** — download and export comments from one TikTok, Instagram, Douyin, WeChat Channels, or Xiaohongshu video with automatic pagination and JSON output.
 - **`packages/video-understand`** — turn a local video file or a TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, viral remake, or video breakdown.
@@ -22,14 +24,16 @@ Source repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-s
 
 ```text
 packages/
+  openapi-guide/    # OpenAPI documentation & developer integration guidance
   content-create/   # Image & video generation
   tkshop-query/     # TK shop data & analytics
+  tk-blacklist/     # TK creator blacklist lookup
   social-monitor/   # Social creator monitoring and material metrics
   social-comments/  # Social video comment downloads
   video-understand/ # Video understanding & replication-prompt generation
   video-remake/     # Long-video segment remake, review, and merge
   video-publish/    # Batch video publishing and schedules
-shared/scripts/     # Common runtime copied into each built Skill
+shared/scripts/     # Common runtime copied into each business-API Skill
 scripts/            # Single-Skill build tooling
 docs/               # CDN package publishing instructions
 ```
@@ -45,6 +49,15 @@ python3 shared/scripts/user_keys.py single bind
 
 Open the generated authorization URL to complete binding. Never send, display,
 or save an API key in chat.
+
+Every authenticated Lingtu request reads only `LINGTU_API_KEY` and sends it in
+the `x-api-key` header. Every independently distributed business-API Skill bundles
+`shared/scripts/user_keys.py`; it does not depend on the repository root.
+
+`openapi-guide` only reads public documentation. It does not start account binding,
+read or use an API key, or call protected business endpoints. Developers create and
+manage keys at <https://ailingtu.com/api-keys>, then configure credentials in their
+own server-side environment when they run integration code.
 
 To bind a TikTok Shop, or when the shop / shop-product list is empty, ask the user to open this link and finish shop authorization before retrying:
 
@@ -66,6 +79,19 @@ Lingtu TOS/CDN. Use the same guide for upgrades. Do not install from GitHub or
 another skill store.
 
 ## Publish Skills separately to Lingtu CDN
+
+Create a new package with the repository scaffold first:
+
+```bash
+python3 scripts/create_package.py creator-insights \
+  --display-name "Lingtu Creator Insights" \
+  --summary "Analyze creator data and produce actionable insights." \
+  --description "Query creator data through Lingtu AI and turn it into practical analysis."
+```
+
+The default is `auth: lingtu-api-key`. Pass `--auth none` only for a Skill that
+does not call authenticated Lingtu business APIs. Every package must declare its
+authentication mode, and the builder validates the matching runtime and guidance.
 
 Build one self-contained Skill at a time:
 

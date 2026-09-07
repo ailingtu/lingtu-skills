@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGES_DIR = ROOT / "packages"
 SHARED_DIR = ROOT / "shared"
 DEFAULT_OUTPUT = ROOT / "dist" / "packages"
+AUTH_MODES = {"lingtu-api-key", "none"}
 
 PACKAGE_IDS = tuple(
     sorted(path.parent.name for path in PACKAGES_DIR.glob("*/SKILL.md"))
@@ -53,6 +54,7 @@ def parse_frontmatter(skill_md: Path) -> dict[str, str]:
             "name",
             "slug",
             "version",
+            "auth",
             "displayName",
             "summary",
             "description",
@@ -69,7 +71,7 @@ def validate_skill_name(name: str, skill_md: Path) -> None:
 
 
 def validate_metadata(metadata: dict[str, str], skill_md: Path) -> None:
-    required = ("name", "slug", "version", "displayName", "summary", "description", "license")
+    required = ("name", "slug", "version", "auth", "displayName", "summary", "description", "license")
     missing = [key for key in required if not metadata.get(key)]
     if missing:
         raise ValueError(f"{skill_md} 缺少分发必填字段: {', '.join(missing)}")
@@ -80,6 +82,27 @@ def validate_metadata(metadata: dict[str, str], skill_md: Path) -> None:
         raise ValueError(f"{skill_md} 的 name 与 slug 必须一致")
     if not re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", metadata["version"]):
         raise ValueError(f"{skill_md} 的 version 不是合法 semver: {metadata['version']!r}")
+    if metadata["auth"] not in AUTH_MODES:
+        raise ValueError(
+            f"{skill_md} 的 auth 必须是 {', '.join(sorted(AUTH_MODES))} 之一: "
+            f"{metadata['auth']!r}"
+        )
+
+
+def validate_auth_instructions(metadata: dict[str, str], skill_md: Path) -> None:
+    if metadata["auth"] != "lingtu-api-key":
+        return
+    text = skill_md.read_text(encoding="utf-8")
+    required_fragments = (
+        "LINGTU_API_KEY",
+        "x-api-key",
+        "python3 shared/scripts/user_keys.py single bind",
+    )
+    missing = [fragment for fragment in required_fragments if fragment not in text]
+    if missing:
+        raise ValueError(
+            f"{skill_md} 缺少灵途认证/绑定说明: {', '.join(missing)}"
+        )
 
 
 def ignore_entry(_directory: str, names: list[str]) -> set[str]:
@@ -178,6 +201,7 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
 
     metadata = parse_frontmatter(skill_md)
     validate_metadata(metadata, skill_md)
+    validate_auth_instructions(metadata, skill_md)
     skill_name = metadata["name"]
 
     destination = output / skill_name
@@ -188,11 +212,12 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
     if not (destination / "LICENSE").is_file():
         shutil.copy2(ROOT / "LICENSE", destination / "LICENSE")
 
-    # Existing package scripts search their ancestors for shared/scripts. Keeping
-    # it inside each Skill makes the uploaded directory independent of this repo.
-    # video-remake intentionally contains its complete runtime in its own scripts.
-    if package_id != "video-remake":
+    # Authentication behavior is declared by SKILL.md rather than inferred from
+    # a package name, so future API and public-only Skills follow the same path.
+    if metadata["auth"] == "lingtu-api-key":
         shutil.copytree(SHARED_DIR, destination / "shared", ignore=ignore_entry)
+    elif (destination / "shared").exists():
+        raise ValueError(f"{skill_md} 声明 auth: none，但包内包含 shared 认证运行时")
 
     if package_id == "content-create":
         patch_content_create_artifact(destination)
@@ -200,6 +225,13 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
 
     if not (destination / "SKILL.md").is_file():
         raise ValueError(f"{destination} 构建后缺少根目录 SKILL.md")
+    if metadata["auth"] == "lingtu-api-key":
+        for relative_path in (
+            "shared/scripts/lingtu_auth.py",
+            "shared/scripts/user_keys.py",
+        ):
+            if not (destination / relative_path).is_file():
+                raise ValueError(f"{destination} 构建后缺少认证运行时: {relative_path}")
 
     zip_path = output / f"{skill_name}.zip"
     if zip_path.exists():
@@ -247,6 +279,7 @@ def main() -> int:
                 "displayName": metadata["displayName"],
                 "summary": metadata["summary"],
                 "version": metadata["version"],
+                "auth": metadata["auth"],
                 "sha256": archive_sha256,
                 "bytes": archive.stat().st_size,
             },

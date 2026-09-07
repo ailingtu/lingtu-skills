@@ -1,7 +1,8 @@
 ---
 name: lingtu-video-publish
 slug: lingtu-video-publish
-version: 0.2.0
+version: 0.2.1
+auth: lingtu-api-key
 displayName: 灵途批量视频发布
 summary: 按 CSV 排期批量发布 TikTok Shop 带货视频、图文和养号内容。
 description: 灵途批量视频/图文发布 — 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频或带货图文。支持生成 CSV 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、CSV/XLSX 通用读取、dry-run 预览。
@@ -443,6 +444,7 @@ API 映射（多图单挂车）：
 
 ## 配置
 
+所有需要认证的请求只使用 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。
 安装不要求认证。执行任务时如果缺少 `LINGTU_API_KEY`，从本 Skill 根目录运行
 `python3 shared/scripts/user_keys.py single bind`，并把生成的授权链接交给用户打开。
 不要索取、展示或保存用户的 API Key。

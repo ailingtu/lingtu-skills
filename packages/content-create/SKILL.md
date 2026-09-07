@@ -1,7 +1,8 @@
 ---
 name: lingtu-content-create
 slug: lingtu-content-create
-version: 0.3.3
+version: 0.3.4
+auth: lingtu-api-key
 displayName: 灵途内容生成与爆款复刻
 summary: 生成跨境电商商品图、带货视频和爆款复刻素材。
 description: 灵途 AI 内容生成。通过灵途 AI 的任务化接口生成商品主图、AI 视频参考图、电商带货视频、爆款视频复刻等媒体内容。用户提到"生成图片/视频"、"商品图优化"、"参考图三件套"、"带货视频"、"UGC 短视频"、"爆款复刻"（含 TikTok/抖音/小红书/视频号/YouTube/Instagram 源视频），或需要把提示词与多张参考图传给灵途 AI 并轮询任务结果时使用。
@@ -29,6 +30,7 @@ Use only the workflow references needed for the request; do not load all of them
 
 ## Configuration
 
+All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
 Installation does not require authentication. If `LINGTU_API_KEY` is missing when
 running a task, execute `python3 shared/scripts/user_keys.py single bind` from this
 Skill root and give the generated authorization URL to the user. Never ask for,
