@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lingtu TK Blacklist"
+  short_description: "Lingtu TK 达人黑名单批量查询"
+  default_prompt: "Use $lingtu-tk-blacklist to check TikTok creator uniqueIds against the TK blacklist."
