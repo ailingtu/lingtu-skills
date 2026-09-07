@@ -7,6 +7,7 @@ Use this repository when a user asks for Lingtu AI content generation, TK shop d
 - User installation and upgrades must follow https://ailingtu.com/install/skills.md.
 - Do not tell users to install or update Skills with GitHub, `git clone`, `git pull`, or another skill store.
 - GitHub https://github.com/ailingtu/lingtu-skills is the development source only.
+- Before updating or adding a package in the official SkillHub, read `docs/skillhub-release.md` completely. Normal releases must build and publish exactly one package with `--package`; never use an implicit full-directory publish for a single-Skill change.
 
 ## Available Packages
 
