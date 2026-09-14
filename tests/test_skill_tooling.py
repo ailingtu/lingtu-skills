@@ -1,7 +1,10 @@
 import importlib.util
 import re
+import subprocess
+import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -18,9 +21,24 @@ def load_module(name: str, path: Path):
 
 BUILD = load_module("lingtu_build_package", ROOT / "scripts" / "build_package.py")
 CREATE = load_module("lingtu_create_package", ROOT / "scripts" / "create_package.py")
+AUTH = load_module("lingtu_auth", ROOT / "shared" / "scripts" / "lingtu_auth.py")
 
 
 class SkillAuthContractTests(unittest.TestCase):
+    def test_missing_key_reports_configuration_without_binding(self):
+        for value in ("", "   "):
+            with self.subTest(value=value), patch.dict("os.environ", {"LINGTU_API_KEY": value}, clear=True):
+                with self.assertRaises(SystemExit) as error:
+                    AUTH.require_api_key()
+                message = str(error.exception)
+                self.assertIn("https://ailingtu.com/api-keys", message)
+                self.assertIn("LINGTU_API_KEY", message)
+                self.assertNotIn("bind", message)
+
+    def test_configured_key_is_returned_without_output(self):
+        with patch.dict("os.environ", {"LINGTU_API_KEY": " test-placeholder "}, clear=True):
+            self.assertEqual(AUTH.require_api_key(), "test-placeholder")
+
     def test_production_scripts_do_not_reference_alternate_api_key_variables(self):
         roots = [ROOT / "shared" / "scripts"] + [
             path for path in (ROOT / "packages").glob("*/scripts") if path.is_dir()
@@ -47,13 +65,53 @@ class SkillAuthContractTests(unittest.TestCase):
                 with self.subTest(package=package_id):
                     destination, _ = BUILD.build_package(package_id, output)
                     metadata = BUILD.parse_frontmatter(destination / "SKILL.md")
-                    binding_script = destination / "shared" / "scripts" / "user_keys.py"
+                    auth_script = destination / "shared" / "scripts" / "lingtu_auth.py"
                     self.assertEqual(
-                        binding_script.is_file(),
+                        auth_script.is_file(),
                         metadata["auth"] == "lingtu-api-key",
                     )
+                    self.assertFalse((destination / "shared" / "scripts" / "user_keys.py").exists())
+                    for path in destination.rglob("*"):
+                        if path.suffix in {".md", ".py"}:
+                            self.assertNotIn("user_keys.py single bind", path.read_text())
+                            self.assertNotIn("/binduser", path.read_text())
                     if metadata["auth"] == "none":
                         self.assertFalse((destination / "shared").exists())
+                    else:
+                        with patch.dict("os.environ", {"LINGTU_API_KEY": ""}, clear=True):
+                            result = subprocess.run(
+                                [sys.executable, "-c", "from lingtu_auth import require_api_key; require_api_key()"],
+                                cwd=auth_script.parent, capture_output=True, text=True,
+                            )
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn("Command", result.stderr)
+                        self.assertIn("Win + R", result.stderr)
+                        self.assertIn("launchctl setenv", result.stderr)
+                        self.assertIn("SetEnvironmentVariable", result.stderr)
+                        self.assertNotIn("Traceback", result.stderr)
+
+    def test_generation_and_remake_bundles_run_without_sibling_skills(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            remake, _ = BUILD.build_package("video-remake", output)
+            content, _ = BUILD.build_package("content-create", output)
+            self.assertTrue((content / "references/viral-remake-workflow.md").is_file())
+            self.assertTrue((content / "references/video-understand-api.md").is_file())
+            self.assertFalse((remake / "references/viral-remake-workflow.md").exists())
+            self.assertTrue((remake / "references/long-video-workflow.md").is_file())
+            for package, scripts in (
+                (content, ("lingtu_video_understand.py", "lingtu_content_task.py")),
+                (remake, ("lingtu_video_remake.py",)),
+            ):
+                for script in scripts:
+                    result = subprocess.run(
+                        [sys.executable, str(package / "scripts" / script), "--help"],
+                        cwd=package, capture_output=True, text=True,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                for reference in (package / "references").glob("*.md"):
+                    self.assertNotIn("../content-create/", reference.read_text())
+                    self.assertNotIn("../video-understand/", reference.read_text())
 
     def test_scaffold_emits_auth_contract_and_ui_metadata(self):
         with tempfile.TemporaryDirectory() as directory:

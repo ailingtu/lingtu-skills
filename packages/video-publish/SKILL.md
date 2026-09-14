@@ -445,9 +445,11 @@ API 映射（多图单挂车）：
 ## 配置
 
 所有需要认证的请求只使用 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。
-安装不要求认证。执行任务时如果缺少 `LINGTU_API_KEY`，从本 Skill 根目录运行
-`python3 shared/scripts/user_keys.py single bind`，并把生成的授权链接交给用户打开。
+安装不要求认证。执行任务时如果缺少 `LINGTU_API_KEY`，引导用户前往 https://ailingtu.com/api-keys 创建或管理密钥，并在运行 Skill 的环境中配置 `LINGTU_API_KEY` 后重试。不再生成账号绑定授权 URL。
 不要索取、展示或保存用户的 API Key。
+
+缺少密钥时，读取 `shared/references/api-key-setup.md`，向用户展示其操作系统对应的完整步骤（如何打开终端、可复制命令、粘贴密钥、重启应用及生效范围），不要只说“配置环境变量”。已知系统时只展示对应部分；未知时同时提供 Mac 和 Windows。配置由用户在自己电脑上完成，不代为读取或填入真实密钥。
+
 
 环境变量：
 

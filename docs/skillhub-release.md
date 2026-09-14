@@ -14,7 +14,7 @@ Skill 时，先完整阅读本文，再执行构建、上传或官网发布。
   开发源码，不是安装渠道。
 - `auth: lingtu-api-key` 仅用于调用受保护灵途业务接口的 Skill；公开匿名接口使用
   `auth: none`。
-- 官网发布遵循 `www.ailingtu/DEPLOY.md`。不要从有无关改动的工作区直接发布。
+- 普通 Skill 发布只更新 TOS/CDN 和数据库，不部署官网。只有官网代码改动才遵循 `www.ailingtu/DEPLOY.md` 发布 Web。
 
 ## 项目位置
 
@@ -64,14 +64,10 @@ npm run skills:publish -- \
   --package lingtu-tk-blacklist
 ```
 
-发布器会上传最新版 ZIP、带版本号的不可变 ZIP，并只合并更新索引中的目标记录。
+发布器上传并校验不可变版本 ZIP，事务更新数据库，再导出索引并更新兼容下载别名。安装索引使用不可变 URL；其他 Skill 记录保持不变。
 
-7. 如果版本、名称、说明、分类、输入输出或认证要求发生变化，同步 SkillHub 官网
-   展示。当前目录定义位于 `www.ailingtu/composables/useSkillCatalog.ts`，中英文文案
-   位于 `www.ailingtu/locales/zh-CN.json` 和 `en-US.json`。修改前先检查当前实现，
-   避免覆盖正在进行的目录数据化改造。
-8. 按 `www.ailingtu/DEPLOY.md` 完成 Web 构建、提交和发布。只发布 Web，不执行 MCP
-   或数据库迁移。
+7. 发布器现在事务更新 MySQL 目录与版本记录，再从数据库导出 CDN 索引。官网通过 API 动态读取，因此普通 Skill 发布不修改或部署官网代码。完整中英文文案更新可用 `--catalog /path/catalog.json`，也可放在包根目录 `catalog.json`；已有包不传时保留数据库文案，以 SKILL.md 同步中文名称和简介。
+8. 发布命令必须使用经核对的目标数据库环境与 TOS 凭证。默认 npm 命令读取 `.env.local`；生产环境应显式加载对应环境文件，详情见 `www.ailingtu/docs/SKILL_CATALOG.md`。首次数据库切换须先按 `DEPLOY.md` 完成备份确认、建表迁移、目录导入和一次官网部署；未完成前不得执行新版数据库发布器。
 
 ## 新增 Skill
 
@@ -112,8 +108,7 @@ npm run skills:publish -- \
 
 新增包会追加到线上索引；已有记录必须保持原样。
 
-5. 在官网 SkillHub 增加目录卡片、中英文详情、分类和认证要求。构建通过后按官网
-   发布规范上线。
+5. 新 Skill 必须提供完整 `catalog.json`（包内或 `--catalog`）：包括分类、平台、中英文标题/简介/亮点/示例/输入输出/要求。发布器写入数据库后官网自动展示，不再改语言文件或部署官网。
 
 ## 发布后验收
 

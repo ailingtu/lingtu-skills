@@ -26,7 +26,7 @@
 }
 ```
 
-上传的是已经通过 FFmpeg 移除音轨、时长不超过15秒的片段。
+视频参考上传的是已经通过 FFmpeg 移除音轨、时长不超过15秒的片段。也可上传图片与音频参考，字段见下文。
 
 ## Wan3.0 排期创建
 
@@ -47,7 +47,7 @@
 }
 ```
 
-- `seconds` 为片段实际时长向上取整，范围为 1–15。
+- `seconds` 默认取片段实际时长向上取整（1–15），显式传 `-1` 时使用自适应时长。
 - 每个任务只传一个消音参考片段。
 - 每次只创建一个结果。
 - 成功响应通常包含 `data.scheduleId`，也可能包含 `data.taskIds`。
@@ -68,3 +68,25 @@
 - 认证：只使用 `LINGTU_API_KEY`，请求头为 `x-api-key`。不支持其他 Key 环境变量。
 - 响应：JSON，时间戳数组可位于根数组、`segments`、`data.segments`、`result.segments` 或 `data.result.segments`。
 - 每项需要 `start`、`end`、`text`；时间单位为秒。
+
+## 人物与音色参考参数
+
+Wan3.0 可在同一 `params` 中组合以下字段：
+
+```json
+{
+  "prompt": "将 @视频1 中的人物替换为 @图1 中的人物，保持场景与动作，清除画面文字。人物用 @音频1 的音色说指定台词，匹配嘴型。",
+  "model": "wan3.0-video",
+  "seconds": -1,
+  "size": "480x854",
+  "inputReferences": ["https://static.ailingtu.com/file/example.png"],
+  "videoFileIds": [1710086],
+  "audioFileIds": [1710087]
+}
+```
+
+- `inputReferences` 为有序图片 URL 数组；本地图片上传后取 `data.url`。
+- `audioFileIds` 为有序音频文件 ID 数组；本地音频上传后取 `data.id`。
+- 提示词的 `@图1`、`@视频1`、`@音频1` 分别对应各类素材的顺序；每段仍只传一个消音参考视频。
+- `seconds: -1` 表示自适应生成时长，不保证与源片段等长；源视频切片仍不超过15秒。默认维持片段时长向上取整，可显式指定 1–15。
+- 上述组合字段有用户提供的后台实际请求作为依据，公共接口文档亦列出对应字段；本次未在线验证生成效果。Skill 继续调用 `/v1/ai/schedule/create`，只使用 `x-api-key`，不使用后台 Bearer 令牌或公司请求头。

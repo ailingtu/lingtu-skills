@@ -14,7 +14,7 @@ Current package version: `0.2.1`. Remote installers can compare the `version` fi
 
 ## Requirements
 
-All authenticated requests use only the `LINGTU_API_KEY` environment variable and send it as `x-api-key`. If it is missing, run `python3 shared/scripts/user_keys.py single bind` from this Skill root and open the generated authorization URL. Never paste the key into chat or commit it or private business data.
+All authenticated requests use only the `LINGTU_API_KEY` environment variable and send it as `x-api-key`. If it is missing, ask the user to create or manage a key at https://ailingtu.com/api-keys and configure `LINGTU_API_KEY` in the environment running the Skill before retrying. Never paste the key into chat or commit it or private business data.
 
 ## Script Usage
 

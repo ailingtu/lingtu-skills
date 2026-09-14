@@ -11,13 +11,13 @@
 ## 包含哪些能力
 
 - **`packages/openapi-guide`** — 面向开发者查询灵途 OpenAPI 文档、说明 API Key 的获取与安全使用方式、选择接口、生成或审查接入代码和排查脱敏错误；Skill 本身不持有 API Key，也不调用线上业务接口。
-- **`packages/content-create`** — 生成商品图、AI 视频参考图、电商卖货视频、爆款复刻视频等。
+- **`packages/content-create`** — AI 带货视频和 AI 商品图片生成 by 灵途 AI。根据商品素材和提示词生成带货视频、UGC 短视频、商品主图和场景图。
 - **`packages/tkshop-query`** — 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。
 - **`packages/tk-blacklist`** — 按 TikTok uniqueId 批量查询达人黑名单记录、反馈次数、最近反馈时间和原因。
 - **`packages/social-monitor`** — TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据和近期视频情报报告。
 - **`packages/social-comments`** — 下载和导出 TikTok、Instagram、抖音、视频号及小红书单条视频评论，支持自动分页和 JSON 保存。
-- **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、爆款复刻和视频拆解。
-- **`packages/video-remake`** — 长视频转写、按语义切成15秒内无声片段、Wan3.0逐段重绘、逐段确认并合成最终视频；完全独立运行。
+- **`packages/video-understand`** — 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、参考结构生成和视频拆解。
+- **`packages/video-remake`** — 爆款复刻：源视频转写、15秒内语义切片、Wan3.0逐段重绘确认和合成；发行包独立运行。参考结构与商品改编生成属于 `packages/content-create`。
 - **`packages/video-publish`** — TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。
 
 ## 目录结构 
@@ -31,27 +31,23 @@ packages/
   social-monitor/   # 社媒达人/竞品监控、素材数据
   social-comments/  # 社交媒体视频评论下载
   video-understand/ # 视频理解与复刻提示词生成
-  video-remake/     # 长视频分段重绘、确认与合成
+  video-remake/     # 爆款复刻：分段重绘、确认与合成
   video-publish/    # 批量视频发布和排期
 shared/scripts/     # 构建时复制进每个业务 API Skill 的公共运行时
 scripts/            # 单 Skill 构建工具
 docs/               # CDN 单包发布说明
 ```
 
-## 账号绑定
+## API Key 配置
 
-安装 Skill 不要求预先提供密钥。首次执行灵途任务且缺少 `LINGTU_API_KEY` 时，
-Agent 会从已安装 Skill 根目录运行：
-
-```bash
-python3 shared/scripts/user_keys.py single bind
-```
-
-请打开生成的授权链接完成绑定。不要在聊天中发送、展示或保存 API Key。
+安装 Skill 不要求预先提供密钥。执行灵途任务且缺少 `LINGTU_API_KEY` 时，
+请前往 <https://ailingtu.com/api-keys> 创建或管理密钥，并在运行 Skill 的环境中
+配置 `LINGTU_API_KEY` 后重试。不再生成账号绑定授权 URL。
+不要在聊天中发送、展示或保存 API Key。
 
 所有需要认证的灵途请求只读取 `LINGTU_API_KEY`，并通过 `x-api-key`
 请求头发送。每个会调用灵途业务 API 的独立分发包都内置
-`shared/scripts/user_keys.py`，不依赖本仓库的根目录。
+`shared/scripts/lingtu_auth.py`，不依赖本仓库的根目录。
 
 `openapi-guide` 仅访问公开文档，不执行账号绑定，也不读取或使用 API Key。开发者可在 <https://ailingtu.com/api-keys> 登录后创建和管理 API Key；实际运行接入代码时，应在自己的服务端环境中配置凭据。
 
@@ -192,7 +188,9 @@ python3 scripts/lingtu_video_understand.py replicate --file ./clip.mp4
 python3 scripts/lingtu_video_understand.py upload ./clip.mp4
 ```
 
-### 长视频分段复刻（Video Remake）
+### 爆款复刻（Video Remake）
+
+参考结构的视频生成使用 `packages/content-create/references/viral-remake-workflow.md`，先分析源视频，再适配商品并生成。爆款复刻使用 `packages/video-remake/references/long-video-workflow.md`，执行语义分段、逐段重绘确认与合成，下面是该流程的命令示例。
 
 ```bash
 cd packages/video-remake
@@ -247,3 +245,5 @@ python3 scripts/lingtu_video_publish.py publish \
 - API 变更时，先更新对应包的 `references/api.md`，再更新脚本。
 - 每个发布物必须自包含，不得依赖安装目录外的文件。
 - 不要向客户暴露 API 密钥。
+
+完整配置步骤（含 Mac / Windows 打开终端、命令和重启说明）：[API Key 配置指南](shared/references/api-key-setup.md)。

@@ -3,14 +3,14 @@ name: lingtu-tk-blacklist
 slug: lingtu-tk-blacklist
 version: 0.1.1
 auth: none
-displayName: 灵途 TK 达人黑名单查询
-summary: 按 TikTok uniqueId 批量核验达人黑名单记录。
-description: TK 达人黑名单查询。通过灵途 AI 接口按 TikTok uniqueId 批量查询达人是否在黑名单中，返回地区、昵称、反馈次数、最近反馈时间和反馈原因。用户提到"达人黑名单"、"黑名单查询"、"查达人是否拉黑"、"TK 达人风控"、"TikTok 黑名单"或给出多个 uniqueId 要批量核验时使用。
+displayName: TikTok 达人合作黑名单 By 灵途 AI
+summary: 由灵途 AI 提供，批量查询 TikTok 达人合作黑名单及反馈记录，为合作前核验提供参考。
+description: TikTok 达人合作黑名单查询，由灵途 AI 提供。支持通过达人用户名、@handle 或 TikTok 链接，单个或批量查询合作黑名单记录，查看地区、昵称、反馈次数、最近反馈时间及反馈原因，为合作前核验提供参考。用户提到"达人合作黑名单"、"达人黑名单"、"黑名单查询"、"查达人是否拉黑"、"TK 达人风控"、"TikTok 黑名单"或提供达人 uniqueId 要核验黑名单时使用。
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/tk-blacklist
 ---
 
-# TK 达人黑名单查询
+# TikTok 达人合作黑名单 By 灵途 AI
 
 ## Installation and upgrades
 
@@ -18,7 +18,7 @@ Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Sk
 
 ## Overview
 
-Use this Skill to query whether one or more TikTok creators are present in Lingtu's TK blacklist.
+Use this Skill to check one or more TikTok creators against Lingtu AI's creator collaboration blacklist and review feedback records before a potential collaboration.
 
 Supported API flow:
 

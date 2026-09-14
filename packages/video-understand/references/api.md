@@ -87,3 +87,20 @@ To assemble the final prompt, concatenate `result` from every `streaming` event 
 ### Errors
 
 HTTP errors are returned with a JSON body and no SSE frames. Surface the status code and body verbatim.
+
+
+### Client validation and output
+
+The client ignores SSE comments and `event`/`id`/`retry` metadata, accepts `data:`
+with or without a space and multiline JSON, and supports consecutive JSON data lines
+without blank separators as observed on this endpoint. Only `status: "streaming"`
+contributes text. Empty prompts, malformed JSON/UTF-8, non-SSE content types,
+non-text results, changed task ids, unexpected statuses and non-zero error codes
+fail with a non-zero exit. Error-status checks are defensive, not a claim that the
+server currently emits those events. Timeout and connection failures also fail;
+requests are not automatically replayed.
+
+EOF remains the documented completion signal. A clean early EOF after valid text
+cannot be distinguished from normal completion without a server-side completion
+marker or task-status contract. The client does not invent a terminal event requirement.
+Normal text and JSON are buffered until validation passes; raw output is diagnostic.

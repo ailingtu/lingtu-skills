@@ -17,7 +17,7 @@
 
 ## 环境
 
-所有需要认证的请求只使用 `LINGTU_API_KEY` 环境变量，并通过 `x-api-key` 请求头发送。如果缺少，从本 Skill 根目录运行 `python3 shared/scripts/user_keys.py single bind`，并打开生成的授权链接。不要在聊天中发送、展示或保存真实 Key。
+所有需要认证的请求只使用 `LINGTU_API_KEY` 环境变量，并通过 `x-api-key` 请求头发送。如果缺少，引导用户前往 https://ailingtu.com/api-keys 创建或管理密钥，并在运行 Skill 的环境中配置 `LINGTU_API_KEY` 后重试。不要在聊天中发送、展示或保存真实 Key。
 
 可选：
 

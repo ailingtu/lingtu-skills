@@ -11,13 +11,13 @@ Source repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-s
 ## What's Inside
 
 - **`packages/openapi-guide`** — search the public Lingtu OpenAPI documentation, explain API Key creation and safe use, choose operations, generate or review integration code, and diagnose sanitized errors without holding a key or calling protected business endpoints.
-- **`packages/content-create`** — generate product images, AI video reference packs, ecommerce/UGC selling videos, and viral-remake media through Lingtu AI.
+- **`packages/content-create`** — generate product images and ecommerce/UGC selling videos from products, images, and prompts.
 - **`packages/tkshop-query`** — query TK shop data: daily reports, shop lists, and AI-powered operations Q&A.
 - **`packages/tk-blacklist`** — batch-check TikTok creator uniqueIds against blacklist records, including feedback counts, latest feedback time, and reason.
 - **`packages/social-monitor`** — monitor TikTok/Instagram creators or competitor accounts, fetch account video lists and single-video material metrics, and generate recent-video intelligence reports.
 - **`packages/social-comments`** — download and export comments from one TikTok, Instagram, Douyin, WeChat Channels, or Xiaohongshu video with automatic pagination and JSON output.
-- **`packages/video-understand`** — turn a local video file or a TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, viral remake, or video breakdown.
-- **`packages/video-remake`** — independently transcribe a long video, cut it into muted semantic segments of at most 15 seconds, regenerate and approve each segment with Wan3.0, then merge the approved results.
+- **`packages/video-understand`** — turn a local video file or a TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URL into a natural-language replication prompt for remixing, tagging, reference-based generation, or video breakdown.
+- **`packages/video-remake`** — viral video remaking: transcribe the source video, cut it into muted semantic reference segments of at most 15 seconds, regenerate and approve each segment with Wan3.0, then merge. Reference-structure adaptation for products belongs to `packages/content-create`. The distributed package runs independently.
 - **`packages/video-publish`** — batch TikTok / TikTok Shop video publishing, schedule CSV generation, creator/product lookup, and dry-run validation.
 
 ## Repository Layout
@@ -31,28 +31,24 @@ packages/
   social-monitor/   # Social creator monitoring and material metrics
   social-comments/  # Social video comment downloads
   video-understand/ # Video understanding & replication-prompt generation
-  video-remake/     # Long-video segment remake, review, and merge
+  video-remake/     # Viral remake through segment redrawing and merging
   video-publish/    # Batch video publishing and schedules
 shared/scripts/     # Common runtime copied into each business-API Skill
 scripts/            # Single-Skill build tooling
 docs/               # CDN package publishing instructions
 ```
 
-## Account binding
+## API Key configuration
 
-Installing a Skill does not require a key. Before the first Lingtu task, if
-`LINGTU_API_KEY` is unavailable, the agent runs this from the installed Skill root:
-
-```bash
-python3 shared/scripts/user_keys.py single bind
-```
-
-Open the generated authorization URL to complete binding. Never send, display,
-or save an API key in chat.
+Installing a Skill does not require a key. If `LINGTU_API_KEY` is missing when
+running a task, create or manage a key at <https://ailingtu.com/api-keys> and
+configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
+Account-binding URL generation has been removed. Never send, display, or save
+an API key in chat.
 
 Every authenticated Lingtu request reads only `LINGTU_API_KEY` and sends it in
 the `x-api-key` header. Every independently distributed business-API Skill bundles
-`shared/scripts/user_keys.py`; it does not depend on the repository root.
+`shared/scripts/lingtu_auth.py`; it does not depend on the repository root.
 
 `openapi-guide` only reads public documentation. It does not start account binding,
 read or use an API key, or call protected business endpoints. Developers create and
@@ -229,3 +225,5 @@ python3 scripts/lingtu_video_publish.py publish \
 ## Development
 
 Keep core logic in `packages/`; do not restore cross-platform adapters or a bulk installer. When an API contract changes, update `references/api.md` before the script. Every published Skill must be self-contained.
+
+For step-by-step Mac and Windows terminal setup, see the [API Key setup guide](shared/references/api-key-setup.md).

@@ -67,3 +67,9 @@ remake-job/
 
 只有全部片段均为 `approved` 或 `skipped` 时允许合成。按片段原始顺序取每段 `approved_attempt` 指向的文件。合成成功后记录最终输出路径，但不删除任何原始片段或历史生成版本。
 
+
+每个 attempt 可附带 `image_references`（上传后图片 URL 数组）和 `audio_file_ids`（音频 ID 数组）。`seconds` 可为 `-1`（自适应）或 1–15。同一片段重做时，未显式指定的参考素材和时长从上一 attempt 复用；旧任务缺少这些字段时视为空参考列表，默认时长仍由片段计算。以上为 schema_version 1 的可选扩展。
+
+`transcription.source` 另支持 `provided-text-whole-clip`：短视频完整台词对应整个视频区间，不代表逐句 ASR 时间戳；schema_version 仍为 1。
+
+`transcription.source` 另支持 `no-speech`：用户明确声明无台词。`transcript.json` 为 `{"segments": []}`，各片段 `text` 为空，按固定时长切片；空台词是该模式的合法状态，schema_version 仍为 1。

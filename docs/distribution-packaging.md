@@ -16,12 +16,11 @@
 
 新包应先通过 `scripts/create_package.py` 创建。`SKILL.md` 必须显式声明：
 
-- `auth: lingtu-api-key`：调用灵途业务 API，构建时自动内置统一认证与绑定运行时。
+- `auth: lingtu-api-key`：调用灵途业务 API，构建时自动内置统一认证运行时。
 - `auth: none`：不调用需要认证的灵途业务 API，构建产物不包含认证运行时。
 
 构建器会校验该声明。`lingtu-api-key` 包的 `SKILL.md` 还必须包含
-`LINGTU_API_KEY`、`x-api-key` 和 `python3 shared/scripts/user_keys.py single bind`
-引导。
+`LINGTU_API_KEY`、`x-api-key` 和 `https://ailingtu.com/api-keys` 配置引导。
 
 从仓库根目录运行：
 
@@ -58,9 +57,9 @@ references/
 `lingtu-content-create/SKILL.md` 这样的二级路径。
 
 所有会调用灵途业务 API 的产物都内置 `shared/scripts`，以便统一读取
-`LINGTU_API_KEY` 并提供账号绑定入口；安装后不依赖原 monorepo。只读取公开文档的
+`LINGTU_API_KEY`，缺少时提示用户配置该环境变量；安装后不依赖原 monorepo。只读取公开文档的
 `openapi-guide` 不包含认证运行时。内容生成 Skill
-还内置了视频理解脚本，确保爆款视频 URL 的复刻流程不要求用户另外安装
+还内置了视频理解脚本，确保参考视频 URL 的结构改编生成流程不要求用户另外安装
 `lingtu-video-understand`。
 
 ## 发布

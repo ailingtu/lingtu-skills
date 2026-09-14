@@ -26,6 +26,7 @@ PACKAGE_IDS = tuple(
 
 EXCLUDED_NAMES = {
     ".DS_Store",
+    "LICENSE",
     "README.md",
     "Thumbs.db",
 }
@@ -96,12 +97,13 @@ def validate_auth_instructions(metadata: dict[str, str], skill_md: Path) -> None
     required_fragments = (
         "LINGTU_API_KEY",
         "x-api-key",
-        "python3 shared/scripts/user_keys.py single bind",
+        "https://ailingtu.com/api-keys",
+        "shared/references/api-key-setup.md",
     )
     missing = [fragment for fragment in required_fragments if fragment not in text]
     if missing:
         raise ValueError(
-            f"{skill_md} 缺少灵途认证/绑定说明: {', '.join(missing)}"
+            f"{skill_md} 缺少灵途 API Key 配置说明: {', '.join(missing)}"
         )
 
 
@@ -115,37 +117,17 @@ def ignore_entry(_directory: str, names: list[str]) -> set[str]:
     return ignored
 
 
-def patch_content_create_artifact(skill_dir: Path) -> None:
-    """Keep the viral-remake flow usable without a second installed Skill."""
-    video_script = PACKAGES_DIR / "video-understand" / "scripts" / "lingtu_video_understand.py"
-    shutil.copy2(video_script, skill_dir / "scripts" / video_script.name)
-
-    replacements = {
-        "run `packages/video-understand` first": (
-            "run the bundled `scripts/lingtu_video_understand.py` helper first"
-        ),
-        "analyze via `packages/video-understand` when a URL is given": (
-            "analyze via the bundled `scripts/lingtu_video_understand.py` helper when a URL is given"
-        ),
-        "first run `packages/video-understand` (`scripts/lingtu_video_understand.py replicate --url ...`)": (
-            "first run `python3 scripts/lingtu_video_understand.py replicate --url ...`"
-        ),
-    }
-
-    for relative_path in ("SKILL.md", "references/viral-remake-workflow.md"):
-        target = skill_dir / relative_path
-        text = target.read_text(encoding="utf-8")
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        target.write_text(text, encoding="utf-8")
-
-    remaining = []
-    for relative_path in ("SKILL.md", "references/viral-remake-workflow.md"):
-        target = skill_dir / relative_path
-        if "packages/video-understand" in target.read_text(encoding="utf-8"):
-            remaining.append(relative_path)
-    if remaining:
-        raise ValueError(f"content-create 仍包含外部 video-understand 路径: {remaining}")
+def bundle_content_understand_helpers(skill_dir: Path) -> None:
+    """Bundle video analysis for reference-based generation without sibling Skills."""
+    shutil.copy2(PACKAGES_DIR / "video-understand/scripts/lingtu_video_understand.py",
+                 skill_dir / "scripts/lingtu_video_understand.py")
+    shutil.copy2(PACKAGES_DIR / "video-understand/references/api.md",
+                 skill_dir / "references/video-understand-api.md")
+    target = skill_dir / "references/viral-remake-workflow.md"
+    text = target.read_text(encoding="utf-8")
+    text = text.replace("../../video-understand/references/api.md", "video-understand-api.md")
+    text = text.replace("../video-understand/scripts/", "scripts/")
+    target.write_text(text, encoding="utf-8")
 
 
 def patch_portable_documentation(skill_dir: Path) -> None:
@@ -209,9 +191,6 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
         shutil.rmtree(destination)
     shutil.copytree(source, destination, ignore=ignore_entry)
 
-    if not (destination / "LICENSE").is_file():
-        shutil.copy2(ROOT / "LICENSE", destination / "LICENSE")
-
     # Authentication behavior is declared by SKILL.md rather than inferred from
     # a package name, so future API and public-only Skills follow the same path.
     if metadata["auth"] == "lingtu-api-key":
@@ -220,7 +199,7 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
         raise ValueError(f"{skill_md} 声明 auth: none，但包内包含 shared 认证运行时")
 
     if package_id == "content-create":
-        patch_content_create_artifact(destination)
+        bundle_content_understand_helpers(destination)
     patch_portable_documentation(destination)
 
     if not (destination / "SKILL.md").is_file():
@@ -228,7 +207,7 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
     if metadata["auth"] == "lingtu-api-key":
         for relative_path in (
             "shared/scripts/lingtu_auth.py",
-            "shared/scripts/user_keys.py",
+            "shared/references/api-key-setup.md",
         ):
             if not (destination / relative_path).is_file():
                 raise ValueError(f"{destination} 构建后缺少认证运行时: {relative_path}")

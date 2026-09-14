@@ -12,6 +12,7 @@ import secrets
 import string
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -64,6 +65,67 @@ LEGACY_MODEL_ALIASES = {
     "grok-imagine-1": "grok-imagine-1.5",
     "seedance-2.0": "seedance2.0-fast",
 }
+
+DEFAULT_MODELS = {"video": "wan3.0-video", "image": "gpt-image-2"}
+
+
+def model_preferences_path() -> Path:
+    return Path.home() / ".config" / "lingtu" / "content-create.json"
+
+
+def read_model_preferences() -> dict[str, str]:
+    path = model_preferences_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"Cannot read model preferences at {path}: {exc}") from exc
+    if not isinstance(data, dict) or set(data) - set(DEFAULT_MODELS):
+        raise ValueError(f"Invalid model preferences at {path}; expected image/video model names.")
+    for kind, model in data.items():
+        supported = IMAGE_MODELS if kind == "image" else VIDEO_MODELS
+        if not isinstance(model, str) or model not in supported:
+            raise ValueError(f"Invalid {kind} model in {path}; correct the saved configuration.")
+    return data
+
+
+def selected_model(kind: str, explicit: str | None, *, poll_only: bool = False) -> str | None:
+    if explicit:
+        return resolve_model_name(explicit)
+    # A new preference must never filter results from an existing task.
+    if poll_only:
+        return None
+    if kind not in DEFAULT_MODELS:
+        raise ValueError(f"Unsupported kind '{kind}'. Use image or video.")
+    return read_model_preferences().get(kind, DEFAULT_MODELS[kind])
+
+
+def update_model_preference(kind: str, model: str | None) -> None:
+    if kind not in DEFAULT_MODELS:
+        raise ValueError(f"Unsupported kind '{kind}'. Use image or video.")
+    if model is not None:
+        supported = IMAGE_MODELS if kind == "image" else VIDEO_MODELS
+        if model not in supported:
+            raise ValueError(f"Unknown {kind} model '{model}'.")
+    data = read_model_preferences()
+    if model is None:
+        data.pop(kind, None)
+    else:
+        data[kind] = model
+    path = model_preferences_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(data, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
 
 ASSET_KEYS = {
     "url",
@@ -457,15 +519,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        help="Lingtu AI model name. Video: wan3.0-video (default), gemini-omni-video, veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
+        help="One-time model override; does not change saved preferences. Without it use the saved model, then the built-in default. Video: wan3.0-video (default), gemini-omni-video, veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
     )
+    preferences = parser.add_mutually_exclusive_group()
+    preferences.add_argument("--show-default-model", action="store_true", help="Show the saved or built-in model for --kind; no API call.")
+    preferences.add_argument("--set-default-model", metavar="MODEL", help="Save a default model for --kind for future conversations, then exit; no generation.")
+    preferences.add_argument("--reset-default-model", action="store_true", help="Remove the saved model for --kind and restore the built-in default, then exit.")
     parser.add_argument(
         "--seconds",
         type=int,
         help="Video duration in seconds. wan3.0-video accepts -1 (adaptive) or 1-30 and defaults to 15; other defaults vary by model.",
     )
-    parser.add_argument("--size", default="720x1280", help="Video size, such as 720x1280 or 1280x720.")
-    parser.add_argument("--aspect-ratio", default="1:1", help="Image aspect ratio, such as 1:1 or 9:16.")
+    parser.add_argument("--size", default="480x854", help="Video size; defaults to portrait 480p (480x854). Use 854x480 for landscape 480p.")
+    parser.add_argument("--aspect-ratio", default="9:16", help="Image aspect ratio; defaults to portrait 9:16. Override for other ratios such as 1:1.")
     parser.add_argument("--nums", type=int, default=1, help="Number of outputs to create.")
     parser.add_argument("--watermark", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument(
@@ -565,7 +631,7 @@ def validate_model_args(args: argparse.Namespace) -> None:
             raise ValueError(
                 f"Model '{model}' does not support --seconds {args.seconds}. Allowed: {allowed}."
             )
-        if args.size_was_set and args.size not in allowed_sizes:
+        if args.size not in allowed_sizes:
             allowed = ", ".join(sorted(allowed_sizes))
             raise ValueError(
                 f"Model '{model}' does not support --size {args.size}. Allowed: {allowed}."
@@ -821,7 +887,23 @@ def poll_schedule(args: argparse.Namespace, api_key: str, schedule_id: Any, task
 
 def main() -> int:
     args = parse_args()
+    args.kind = args.kind.lower()
     poll_only = bool(args.poll_task_id or args.poll_schedule_id)
+    if args.show_default_model or args.set_default_model is not None or args.reset_default_model:
+        if poll_only or args.prompt or args.model or args.reference_image or args.reference_video or args.reference_audio:
+            print_error({"error": "Model preference commands cannot be combined with generation or polling inputs."}, stderr=True)
+            return 2
+        try:
+            if args.set_default_model is not None:
+                update_model_preference(args.kind, resolve_model_name(args.set_default_model))
+            elif args.reset_default_model:
+                update_model_preference(args.kind, None)
+            print(json.dumps({"kind": args.kind, "model": selected_model(args.kind, None),
+                              "config_path": str(model_preferences_path())}, ensure_ascii=False))
+            return 0
+        except (ValueError, OSError) as exc:
+            print_error({"error": str(exc)}, stderr=True)
+            return 2
     if args.poll_task_id and args.poll_schedule_id:
         print_error({"error": "Use only one of --poll-task-id or --poll-schedule-id."}, stderr=True)
         return 2
@@ -832,10 +914,11 @@ def main() -> int:
     resolved_mode = resolve_create_mode(args)
     if not args.client_task_id and not poll_only:
         args.client_task_id = generate_client_task_id()
-    if args.model:
-        args.model = resolve_model_name(args.model)
-    elif not poll_only:
-        args.model = "gpt-image-2" if args.kind.lower() == "image" else "wan3.0-video"
+    try:
+        args.model = selected_model(args.kind, args.model, poll_only=poll_only)
+    except (ValueError, OSError) as exc:
+        print_error({"error": str(exc)}, stderr=True)
+        return 2
     if args.model and not poll_only:
         try:
             validate_model_args(args)

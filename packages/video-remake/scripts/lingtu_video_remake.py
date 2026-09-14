@@ -486,7 +486,7 @@ def require_lingtu_key() -> str:
         raise WorkflowError(str(exc)) from exc
 
 
-def upload_video(path: Path, base_url: str, upload_path: str, api_key: str) -> int:
+def upload_media(path: Path, base_url: str, upload_path: str, api_key: str, *, image: bool = False) -> int | str:
     body, boundary = multipart_body({}, path)
     response = request_json(
         "POST",
@@ -501,6 +501,11 @@ def upload_video(path: Path, base_url: str, upload_path: str, api_key: str) -> i
     code = response.get("code")
     if code not in (None, 0, "0"):
         raise WorkflowError(f"上传失败：{response.get('message') or response}")
+    if image:
+        url = first_value(response, ("data.url", "url"))
+        if not isinstance(url, str) or urllib.parse.urlparse(url).scheme not in {"http", "https"}:
+            raise WorkflowError("图片上传响应缺少合法 data.url。")
+        return url
     file_id = first_value(response, ("data.id", "id"))
     try:
         normalized = int(file_id)
@@ -509,6 +514,37 @@ def upload_video(path: Path, base_url: str, upload_path: str, api_key: str) -> i
     if normalized <= 0:
         raise WorkflowError(f"上传响应包含无效 data.id：{file_id}")
     return normalized
+
+
+def upload_video(path: Path, base_url: str, upload_path: str, api_key: str) -> int:
+    return int(upload_media(path, base_url, upload_path, api_key))
+
+
+def validate_references(values: list[str], *, image: bool) -> list[str]:
+    result = []
+    for value in values:
+        if image and urllib.parse.urlparse(value).scheme in {"http", "https"}:
+            result.append(value)
+        elif not image and value.isdecimal() and int(value) > 0:
+            result.append(value)
+        else:
+            path = Path(value).expanduser().resolve()
+            if not path.is_file():
+                raise WorkflowError(f"参考素材不存在或格式无效：{value}")
+            result.append(str(path))
+    return result
+
+
+def resolve_references(values: list[str], args: argparse.Namespace, api_key: str, *, image: bool) -> list:
+    result = []
+    for value in values:
+        if image and urllib.parse.urlparse(value).scheme in {"http", "https"}:
+            result.append(value)
+        elif not image and value.isdecimal():
+            result.append(int(value))
+        else:
+            result.append(upload_media(Path(value), args.base_url, args.upload_path, api_key, image=image))
+    return result
 
 
 def client_task_id() -> str:
@@ -526,6 +562,8 @@ def create_schedule(
     size: str,
     prompt: str,
     name: str,
+    image_references: list[str] | None = None,
+    audio_file_ids: list[int] | None = None,
 ) -> tuple[str, list[str], str]:
     task_id = client_task_id()
     payload = {
@@ -542,6 +580,10 @@ def create_schedule(
         "nums": 1,
         "name": name,
     }
+    if image_references:
+        payload["params"]["inputReferences"] = image_references
+    if audio_file_ids:
+        payload["params"]["audioFileIds"] = audio_file_ids
     response = request_json("POST", build_url(base_url, create_path), api_key=api_key, payload=payload)
     if not isinstance(response, dict):
         raise WorkflowError("创建接口返回类型不是 JSON 对象。")
@@ -670,18 +712,25 @@ def generate_segment(job_dir: Path, manifest: dict[str, Any], segment: dict[str,
     source_clip = Path(str(segment.get("source_clip") or ""))
     if not source_clip.is_file():
         raise WorkflowError(f"消音参考片段不存在：{source_clip}")
+    previous = (segment.get("attempts") or [{}])[-1]
+    images = validate_references(
+        args.reference_image if args.reference_image is not None else previous.get("image_references", []), image=True)
+    audio = validate_references(
+        args.reference_audio if args.reference_audio is not None else [str(v) for v in previous.get("audio_file_ids", [])], image=False)
     api_key = require_lingtu_key()
     info = probe_media(source_clip)
-    size = resolve_size(info, args.size)
-    seconds = max(1, min(15, math.ceil(float(segment["duration"]))))
+    size = resolve_size(info, args.size or previous.get("size"))
+    seconds = args.seconds if args.seconds is not None else previous.get("seconds", max(1, min(15, math.ceil(float(segment["duration"])))))
     attempt_number = len(segment.get("attempts") or []) + 1
-    prompt = args.prompt or manifest.get("prompt") or DEFAULT_PROMPT
+    prompt = args.prompt or previous.get("prompt") or manifest.get("prompt") or DEFAULT_PROMPT
     if getattr(args, "allow_regenerate", False):
         previous = (segment.get("attempts") or [])[-1] if segment.get("attempts") else {}
         note = previous.get("review_note")
         if note:
             prompt = f"{prompt}\nUser correction for this segment: {note}"
 
+    image_references = resolve_references(images, args, api_key, image=True)
+    audio_file_ids = resolve_references(audio, args, api_key, image=False)
     file_id = upload_video(source_clip, args.base_url, args.upload_path, api_key)
     schedule_id, task_ids, task_id = create_schedule(
         base_url=args.base_url,
@@ -692,6 +741,8 @@ def generate_segment(job_dir: Path, manifest: dict[str, Any], segment: dict[str,
         size=size,
         prompt=prompt,
         name=f"{manifest['job_id']}-{segment['id']}-attempt-{attempt_number}",
+        image_references=image_references,
+        audio_file_ids=audio_file_ids,
     )
     attempt = {
         "number": attempt_number,
@@ -699,6 +750,8 @@ def generate_segment(job_dir: Path, manifest: dict[str, Any], segment: dict[str,
         "schedule_id": schedule_id,
         "task_ids": task_ids,
         "reference_file_id": file_id,
+        "image_references": image_references,
+        "audio_file_ids": audio_file_ids,
         "seconds": seconds,
         "size": size,
         "prompt": prompt,
@@ -716,6 +769,42 @@ def generate_segment(job_dir: Path, manifest: dict[str, Any], segment: dict[str,
     return poll_attempt(job_dir, manifest, segment, args)
 
 
+def prepare_transcript(args: argparse.Namespace, source: Path, job_dir: Path, duration: float) -> tuple[list[dict[str, Any]], str]:
+    if args.no_speech:
+        return [], "no-speech"
+    text = args.script_text
+    script_file = args.script_file
+    if args.transcript:
+        path = args.transcript.expanduser().resolve()
+        if path.suffix.lower() == ".txt":
+            script_file = path
+        else:
+            return load_transcript(path), path.suffix.lower().lstrip(".")
+    if script_file:
+        text = script_file.expanduser().resolve().read_text(encoding="utf-8-sig")
+    if text is not None:
+        text = text.strip()
+        if not text:
+            raise WorkflowError("台词不能为空。")
+        if duration <= min(15.0, args.max_seconds):
+            # This is a whole-clip interval, not inferred sentence timestamps.
+            return [{"start": 0.0, "end": duration, "text": text}], "provided-text-whole-clip"
+    if args.whisper:
+        return transcribe_whisper(source, job_dir, args.whisper_model, args.language), "whisper"
+    if args.asr_url:
+        return transcribe_http(source, args.asr_url, args.asr_model, args.language), "http"
+    if shutil.which("whisper"):
+        return transcribe_whisper(source, job_dir, args.whisper_model, args.language), "whisper"
+    asr_url = os.getenv("LINGTU_ASR_URL")
+    if asr_url:
+        return transcribe_http(source, asr_url, args.asr_model, args.language), "http"
+    raise WorkflowError(
+        "无法自动转写：本机未安装 Whisper CLI，也未配置 LINGTU_ASR_URL。"
+        "可安装可用的本地转写工具或配置已知 ASR 服务后重试；已有 JSON/SRT/VTT 可直接复用。"
+        "不超过单段上限的短视频，已有完整台词时可用 --script-file 台词.txt 或 --script-text 提供，免转写。"
+    )
+
+
 def command_prepare(args: argparse.Namespace) -> None:
     source = args.source.expanduser().resolve()
     if not source.is_file():
@@ -726,19 +815,7 @@ def command_prepare(args: argparse.Namespace) -> None:
     job_dir.mkdir(parents=True, exist_ok=True)
     info = probe_media(source)
 
-    transcript_source: str
-    if args.transcript:
-        transcript_file = args.transcript.expanduser().resolve()
-        transcript = load_transcript(transcript_file)
-        transcript_source = transcript_file.suffix.lower().lstrip(".")
-    elif args.asr_url:
-        transcript = transcribe_http(source, args.asr_url, args.asr_model, args.language)
-        transcript_source = "http"
-    elif args.whisper:
-        transcript = transcribe_whisper(source, job_dir, args.whisper_model, args.language)
-        transcript_source = "whisper"
-    else:
-        raise WorkflowError("必须提供 --transcript、--whisper 或 --asr-url 之一。")
+    transcript, transcript_source = prepare_transcript(args, source, job_dir, info["duration"])
 
     transcript_path = job_dir / "transcript.json"
     atomic_write_json(transcript_path, {"segments": transcript})
@@ -982,6 +1059,12 @@ def command_status(args: argparse.Namespace) -> None:
     })
 
 
+def add_reference_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--reference-image", action="append", help="Image local path or HTTP(S) URL; repeat in @图 order.")
+    parser.add_argument("--reference-audio", action="append", help="Voice reference local path or positive file id; repeat in @音频 order.")
+    parser.add_argument("--seconds", type=int, choices=[-1, *range(1, 16)], help="-1 for adaptive duration; otherwise 1-15. Default: rounded segment duration.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Long-video transcription, muted segmentation, Wan3.0 remake, review, and merge.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -991,9 +1074,12 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--job-dir", type=Path, required=True)
     prepare.add_argument("--job-id")
     transcription = prepare.add_mutually_exclusive_group()
-    transcription.add_argument("--transcript", type=Path, help="Timestamped JSON, SRT, or VTT transcript.")
+    transcription.add_argument("--no-speech", action="store_true", help="Explicitly no dialogue: skip ASR and cut at max-seconds intervals.")
+    transcription.add_argument("--transcript", type=Path, help="Timestamped JSON/SRT/VTT, or plain TXT for a single short clip.")
+    transcription.add_argument("--script-file", type=Path, help="UTF-8 plain dialogue; short clips skip ASR.")
+    transcription.add_argument("--script-text", help="Complete dialogue; short clips skip ASR.")
     transcription.add_argument("--whisper", action="store_true", help="Use an installed Whisper CLI.")
-    transcription.add_argument("--asr-url", default=os.getenv("LINGTU_ASR_URL"))
+    transcription.add_argument("--asr-url", help="Explicit HTTP ASR service; otherwise auto-detect local Whisper, then LINGTU_ASR_URL.")
     prepare.add_argument("--whisper-model", default="small")
     prepare.add_argument("--asr-model", default=os.getenv("LINGTU_ASR_MODEL"))
     prepare.add_argument("--language")
@@ -1008,6 +1094,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--segment")
     generate.add_argument("--prompt")
     generate.add_argument("--size")
+    add_reference_args(generate)
     add_network_args(generate)
     generate.set_defaults(func=command_generate, allow_regenerate=False)
 
@@ -1016,6 +1103,7 @@ def build_parser() -> argparse.ArgumentParser:
     regenerate.add_argument("--segment", required=True)
     regenerate.add_argument("--prompt")
     regenerate.add_argument("--size")
+    add_reference_args(regenerate)
     add_network_args(regenerate)
     regenerate.set_defaults(func=command_regenerate, allow_regenerate=True)
 

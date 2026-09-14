@@ -1,112 +1,33 @@
 ---
 name: lingtu-video-remake
 slug: lingtu-video-remake
-version: 0.1.1
+version: 0.2.4
 auth: lingtu-api-key
-displayName: 灵途长视频分段复刻
-summary: 转写长视频，按语义切成15秒内片段，经Wan3.0逐段重绘确认后合成。
-description: 长视频分段复刻与重绘。将本地长视频识别为带时间戳文字，按语义边界切成不超过15秒的片段，消除原音频，逐段上传给 Wan3.0 生成；每一段都必须由用户预览确认或明确跳过，全部处理完成后再合成为最终视频。用户提到“长视频复刻”“分段重绘”“识别文字后切片生成”“Wan3.0逐段生成并合成”时使用。不用于普通文生视频、视频内容总结或仅提取字幕。
+displayName: 灵途爆款复刻
+summary: 将源视频按语义分段，用 Wan3.0 逐段重绘、确认并合成爆款复刻视频。
+description: 爆款复刻：保留源视频顺序，有台词时转写并按语义切片，明确无台词时直接按最多15秒切片，用 Wan3.0 逐段重绘，经用户逐段确认或跳过后合成。用户要求爆款复刻、视频分段重绘或长视频复刻时使用。参考源视频的脚本、镜头、节奏，结合商品和卖点生成新视频属于 lingtu-content-create；仅分析视频或提取提示词使用 lingtu-video-understand。
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/video-remake
 ---
 
-# 长视频分段复刻
+# 灵途爆款复刻
 
-## 安装与升级
+## 安装与认证
 
-按照 https://ailingtu.com/install/skills.md 操作，不要从 GitHub 或其他技能商店安装或升级本 Skill。
+按照 https://ailingtu.com/install/skills.md 安装或升级。
+所有认证请求只读取 `LINGTU_API_KEY`，通过 `x-api-key` 发送。任务需要认证但缺少 Key 时，引导用户前往 https://ailingtu.com/api-keys 创建或管理密钥，并在运行 Skill 的环境中配置 `LINGTU_API_KEY` 后重试；不要索取、展示或保存 API Key。
 
-使用 `scripts/lingtu_video_remake.py` 完成转写、语义切片、消音、Wan3.0 逐段生成、人工确认和最终合成。此 Skill 完全自包含，不调用或导入其他 Skill。
+缺少密钥时，读取 `shared/references/api-key-setup.md`，向用户展示其操作系统对应的完整步骤（如何打开终端、可复制命令、粘贴密钥、重启应用及生效范围），不要只说“配置环境变量”。已知系统时只展示对应部分；未知时同时提供 Mac 和 Windows。配置由用户在自己电脑上完成，不代为读取或填入真实密钥。
 
-## 前置条件
 
-- Python 3.10 或更高版本。
-- `ffmpeg` 与 `ffprobe` 必须在 `PATH` 中。
-- Wan3.0 生成和 HTTP ASR 认证都只使用 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。缺少时从本 Skill 根目录运行 `python3 shared/scripts/user_keys.py single bind`，把生成的授权链接交给用户打开；不要索取、展示或保存用户的 API Key。
-- 转写需要带时间戳的数据。优先使用用户提供的 JSON、SRT 或 VTT；也可使用本机已安装的 Whisper CLI，或用户配置的 HTTP ASR 服务。
+## 工作流与边界
 
-修改 Lingtu 接口路径、任务字段或状态映射前，先读取 `references/api.md`。处理或恢复任务状态前，读取 `references/job-schema.md`。
+- **爆款复刻**：读取 `references/long-video-workflow.md`，明确无台词时使用 `prepare --no-speech` 按最多15秒切片，跳过转写；短视频已有完整台词时直接准备整段；其余需要切片或提取台词时自动转写，再按语义切片，使用 Wan3.0 逐段重绘，最后按原顺序合成。每段不超过15秒，生成结果须由用户逐段确认或明确跳过后才处理下一段。此流程也适用于短视频，不按源视频时长切换到视频生成。
+- **参考结构的视频生成**：参考源视频的脚本、镜头或节奏，结合自己的商品和卖点生成新视频，使用 `lingtu-content-create` 的 `references/viral-remake-workflow.md`。
+- **只要视频分析、总结、打标或提示词**：使用 `lingtu-video-understand`。
 
-## 工作流
+人物照片、音色参考与指定台词可按流程文档“组合照片、声音与台词”接入，生成时支持 `--reference-image`、`--reference-audio`、`--seconds -1` 和 `--prompt`。
 
-1. 使用 `prepare` 创建任务。它取得带时间戳转写、规划不超过15秒的连续片段，并通过 FFmpeg 生成无音轨参考视频。
-2. 向用户展示片段数量、时间范围与对应文字。转写明显错误或切点不合理时先停止，不提交付费生成。
-3. 使用 `generate` 只生成当前一段。不要并行提交后续片段，也不要在用户确认当前结果前自动生成下一段。
-4. 展示生成视频、片段编号、原始时间范围、对应文字和尝试次数，等待用户选择：
-   - 满意：运行 `approve`。
-   - 不满意：运行 `reject --note ...`，得到明确修改意见后才运行 `regenerate`。
-   - 不需要：只有用户明确要求时运行 `skip`。
-5. 当前段 `approved` 或 `skipped` 后，才处理下一段。
-6. 所有片段均为 `approved` 或 `skipped` 后运行 `merge`。脚本会统一编码、分辨率、帧率和音轨，再按原顺序合成。
+本包自带分段重绘脚本和认证运行时，无需另装其他 Skill。前置依赖、转写来源、逐段确认和恢复规则见流程文档。修改接口前读取 `references/api.md`；恢复任务状态前读取 `references/job-schema.md`。
 
-任何创建响应已返回 `schedule_id` 的任务都必须通过 `poll` 恢复。轮询超时、网络中断或脚本退出不代表生成失败，不得因此创建新任务。只有 API 明确返回失败且用户要求重做时，才运行 `regenerate`。
-
-## 常用命令
-
-从带时间戳 JSON、SRT 或 VTT 开始：
-
-```bash
-python3 scripts/lingtu_video_remake.py prepare ./source.mp4 \
-  --transcript ./source.json \
-  --job-dir ./remake-job
-```
-
-使用本机 Whisper CLI：
-
-```bash
-python3 scripts/lingtu_video_remake.py prepare ./source.mp4 \
-  --whisper \
-  --whisper-model small \
-  --job-dir ./remake-job
-```
-
-使用自定义 HTTP ASR 服务：
-
-```bash
-python3 scripts/lingtu_video_remake.py prepare ./source.mp4 \
-  --asr-url "$LINGTU_ASR_URL" \
-  --job-dir ./remake-job
-```
-
-逐段生成和确认：
-
-```bash
-python3 scripts/lingtu_video_remake.py generate --job-dir ./remake-job
-python3 scripts/lingtu_video_remake.py approve --job-dir ./remake-job --segment segment-001
-python3 scripts/lingtu_video_remake.py generate --job-dir ./remake-job
-```
-
-拒绝并明确重做：
-
-```bash
-python3 scripts/lingtu_video_remake.py reject \
-  --job-dir ./remake-job --segment segment-002 \
-  --note "人物动作不连贯，保持参考视频的动作节奏"
-
-python3 scripts/lingtu_video_remake.py regenerate \
-  --job-dir ./remake-job --segment segment-002
-```
-
-恢复已有生成任务：
-
-```bash
-python3 scripts/lingtu_video_remake.py poll \
-  --job-dir ./remake-job --segment segment-002
-```
-
-检查状态并合成：
-
-```bash
-python3 scripts/lingtu_video_remake.py status --job-dir ./remake-job
-python3 scripts/lingtu_video_remake.py merge \
-  --job-dir ./remake-job --output ./final-remake.mp4
-```
-
-默认仅消除上传给 Wan3.0 的原视频音轨，最终合成会保留生成视频的音频。用户要求最终静音时给 `merge` 加 `--final-mute`。
-
-## 输出要求
-
-- `prepare` 后报告任务目录、转写来源、片段总数和片段表。
-- `generate` 或 `poll` 完成后，优先用本地绝对路径渲染生成视频，并清楚标明等待确认的片段。
-- `merge` 后返回最终视频的本地绝对路径。
-- API 明确失败时报告服务端状态和错误。未知错误时附上：`生成失败或遇到未知问题，请联系开发者：微信 yh8000m`。
+不默认要求用户上传时间戳文件。完整台词且视频不超过单段上限时使用 `prepare --script-file` 或 `--script-text`，无须 ASR。明确无台词时使用 `--no-speech`；不能将“用户未提供台词”视为“视频无台词”。其余情况默认检测本机 Whisper，再使用已配置的 HTTP ASR；没有可用方式时说明缺失能力，不虚构时间戳。模拟任务禁止启动 ASR、下载模型或调用在线接口。

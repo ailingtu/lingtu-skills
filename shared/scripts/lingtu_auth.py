@@ -1,46 +1,15 @@
 #!/usr/bin/env python3
-"""Shared auth helper for Lingtu skills.
-
-Reads only LINGTU_API_KEY from the environment. When it is missing, users are
-guided through the account-binding entry point bundled with every API Skill.
-"""
+"""Read only LINGTU_API_KEY from the environment for authenticated Lingtu requests."""
 
 from __future__ import annotations
 
 import os
-import secrets
-import urllib.parse
-
-
-DEFAULT_SITE_URL = "https://app.ailingtu.com"
+from pathlib import Path
 
 
 def require_api_key() -> str:
     key = os.environ.get("LINGTU_API_KEY", "").strip()
     if not key:
-        raise SystemExit(
-            "LINGTU_API_KEY environment variable is not set. "
-            "Run `python3 shared/scripts/user_keys.py single bind` from the Skill root "
-            "and open the generated authorization URL."
-        )
+        guide = Path(__file__).resolve().parents[1] / "references" / "api-key-setup.md"
+        raise SystemExit(guide.read_text(encoding="utf-8"))
     return key
-
-
-def build_single_user_bind_url(
-    channel: str = "local",
-    user_id: str = "",
-    remark: str = "",
-) -> str:
-    """Build the browser URL used to bind a local user to Lingtu AI."""
-    source = (channel or "local").strip().lower()
-    local_user_id = (user_id or "").strip()
-    if not local_user_id:
-        local_user_id = f"local_{secrets.token_urlsafe(18).replace('-', '_')}"
-    params = {
-        "token": secrets.token_urlsafe(16),
-        "platform": source,
-        "userid": local_user_id,
-    }
-    if remark:
-        params["remark"] = remark
-    return f"{DEFAULT_SITE_URL}/binduser?{urllib.parse.urlencode(params)}"

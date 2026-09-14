@@ -33,11 +33,13 @@ Read `references/api.md` before changing endpoint paths, request fields, respons
 
 All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
 Installation does not require authentication. If `LINGTU_API_KEY` is missing when
-running a task, execute `python3 shared/scripts/user_keys.py single bind` from this
-Skill root and give the generated authorization URL to the user. Never ask for,
-display, or store their API key.
+running a task, ask the user to create or manage a key at https://ailingtu.com/api-keys
+and configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
+Never ask for, display, or store their API key in chat. Do not generate account-binding URLs.
 
 TikTok Shop 店铺绑定入口是 https://app.ailingtu.com/teamshop 。当用户想绑定 TikTok 店铺、查询不到店铺、或店铺列表为空时，明确让用户打开这个链接完成店铺绑定，然后再执行 `list-shops` 或日报查询。
+
+缺少密钥时，读取 `shared/references/api-key-setup.md`，向用户展示其操作系统对应的完整步骤（如何打开终端、可复制命令、粘贴密钥、重启应用及生效范围），不要只说“配置环境变量”。已知系统时只展示对应部分；未知时同时提供 Mac 和 Windows。配置由用户在自己电脑上完成，不代为读取或填入真实密钥。
 
 Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
 

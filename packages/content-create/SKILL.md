@@ -1,16 +1,16 @@
 ---
 name: lingtu-content-create
 slug: lingtu-content-create
-version: 0.3.4
+version: 0.4.2
 auth: lingtu-api-key
-displayName: 灵途内容生成与爆款复刻
-summary: 生成跨境电商商品图、带货视频和爆款复刻素材。
-description: 灵途 AI 内容生成。通过灵途 AI 的任务化接口生成商品主图、AI 视频参考图、电商带货视频、爆款视频复刻等媒体内容。用户提到"生成图片/视频"、"商品图优化"、"参考图三件套"、"带货视频"、"UGC 短视频"、"爆款复刻"（含 TikTok/抖音/小红书/视频号/YouTube/Instagram 源视频），或需要把提示词与多张参考图传给灵途 AI 并轮询任务结果时使用。
+displayName: AI 带货视频和 AI 商品图片生成 by 灵途 AI
+summary: 用灵途 AI 生成电商带货视频、UGC 短视频、商品主图和场景图。
+description: AI 带货视频和 AI 商品图片生成，由灵途 AI 提供。根据商品图片、卖点和提示词生成电商带货视频、UGC 短视频、商品主图、卖点细节图、生活场景图。用户要生成商品图片、优化商品图或制作带货视频时使用。也支持参考源视频结构，结合商品与卖点生成新视频。爆款复刻（语义分段、逐段重绘确认与合成）使用 lingtu-video-remake。
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/content-create
 ---
 
-# 灵途 AI 内容生成（图片 / 视频 / 爆款复刻）
+# AI 带货视频和 AI 商品图片生成 by 灵途 AI
 
 ## Installation and upgrades
 
@@ -18,13 +18,13 @@ Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Sk
 
 ## Overview
 
+面向电商商家与内容创作者的 AI 带货视频和 AI 商品图片生成 Skill，由灵途 AI 提供。从商品图片、卖点和提示词出发，生成电商带货视频、UGC 短视频、商品主图、卖点细节图和生活场景图。
+
 Use Lingtu AI's shared schedule API to create generated media from a prompt and optional reference images. Treat image and video creation as variants of the same workflow: submit a schedule creation request, poll by the returned schedule id, then return the generated assets.
 
 This skill also covers product-content workflows around the API:
 
-- Optimizing messy product photos into a standard 3-image AI video reference pack. Read `references/product-reference-workflow.md` when the user gives product images and asks to choose, clean up, optimize, or prepare references for AI video.
 - Generating ecommerce selling videos from product references. Read `references/ecommerce-video-workflow.md` when the user asks for selling videos, UGC-style videos, target-market scripts, multiple variants, or short product ads.
-- Remaking viral product videos. Read `references/viral-remake-workflow.md` when the user provides a viral video (TikTok / Douyin / Xiaohongshu / WeChat Channels / YouTube / Instagram URL or local file), asks to copy a structure, or wants "爆款复刻". For URL sources, run `packages/video-understand` first to get the replication brief.
 
 Use only the workflow references needed for the request; do not load all of them by default.
 
@@ -32,17 +32,24 @@ Use only the workflow references needed for the request; do not load all of them
 
 All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
 Installation does not require authentication. If `LINGTU_API_KEY` is missing when
-running a task, execute `python3 shared/scripts/user_keys.py single bind` from this
-Skill root and give the generated authorization URL to the user. Never ask for,
-display, or store their API key.
+running a task, ask the user to create or manage a key at https://ailingtu.com/api-keys
+and configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
+Never ask for, display, or store their API key in chat. Do not generate account-binding URLs.
+
+缺少密钥时，读取 `shared/references/api-key-setup.md`，向用户展示其操作系统对应的完整步骤（如何打开终端、可复制命令、粘贴密钥、重启应用及生效范围），不要只说“配置环境变量”。已知系统时只展示对应部分；未知时同时提供 Mac 和 Windows。配置由用户在自己电脑上完成，不代为读取或填入真实密钥。
+
 
 Use `https://api.ailingtu.com` as the default base URL. Read `references/api.md` before changing endpoint paths, request fields, response fields, or status mapping.
 
 ## Workflow
 
-1. Collect the generation intent: media kind (`image`, `video`, or another supported type), prompt, output requirements, and optional reference images, videos, or voiceovers.
+1. 模型选择遵循本次指定 > 本机偏好 > 内置默认（视频 `wan3.0-video`，图片 `gpt-image-2`）。默认不询问模型，也不传 `--model`，由脚本读取配置；用户要求修改默认、查看设置或临时切换时，读取 `references/model-preferences.md`。
+   Collect the generation intent: media kind (`image`, `video`, or another supported type), prompt, output requirements, and optional reference images, videos, or voiceovers.
+   - 图片默认比例为 `9:16`；本次指定其他比例时通过 `--aspect-ratio` 覆盖。
+   - 视频默认 480p，竖屏尺寸 `480x854`；横屏 480p 使用 `854x480`。本次明确指定尺寸时使用用户值。所选模型不支持该尺寸时先说明兼容性限制，不自动升到更高分辨率。
    - Video duration defaults by model: `wan3.0-video`=15s, `gemini-omni-video`=10s, `veo3.1-extend`/`veo3.1-lite-extend`=8s, `grok-imagine-1.5`=15s, `seedance2.0-mini`/`seedance2.0`/`seedance2.0-fast`=10s. For `wan3.0-video`, `-1` means adaptive duration and integers from 1 through 30 are supported. If the user specifies duration, use the user's value.
-   - For AI video prompts, strictly use this field format in this exact order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`. Do not add other top-level fields or prose outside the format.
+   - 写视频提示词前确定本次实际模型；未指定时用 `--kind video --show-default-model` 查询。Wan (`wan3.0-video`) 读取 `references/wan-prompt-guide.md`，按素材与意图选用自然语言、参考素材或分镜写法，不强制八字段。
+   - For other video models, use this field format in this exact order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`. Do not add other top-level fields or prose outside the format.
 2. Upload local reference files to Lingtu first via `POST /v1/file/upload` (multipart `file` field). For images, use the returned `data.url`; the create API does not accept base64 / `data:` image URLs. For `wan3.0-video` reference videos and voiceovers, use the returned `data.id`. Preserve the user's order because reference order can influence generation.
 3. Create a Lingtu AI schedule using `scripts/lingtu_content_task.py`. The script auto-uploads local paths passed via `--reference-image`, `--reference-video`, or `--reference-audio`. Image references are sent as `params.inputReference` / `params.inputReferences`; `wan3.0-video` reference videos and voiceovers are sent as integer arrays in `params.videoFileIds` and `params.audioFileIds`. The media flags can also take existing Lingtu file ids for video/audio. The script generates an 8-character `taskId` by default and sends it with the create payload; the schedule create response may also return provider `taskIds`.
 4. Unless the user explicitly asks for multiple outputs, pass `--nums 1`, create only one schedule/task for the request, return the first successful asset, and stop. If the current task is pending, processing, or otherwise not explicitly failed or timed out, keep polling that same task and do not create a new one. Do not generate extra variants or rerun the same prompt after success. **Crucial: a script crash, network error, or non-zero exit during polling does NOT mean the task failed.** Always re-run poll-only with the existing id before considering a retry:
@@ -55,15 +62,16 @@ Use `https://api.ailingtu.com` as the default base URL. Read `references/api.md`
 5. Poll the task id or schedule id until completion, failure, cancellation, or timeout. Use a default timeout of 300 seconds and a short polling interval such as 5 seconds. Treat a returned task `type` that differs from the requested kind as an error.
 6. Return the generated image/video URLs or saved files. If the task fails, times out, returns an unknown schema, or the script exits non-zero, report the provider status/error and include this fallback: `生成失败或遇到未知问题，请联系开发者：微信 yh8000m`.
 
+参考源视频结构、脚本或镜头生成新视频时，读取 `references/viral-remake-workflow.md`，先理解视频，再结合商品与卖点生成。复用已有分析结果。爆款复刻（按语义分段、逐段重绘确认与合成）使用 `lingtu-video-remake`。
+
 ## Product Content Routing
 
-For product content requests, select the narrowest workflow before calling the API:
+- **参考结构的视频生成**：按 `references/viral-remake-workflow.md` 分析源视频并适配商品，再生成新视频。
 
-- **User provides raw product images and asks what to use or improve**: inspect the images first, classify them by role, ask for missing angles only when necessary, then follow `references/product-reference-workflow.md`.
-- **User already has 3 optimized reference images and asks for videos**: follow `references/ecommerce-video-workflow.md`.
-- **User gives a competitor/viral video (including TikTok / 抖音 / 小红书 / 视频号 / YouTube / Instagram links) or asks to recreate a popular style**: follow `references/viral-remake-workflow.md` (analyze via `packages/video-understand` when a URL is given).
+- **商品图片**：根据商品素材和图片用途，直接编写提示词并生成主图、细节图或场景图。
+- **带货视频**：直接使用用户提供的商品素材和卖点，按 `references/ecommerce-video-workflow.md` 设计脚本并生成视频。
 
-When using generated reference images for video, preserve this order unless the user gives another order: product main image, selling-point/detail image, lifestyle scene image.
+参考图片按用户提供的顺序使用，不要求三张固定角色的图片，也不自动增加参考图优化或生成步骤。
 
 ## Script Usage
 
@@ -73,9 +81,7 @@ The bundled script supports direct task creation only as an explicit compatibili
 python3 scripts/lingtu_content_task.py \
   --kind video \
   --prompt "A clean product reveal video for a smart desk lamp" \
-  --model wan3.0-video \
-  --seconds 15 \
-  --size 720x1280 \
+  --size 480x854 \
   --reference-image ./ref-1.png \
   --reference-image ./ref-2.jpg \
   --reference-video ./motion-reference.mp4 \
@@ -94,11 +100,11 @@ export LINGTU_AI_TASK_LIST_PATH="/v1/ai/task/listByScheduleId?scheduleId={schedu
 
 Use `--create-mode schedule` when you want to force schedule behavior explicitly. Use `--client-task-id abc12345` only when the caller needs a specific 8-character task id; otherwise let the script generate one.
 
-For `--kind video`, supported models: `wan3.0-video` (default), `gemini-omni-video`, `veo3.1-lite-extend`, `veo3.1-extend`, `grok-imagine-1.5`, `seedance2.0-mini`, `seedance2.0`, `seedance2.0-fast`. Each model has different allowed durations (see `references/api.md`). `wan3.0-video` supports 480p/720p and accepts `-1` for adaptive duration or any integer from 1 through 30. If a requested model returns "未知模型", do not keep retrying that model; report the provider response and ask for the supported model name or use a confirmed model.
+Video defaults to `wan3.0-video` unless overridden by a saved preference or an explicit `--model`. Read `references/api.md` for other supported models and their duration/resolution constraints when needed. If a requested model returns "未知模型", report the provider response instead of repeatedly retrying it.
 
 `wan3.0-video` also supports optional reference videos and reference voiceovers. Pass a local path or an existing positive Lingtu file id with repeated `--reference-video` and `--reference-audio` flags. `--reference-dubbing` is an alias for `--reference-audio`. The script sends the resolved ids as `params.videoFileIds` and `params.audioFileIds`.
 
-For `--kind image`, supported models: `gpt-image-2` (default), `nano-banana-2`, `nano-banana-2-2k`, `nano-banana-2-4k`, `seedream5.0-lite`.
+Image defaults to `gpt-image-2` unless overridden by a saved preference or an explicit `--model`. Other supported models are listed in `references/api.md`.
 
 Use `--payload-json` for provider-specific fields that are not yet formalized in the script:
 
@@ -106,8 +112,7 @@ Use `--payload-json` for provider-specific fields that are not yet formalized in
 python3 scripts/lingtu_content_task.py \
   --kind image \
   --prompt "A clean product hero image" \
-  --model gpt-image-2 \
-  --aspect-ratio 1:1 \
+  --aspect-ratio 9:16 \
   --nums 1 \
   --payload-json '{"businessType":"MERCHANT_SKU","businessId":"SKU-001"}'
 ```

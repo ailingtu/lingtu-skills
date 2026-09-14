@@ -41,7 +41,7 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 
 ## API Key Configuration
 
-Authentication uses only the `LINGTU_API_KEY` environment variable. If it is missing, run `python3 shared/scripts/user_keys.py single bind` from the Skill root and open the generated authorization URL; never paste the key into chat.
+Authentication uses only the `LINGTU_API_KEY` environment variable. If it is missing, ask the user to create or manage a key at https://ailingtu.com/api-keys and configure `LINGTU_API_KEY` in the environment running the Skill before retrying; never paste the key into chat.
 
 ## Endpoints
 

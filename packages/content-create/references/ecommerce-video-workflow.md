@@ -10,7 +10,7 @@ Collect or infer:
 - Target market/country and language.
 - Video count, duration, aspect ratio, resolution, and model.
 - Whether subtitles, on-screen text, voiceover, product labels, or watermark are allowed.
-- Reference images, ideally ordered as product main, selling-point/detail, lifestyle scene.
+- Available product reference images in the user-provided order; no fixed number or role set is required.
 
 If the user asks for a current target market or audience and it could materially affect the script, check current marketplace/search context before writing prompts.
 
@@ -23,7 +23,7 @@ For each target market, convert the product into realistic use cases:
 - What problem or mood it solves.
 - What action proves the selling point in under 10 seconds.
 
-For short ecommerce videos, avoid overloading the prompt. One video should usually contain:
+For short ecommerce videos, avoid overloading the prompt. A simple single-scene video will usually contain:
 
 - One product.
 - One setting.
@@ -33,14 +33,15 @@ For short ecommerce videos, avoid overloading the prompt. One video should usual
 ## Prompt Rules
 
 - Keep prompts compact, especially for 10-second videos.
-- Every AI video prompt must strictly use this exact field format and order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`.
-- Do not add extra top-level prompt fields, bullet labels, or prose outside those eight fields when submitting the prompt to the API.
+- For Wan (`wan3.0-video`), read `wan-prompt-guide.md` and choose a formula based on the supplied media and desired shot structure. Multi-shot requests may use numbered shots and timestamps.
+- For other video models, use this field format and order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`.
+- The eight-field restriction applies only to the other-model template; Wan may use its native formulas.
 - Use the target-market language for dialogue or voiceover.
 - If the user says no subtitles, explicitly include "No subtitles, no on-screen text."
 - For realistic videos, specify handheld phone footage, real home/store lighting, authentic reaction, and no flashy effects.
 - Avoid asking the model to show long product copy or exact text; video models often render text poorly.
-- Preserve product identity by referencing the 3-image pack and keeping reference order stable.
-- Use `gemini-omni-video` for 10-second videos when that is the confirmed model. Use `720x1280` for 9:16 720px vertical output.
+- Preserve product identity using the supplied images and keep their order stable. Generate the video directly; do not add a reference-image optimization or generation stage.
+- Use `gemini-omni-video` for 10-second videos when that is the confirmed model. Default video output is portrait 480p (`480x854`). If the chosen model does not support 480p, explain the supported resolutions before generation; use `720x1280` only when 720p is requested or accepted.
 
 ## 10-Second Variant Pattern
 
@@ -52,7 +53,7 @@ Generate variants by changing scenario and buyer motivation, not by rewriting th
 4. Social proof or casual gathering.
 5. Close product demo or key action.
 
-## Prompt Template
+## Prompt Template (Other Video Models)
 
 ```text
 Video style:

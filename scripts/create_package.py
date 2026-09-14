@@ -48,12 +48,14 @@ def skill_markdown(
         auth_section = """
 ## Authentication
 
-All authenticated requests use only `LINGTU_API_KEY` and send it as the
-`x-api-key` header. Installation does not require authentication. If the key is
-missing when running a task, execute
-`python3 shared/scripts/user_keys.py single bind` from this Skill root and give
-the generated authorization URL to the user. Never ask for, display, or store
-the user's API key.
+All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
+Installation does not require authentication. If `LINGTU_API_KEY` is missing when
+running a task, ask the user to create or manage a key at https://ailingtu.com/api-keys
+and configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
+Never ask for, display, or store their API key in chat. Do not generate account-binding URLs.
+Read `shared/references/api-key-setup.md` when the key is missing. Show the user
+how to open their Mac terminal or Windows PowerShell, the exact setup commands,
+and how to restart the host app. Do not merely tell them to configure a variable.
 """
     else:
         auth_section = """
