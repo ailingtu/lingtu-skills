@@ -92,7 +92,7 @@ python3 scripts/create_package.py creator-insights \
 公开匿名接口改用 `--auth none`。
 
 2. 完成 `SKILL.md`、`agents/openai.yaml`、`references/api.md` 和 `scripts/`。在根级
-   `AGENTS.md` 增加明确路由，在中英文 README 登记新包。
+   `AGENTS.md` 增加明确路由，在中文 `README.md` 登记新包。
 3. 按上一节运行测试和单包构建：
 
 ```bash

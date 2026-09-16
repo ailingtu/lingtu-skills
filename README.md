@@ -1,7 +1,5 @@
 # 灵途 AI 能力套件
 
-[English Version](README.en.md)
-
 将灵途 AI 的能力封装为可独立安装的技能包。每项能力分别发布、分别安装，Skill 本身保持模型无关。
 
 灵途 AI 官网：[www.ailingtu.com](https://www.ailingtu.com)。
