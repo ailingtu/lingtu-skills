@@ -141,3 +141,12 @@ npm run skills:publish -- \
 - 不要复用已发布版本号覆盖不可变版本包。
 - 不要从 Codeup、GitHub、其他 Skill 商店或浏览器手工上传替代官方 TOS/CDN 流程。
 - 不要把 API Key 写入仓库、命令、日志或聊天。
+
+## 打包记录
+
+成功运行 `scripts/build_package.py <package-id>` 后，脚本自动更新根目录
+`README.md` 能力表格中该包的版本号、北京时间和负责人；新包自动追加一行。
+版本号读取 `SKILL.md`，不会自动升级。首次负责人默认读取 Git `user.name`，
+后续保留已有负责人；可用 `--owner "负责人"` 显式指定或变更。
+没有可用负责人时在构建前报错；构建失败不会更新表格。
+打包完成后，将 README 的记录与包的源码改动一起提交。

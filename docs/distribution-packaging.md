@@ -91,3 +91,12 @@ python3 -m zipfile -l dist/packages/lingtu-content-create.zip
 
 列表中应直接出现 `SKILL.md`。不要出现 `__MACOSX`、`.DS_Store`、
 `__pycache__`、`*.pyc` 或测试目录。
+
+## 打包记录
+
+成功运行 `scripts/build_package.py <package-id>` 后，脚本自动更新根目录
+`README.md` 能力表格中该包的版本号、北京时间和负责人；新包自动追加一行。
+版本号读取 `SKILL.md`，不会自动升级。首次负责人默认读取 Git `user.name`，
+后续保留已有负责人；可用 `--owner "负责人"` 显式指定或变更。
+没有可用负责人时在构建前报错；构建失败不会更新表格。
+打包完成后，将 README 的记录与包的源码改动一起提交。

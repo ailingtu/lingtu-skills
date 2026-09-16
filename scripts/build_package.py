@@ -9,6 +9,8 @@ import json
 import re
 import shutil
 import stat
+import subprocess
+from datetime import datetime, timedelta, timezone
 import sys
 import zipfile
 from pathlib import Path
@@ -220,6 +222,58 @@ def build_package(package_id: str, output: Path) -> tuple[Path, Path]:
     return destination, zip_path
 
 
+
+TABLE_START = "<!-- skills-table:start -->"
+TABLE_END = "<!-- skills-table:end -->"
+
+
+def table_cell(value: str) -> str:
+    """Keep metadata and names inside a single Markdown table cell."""
+    return " ".join(value.split()).replace("|", "&#124;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def prepare_readme_update(package_id: str, metadata: dict[str, str], owner: str | None,
+                          readme: Path, now: datetime | None = None) -> str:
+    text = readme.read_text(encoding="utf-8")
+    if text.count(TABLE_START) != 1 or text.count(TABLE_END) != 1:
+        raise ValueError("README.md 必须包含唯一的 skills-table 起止标记")
+    start = text.index(TABLE_START) + len(TABLE_START)
+    end = text.index(TABLE_END)
+    if end <= start:
+        raise ValueError("README.md 的 skills-table 标记顺序错误")
+    lines = text[start:end].strip().splitlines()
+    prefix = f"| [`{package_id}`](packages/{package_id}/) |"
+    matches = [i for i, line in enumerate(lines) if line.startswith(prefix)]
+    if len(matches) > 1:
+        raise ValueError(f"README.md 重复登记了 {package_id}")
+    index = matches[0] if matches else None
+    cells = [cell.strip() for cell in lines[index].strip("|").split("|")] if index is not None else None
+    if cells is not None and len(cells) != 5:
+        raise ValueError(f"README.md 中 {package_id} 必须有五列")
+    existing_owner = cells[4] if cells else ""
+    if owner is not None:
+        if not owner.strip():
+            raise ValueError("--owner 不能为空")
+        resolved_owner = table_cell(owner)
+    elif existing_owner and existing_owner != "待指定":
+        resolved_owner = existing_owner
+    else:
+        result = subprocess.run(["git", "config", "user.name"], cwd=readme.parent,
+                                capture_output=True, text=True, check=False)
+        if result.returncode != 0 or not result.stdout.strip():
+            raise ValueError("首次打包请通过 --owner 指定负责人，或配置 Git user.name")
+        resolved_owner = table_cell(result.stdout)
+    timestamp = (now or datetime.now(timezone.utc)).astimezone(
+        timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+    description = cells[1] if cells else table_cell(metadata["summary"])
+    row = f"{prefix} {description} | {table_cell(metadata['version'])} | {timestamp} | {resolved_owner} |"
+    if index is None:
+        lines.append(row)
+    else:
+        lines[index] = row
+    return text[:start] + "\n" + "\n".join(lines) + "\n" + text[end:]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="构建可分别上传到灵途 TOS/CDN 的自包含 Skill 目录和 ZIP。"
@@ -235,7 +289,13 @@ def main() -> int:
         default=DEFAULT_OUTPUT,
         help=f"输出目录，默认 {DEFAULT_OUTPUT}",
     )
+    parser.add_argument("--owner", help="负责人；默认保留已有负责人，首次打包读取 Git user.name")
     args = parser.parse_args()
+
+    readme = ROOT / "README.md"
+    source_metadata = parse_frontmatter(PACKAGES_DIR / args.package / "SKILL.md")
+    # Validate the table and owner before producing artifacts.
+    prepare_readme_update(args.package, source_metadata, args.owner, readme)
 
     output = args.output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -269,6 +329,9 @@ def main() -> int:
         encoding="utf-8",
     )
     print(f"[ok] 索引元数据: {metadata_file}")
+    updated_readme = prepare_readme_update(args.package, metadata, args.owner, readme)
+    readme.write_text(updated_readme, encoding="utf-8")
+    print(f"[ok] README: 已同步 {args.package} 的版本、更新时间和负责人")
     return 0
 
 

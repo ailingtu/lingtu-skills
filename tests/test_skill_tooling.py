@@ -3,6 +3,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -145,6 +146,71 @@ class SkillAuthContractTests(unittest.TestCase):
                 "user_keys.py single bind",
                 (public_destination / "SKILL.md").read_text(encoding="utf-8"),
             )
+
+
+class ReadmeBuildRecordTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.readme = self.root / "README.md"
+        self.original = """# Skills
+<!-- skills-table:start -->
+| 能力包 | 能力说明 | 版本号 | 更新时间（北京时间） | 负责人 |
+| --- | --- | --- | --- | --- |
+| [`openapi-guide`](packages/openapi-guide/) | 保留说明 | 0.0.1 | 未记录 | Alice |
+| [`other`](packages/other/) | 其他包 | 1.0.0 | 旧时间 | Bob |
+<!-- skills-table:end -->
+
+正文保持不变。
+"""
+        self.readme.write_text(self.original)
+        self.metadata = {"version": "2.0.0", "summary": "新说明"}
+
+    def test_update_preserves_owner_other_rows_and_description(self):
+        with patch.object(BUILD.subprocess, "run") as git:
+            updated = BUILD.prepare_readme_update(
+                "openapi-guide", self.metadata, None, self.readme,
+                datetime(2026, 9, 16, 8, 0, tzinfo=timezone.utc))
+        git.assert_not_called()
+        self.assertIn("| 保留说明 | 2.0.0 | 2026-09-16 16:00:00 | Alice |", updated)
+        self.assertIn("| [`other`](packages/other/) | 其他包 | 1.0.0 | 旧时间 | Bob |", updated)
+        self.assertTrue(updated.endswith("正文保持不变。\n"))
+        self.assertEqual(self.readme.read_text(), self.original)
+
+    def test_new_package_uses_git_owner_and_escapes_cells(self):
+        result = subprocess.CompletedProcess([], 0, "Jason | Team\n", "")
+        with patch.object(BUILD.subprocess, "run", return_value=result):
+            updated = BUILD.prepare_readme_update("new-skill", self.metadata, None, self.readme)
+        self.assertIn("[`new-skill`](packages/new-skill/)", updated)
+        self.assertIn("Jason &#124; Team", updated)
+
+    def test_explicit_owner_overrides_existing_owner(self):
+        updated = BUILD.prepare_readme_update("openapi-guide", self.metadata, "新负责人", self.readme)
+        self.assertIn("| 新负责人 |", updated)
+        with self.assertRaisesRegex(ValueError, "不能为空"):
+            BUILD.prepare_readme_update("openapi-guide", self.metadata, " ", self.readme)
+
+    def test_missing_owner_fails_without_mutation(self):
+        result = subprocess.CompletedProcess([], 1, "", "")
+        with patch.object(BUILD.subprocess, "run", return_value=result):
+            with self.assertRaisesRegex(ValueError, "--owner"):
+                BUILD.prepare_readme_update("new-skill", self.metadata, None, self.readme)
+        self.assertEqual(self.readme.read_text(), self.original)
+
+    def test_cli_success_updates_record_and_failure_does_not(self):
+        args = ["build_package.py", "openapi-guide", "--output", str(self.root / "dist")]
+        with patch.object(BUILD, "ROOT", self.root), patch.object(sys, "argv", args):
+            with patch.object(BUILD, "build_package", side_effect=ValueError("build failed")):
+                with self.assertRaisesRegex(ValueError, "build failed"):
+                    BUILD.main()
+            self.assertEqual(self.readme.read_text(), self.original)
+            self.assertEqual(BUILD.main(), 0)
+        updated = self.readme.read_text()
+        metadata = BUILD.parse_frontmatter(ROOT / "packages/openapi-guide/SKILL.md")
+        self.assertIn(f"| 保留说明 | {metadata['version']} |", updated)
+        self.assertIn("| Alice |", updated)
+        self.assertTrue((self.root / "dist/lingtu-openapi-guide.metadata.json").is_file())
 
 
 if __name__ == "__main__":
