@@ -63,7 +63,7 @@ def stream_replication(payload, raw=False, emit=True, timeout=300):
         status = event.get("status")
         if event.get("code") not in (None, 0) or status in ("error", "failed", "failure", "cancelled"):
             raise ValueError(f"Analysis failed: {event.get('message') or event.get('error') or status}")
-        if status != "streaming":
+        if status not in ("streaming", "done"):
             raise ValueError(f"Unexpected analysis status: {status!r}")
         if event.get("id") is not None:
             if task_id is not None and str(task_id) != str(event["id"]):
@@ -72,8 +72,9 @@ def stream_replication(payload, raw=False, emit=True, timeout=300):
         piece = event.get("result")
         if piece is not None and not isinstance(piece, str):
             raise ValueError("Analysis result must be text")
-        if piece:
+        if status == "streaming" and piece:
             chunks.append(piece)
+        return status == "done"
 
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -108,7 +109,8 @@ def stream_replication(payload, raw=False, emit=True, timeout=300):
                 except json.JSONDecodeError:
                     continue
                 pending.clear()
-                consume(event)
+                if consume(event):
+                    break
             if pending:
                 raise ValueError("Truncated or malformed SSE data")
         prompt = "".join(chunks)

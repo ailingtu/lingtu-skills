@@ -62,6 +62,25 @@ class StreamTests(unittest.TestCase):
                     m.stream_replication({})
                 self.assertEqual(out.getvalue(), '')
 
+    def test_done_event_preserves_streamed_prompt(self):
+        valid = b'data:{"status":"streaming","result":"hello","id":1}\n'
+        for result in (None, '', 'hello'):
+            terminal = json.dumps({'status': 'done', 'result': result, 'id': 1}).encode()
+            output, text = self.run_stream(valid + b'data:' + terminal + b'\n')
+            self.assertEqual(output, {'id': 1, 'prompt': 'hello'})
+            self.assertEqual(text, 'hello\n')
+
+    def test_done_does_not_bypass_validation(self):
+        valid = b'data:{"status":"streaming","result":"hello","id":1}\n'
+        for body in (
+            b'data:{"status":"done"}\n',
+            valid + b'data:{"status":"done","code":1}\n',
+            valid + b'data:{"status":"done","id":2}\n',
+            valid + b'data:{"status":"done","result":42}\n',
+        ):
+            with self.subTest(body=body), self.assertRaises(SystemExit):
+                self.run_stream(body)
+
     def test_raw_still_rejects_failure(self):
         with self.assertRaises(SystemExit):
             self.run_stream(b'data:{"status":"error"}\n', raw=True)

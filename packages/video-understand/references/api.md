@@ -79,7 +79,7 @@ Server-sent events. Each event line is `data:<json>` (no space after the colon i
 Stream completion:
 
 - The server closes the connection when finished.
-- No explicit `[DONE]` sentinel and no terminal `status: "done"` event has been observed; do not rely on one.
+- A terminal `status: "done"` event was observed in live testing on 2026-09-16. Accept it as completion; do not append its result again. The client also accepts `[DONE]` and legacy EOF completion.
 - The `id` stays constant across chunks for a single request and identifies the analysis task.
 
 To assemble the final prompt, concatenate `result` from every `streaming` event in arrival order. The full prompt is a Markdown-style document containing sections like `**Video Script Title**`, `**Characters / Main Subjects**`, `**Scene / Environment**`, `**Script**` (with timestamps), and `**Notes**`.
@@ -100,7 +100,9 @@ fail with a non-zero exit. Error-status checks are defensive, not a claim that t
 server currently emits those events. Timeout and connection failures also fail;
 requests are not automatically replayed.
 
-EOF remains the documented completion signal. A clean early EOF after valid text
+An explicit `done` event completes the stream after error, task-id and result-type
+validation. A non-empty streamed prompt is still required. EOF remains supported
+for older responses. A clean early EOF after valid text
 cannot be distinguished from normal completion without a server-side completion
 marker or task-status contract. The client does not invent a terminal event requirement.
 Normal text and JSON are buffered until validation passes; raw output is diagnostic.

@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-understand
 slug: lingtu-video-understand
-version: 0.9.0
+version: 0.9.2
 auth: lingtu-api-key
 displayName: 灵途视频拆解分析
 summary: 分析多平台视频，生成脚本结构、卖点和复刻提示词。
