@@ -6,7 +6,7 @@ Packages Lingtu AI capabilities as independently installable skills. Each capabi
 
 Lingtu AI website: [www.ailingtu.com](https://www.ailingtu.com).
 
-Source repository: [ailingtu/lingtu-skills](https://github.com/ailingtu/lingtu-skills), for development and publishing only. Users must install and upgrade through the [official Lingtu Skills installation guide](https://ailingtu.com/install/skills.md), not GitHub.
+Source repository: [coss/ailingtu/skills](https://codeup.aliyun.com/coss/ailingtu/skills), for development and publishing only. Users must install and upgrade through the [official Lingtu Skills installation guide](https://ailingtu.com/install/skills.md), not Codeup or GitHub.
 
 ## What's Inside
 

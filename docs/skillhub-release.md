@@ -10,7 +10,7 @@ Skill 时，先完整阅读本文，再执行构建、上传或官网发布。
   `dist/packages/` 目录。
 - 官方索引采用增量合并：只替换指定 slug 的记录，其余记录的版本、URL、哈希和
   文件大小必须保持不变。
-- 用户安装和升级统一使用 <https://ailingtu.com/install/skills.md>。GitHub 只是
+- 用户安装和升级统一使用 <https://ailingtu.com/install/skills.md>。Codeup 只是
   开发源码，不是安装渠道。
 - `auth: lingtu-api-key` 仅用于调用受保护灵途业务接口的 Skill；公开匿名接口使用
   `auth: none`。
@@ -18,12 +18,19 @@ Skill 时，先完整阅读本文，再执行构建、上传或官网发布。
 
 ## 项目位置
 
+开发源码仓库为 <https://codeup.aliyun.com/coss/ailingtu/skills>，Git 远程地址为
+`git@codeup.aliyun.com:coss/ailingtu/skills.git`。
+
 默认使用以下相邻项目：
 
 ```text
-/Users/jason/www/lingtuai/lingtu-skills   # Skill 源码、构建和测试
+/Users/jason/www/lingtuai/skills.ailingtu   # Skill 源码、构建和测试
 /Users/jason/www/lingtuai/www.ailingtu    # TOS/CDN 发布器和 SkillHub 官网
 ```
+
+构建器根据脚本位置定位源码根目录，改名后仍输出到本仓库的 `dist/packages/`。
+官网发布器默认读取相邻的 `../skills.ailingtu/dist/packages`；非默认目录布局应
+显式传入产物目录，如下方示例。
 
 ## 更新已有 Skill
 
@@ -36,7 +43,7 @@ Skill 时，先完整阅读本文，再执行构建、上传或官网发布。
 4. 从仓库根目录只构建目标包：
 
 ```bash
-cd /Users/jason/www/lingtuai/lingtu-skills
+cd /Users/jason/www/lingtuai/skills.ailingtu
 python3 scripts/build_package.py tk-blacklist
 ```
 
@@ -48,7 +55,7 @@ python3 scripts/build_package.py tk-blacklist
 ```bash
 cd /Users/jason/www/lingtuai/www.ailingtu
 npm run skills:publish -- \
-  /Users/jason/www/lingtuai/lingtu-skills/dist/packages \
+  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
   --package lingtu-tk-blacklist \
   --dry-run
 ```
@@ -60,7 +67,7 @@ npm run skills:publish -- \
 
 ```bash
 npm run skills:publish -- \
-  /Users/jason/www/lingtuai/lingtu-skills/dist/packages \
+  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
   --package lingtu-tk-blacklist
 ```
 
@@ -74,7 +81,7 @@ npm run skills:publish -- \
 1. 使用脚手架创建包，不要手工复制旧包：
 
 ```bash
-cd /Users/jason/www/lingtuai/lingtu-skills
+cd /Users/jason/www/lingtuai/skills.ailingtu
 python3 scripts/create_package.py creator-insights \
   --display-name "灵途达人洞察" \
   --summary "分析达人数据并生成可执行建议。" \
@@ -97,12 +104,12 @@ python3 scripts/build_package.py creator-insights
 ```bash
 cd /Users/jason/www/lingtuai/www.ailingtu
 npm run skills:publish -- \
-  /Users/jason/www/lingtuai/lingtu-skills/dist/packages \
+  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
   --package lingtu-creator-insights \
   --dry-run
 
 npm run skills:publish -- \
-  /Users/jason/www/lingtuai/lingtu-skills/dist/packages \
+  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
   --package lingtu-creator-insights
 ```
 
@@ -128,9 +135,9 @@ npm run skills:publish -- \
 
 ## 禁止操作
 
-- 不要上传整个 `lingtu-skills` 仓库。
+- 不要上传整个 `skills.ailingtu` 仓库。
 - 不要把多个 `packages/*` 合并成一个 ZIP。
 - 不要在日常更新中省略 `--package`。
 - 不要复用已发布版本号覆盖不可变版本包。
-- 不要从 GitHub、其他 Skill 商店或浏览器手工上传替代官方 TOS/CDN 流程。
+- 不要从 Codeup、GitHub、其他 Skill 商店或浏览器手工上传替代官方 TOS/CDN 流程。
 - 不要把 API Key 写入仓库、命令、日志或聊天。

@@ -1,7 +1,7 @@
 # 灵途 Skills 独立分发包
 
 每个 Skill 都通过灵途 TOS/CDN 单独下载和安装。不要上传整个
-`lingtu-skills` 仓库，也不要把多个 `packages/*` 合并成一个 ZIP。
+`skills.ailingtu` 仓库，也不要把多个 `packages/*` 合并成一个 ZIP。
 
 ## 与安装文档的关系
 
@@ -80,7 +80,7 @@ slug 的条目。索引必须包含：
 
 <https://ailingtu.com/install/skills.md>
 
-不再引导用户从 GitHub 或其他技能商店安装。
+不再引导用户从 Codeup、GitHub 或其他技能商店安装。
 
 ## 上传前检查
 
