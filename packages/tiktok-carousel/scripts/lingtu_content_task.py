@@ -1,0 +1,1034 @@
+#!/usr/bin/env python3
+"""Create and poll Lingtu AI media-generation tasks."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import json
+import mimetypes
+import os
+import secrets
+import string
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+def _shared_scripts_dir() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "shared" / "scripts"
+        if candidate.is_dir():
+            return candidate
+    raise RuntimeError("未找到 shared/scripts 目录。请确认 skill 安装完整。")
+
+
+sys.path.insert(0, str(_shared_scripts_dir()))
+
+from lingtu_auth import require_api_key
+from lingtu_http import LingtuHttpError, build_url, request_json as shared_request_json
+from lingtu_upload import multipart_upload
+
+
+SUCCESS_STATUSES = {"succeeded", "success", "completed", "complete", "done", "finished"}
+FAILURE_STATUSES = {"failed", "failure", "error", "cancelled", "canceled", "expired"}
+DEVELOPER_CONTACT = "微信 yh8000m"
+DEVELOPER_CONTACT_MESSAGE = "生成失败或遇到未知问题，请联系开发者：微信 yh8000m"
+
+IMAGE_MODELS = {
+    "gpt-image-2",
+    "nano-banana-2",
+    "nano-banana-2-2k",
+    "nano-banana-2-4k",
+    "seedream5.0-lite",
+}
+# model -> (default_seconds, allowed_seconds, allowed_sizes)
+VIDEO_MODELS: dict[str, tuple[int, set[int], set[str]]] = {
+    "wan3.0-video": (15, {-1, *range(1, 31)}, {"480x854", "854x480", "720x1280", "1280x720"}),
+    "gemini-omni-video": (10, {6, 8, 10}, {"720x1280", "1280x720", "1080x1920", "1920x1080"}),
+    "veo3.1-lite-extend": (8, {8}, {"720x1280", "1280x720"}),
+    "veo3.1-extend": (8, {8}, {"720x1280", "1280x720"}),
+    "grok-imagine-1.5": (15, {6, 10, 15, 20, 25, 30}, {"720x1280", "1280x720"}),
+    "seedance2.0-mini": (10, {4, 8, 10, 12, 15}, {"480x854", "854x480", "720x1280", "1280x720"}),
+    "seedance2.0": (10, {4, 8, 10, 12, 15}, {"480x854", "854x480", "720x1280", "1280x720"}),
+    "seedance2.0-fast": (10, {4, 8, 10, 12, 15}, {"480x854", "854x480", "720x1280", "1280x720"}),
+}
+LEGACY_MODEL_ALIASES = {
+    "grok-imagine-1": "grok-imagine-1.5",
+    "seedance-2.0": "seedance2.0-fast",
+}
+
+DEFAULT_MODELS = {"video": "wan3.0-video", "image": "gpt-image-2"}
+
+
+def model_preferences_path() -> Path:
+    return Path.home() / ".config" / "lingtu" / "content-create.json"
+
+
+def read_model_preferences() -> dict[str, str]:
+    path = model_preferences_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"Cannot read model preferences at {path}: {exc}") from exc
+    if not isinstance(data, dict) or set(data) - set(DEFAULT_MODELS):
+        raise ValueError(f"Invalid model preferences at {path}; expected image/video model names.")
+    for kind, model in data.items():
+        supported = IMAGE_MODELS if kind == "image" else VIDEO_MODELS
+        if not isinstance(model, str) or model not in supported:
+            raise ValueError(f"Invalid {kind} model in {path}; correct the saved configuration.")
+    return data
+
+
+def selected_model(kind: str, explicit: str | None, *, poll_only: bool = False) -> str | None:
+    if explicit:
+        return resolve_model_name(explicit)
+    # A new preference must never filter results from an existing task.
+    if poll_only:
+        return None
+    if kind not in DEFAULT_MODELS:
+        raise ValueError(f"Unsupported kind '{kind}'. Use image or video.")
+    return read_model_preferences().get(kind, DEFAULT_MODELS[kind])
+
+
+def update_model_preference(kind: str, model: str | None) -> None:
+    if kind not in DEFAULT_MODELS:
+        raise ValueError(f"Unsupported kind '{kind}'. Use image or video.")
+    if model is not None:
+        supported = IMAGE_MODELS if kind == "image" else VIDEO_MODELS
+        if model not in supported:
+            raise ValueError(f"Unknown {kind} model '{model}'.")
+    data = read_model_preferences()
+    if model is None:
+        data.pop(kind, None)
+    else:
+        data[kind] = model
+    path = model_preferences_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump(data, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+ASSET_KEYS = {
+    "url",
+    "urls",
+    "coverUrl",
+    "image_url",
+    "image_urls",
+    "thumbnailUrl",
+    "videoUrl",
+    "video_url",
+    "video_urls",
+    "output",
+    "outputs",
+    "result",
+    "results",
+    "resultUrl",
+    "base64",
+}
+
+
+def expected_task_type(kind: str) -> str:
+    normalized = kind.lower()
+    if normalized == "image":
+        return "IMAGE_GENERATION"
+    if normalized == "video":
+        return "VIDEO_GENERATION"
+    return normalized.upper()
+
+
+def asset_type_for_kind(kind: str) -> str:
+    normalized = kind.lower()
+    if normalized == "image":
+        return "IMAGE"
+    if normalized == "video":
+        return "VIDEO"
+    return normalized.upper()
+
+
+def generate_client_task_id() -> str:
+    alphabet = string.ascii_lowercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(8))
+
+
+def upload_reference_image(path: str, base_url: str, api_key: str) -> str:
+    try:
+        result = multipart_upload(
+            path,
+            base=base_url,
+            api_key=api_key,
+            stream=False,
+            allow_null_code=True,
+            require_id=False,
+        )
+    except LingtuHttpError as exc:
+        raise RuntimeError(str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Reference image not found: {path}") from exc
+    url = result.get("url")
+    if not isinstance(url, str) or not url:
+        raise RuntimeError(f"Upload response missing data.url for {path}")
+    return url
+
+
+def resolve_reference_image(path_or_url: str, base_url: str, api_key: str) -> str:
+    if path_or_url.startswith(("http://", "https://")):
+        return path_or_url
+    return upload_reference_image(path_or_url, base_url, api_key)
+
+
+def upload_reference_file_id(path: str, base_url: str, api_key: str, label: str) -> int:
+    try:
+        result = multipart_upload(
+            path,
+            base=base_url,
+            api_key=api_key,
+            stream=True,
+            allow_null_code=True,
+            require_id=True,
+        )
+    except LingtuHttpError as exc:
+        raise RuntimeError(str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Reference {label} not found: {path}") from exc
+    file_id = result.get("id")
+    try:
+        normalized = int(file_id)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"Upload response contains invalid data.id for {path}: {file_id!r}") from exc
+    if normalized <= 0:
+        raise RuntimeError(f"Upload response contains invalid data.id for {path}: {file_id!r}")
+    return normalized
+
+
+def resolve_reference_file_id(value: str, base_url: str, api_key: str, label: str) -> int:
+    path = Path(value).expanduser()
+    if path.is_file():
+        return upload_reference_file_id(str(path), base_url, api_key, label)
+    try:
+        file_id = int(value)
+    except ValueError as exc:
+        raise ValueError(f"Reference {label} must be a local file path or a positive Lingtu file id: {value}") from exc
+    if file_id <= 0:
+        raise ValueError(f"Reference {label} file id must be positive: {value}")
+    return file_id
+
+
+def http_json(method: str, url: str, api_key: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    try:
+        parsed = shared_request_json(method, url, body=body, api_key=api_key, timeout=60)
+    except LingtuHttpError as exc:
+        raise RuntimeError(str(exc)) from exc
+    if not isinstance(parsed, dict):
+        raise RuntimeError(f"Expected JSON object from {url}, got: {type(parsed).__name__}")
+    return parsed
+
+
+def deep_get(data: dict[str, Any], paths: list[str]) -> Any:
+    for path in paths:
+        current: Any = data
+        for part in path.split("."):
+            if isinstance(current, dict) and part in current:
+                current = current[part]
+            elif isinstance(current, list) and part.isdigit() and int(part) < len(current):
+                current = current[int(part)]
+            else:
+                current = None
+                break
+        if current not in (None, ""):
+            return current
+    return None
+
+
+def extract_list_response(data: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates = [
+        "list",
+        "records",
+        "items",
+        "data.list",
+        "data.records",
+        "data.items",
+        "data.data.list",
+        "data.data.records",
+        "data.data.items",
+    ]
+    for path in candidates:
+        value = deep_get(data, [path])
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+    return []
+
+
+def normalize_task_ids(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if item not in (None, "")]
+    if value not in (None, ""):
+        return [str(value)]
+    return []
+
+
+def parse_created_at(value: Any) -> float | None:
+    if not isinstance(value, str) or not value:
+        return None
+    normalized = value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()
+
+
+def collect_values(value: Any, keys: set[str]) -> list[Any]:
+    found: list[Any] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in keys:
+                found.append(item)
+            found.extend(collect_values(item, keys))
+    elif isinstance(value, list):
+        for item in value:
+            found.extend(collect_values(item, keys))
+    return found
+
+
+def flatten_assets(values: list[Any]) -> list[str]:
+    assets: list[str] = []
+    for value in values:
+        if isinstance(value, str):
+            assets.append(value)
+        elif isinstance(value, list):
+            assets.extend(flatten_assets(value))
+        elif isinstance(value, dict):
+            for key in ("url", "image_url", "imageUrl", "video_url", "videoUrl", "resultUrl", "coverUrl", "thumbnailUrl", "base64", "data"):
+                item = value.get(key)
+                if isinstance(item, str):
+                    assets.append(item)
+    return assets
+
+
+def dedupe_assets(assets: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for asset in assets:
+        if asset.startswith(("ai-images/", "ai-videos/")):
+            asset = f"https://static.ailingtu.com/{asset}"
+        if asset in seen:
+            continue
+        seen.add(asset)
+        deduped.append(asset)
+    return deduped
+
+
+def markdown_for_assets(assets: list[str]) -> list[str]:
+    markdown: list[str] = []
+    image_exts = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif")
+    video_exts = (".mp4", ".mov", ".webm", ".m4v")
+    for index, asset in enumerate(assets, start=1):
+        normalized = asset.split("?", 1)[0].lower()
+        if asset.startswith("data:image/") or normalized.endswith(image_exts):
+            markdown.append(f"![Lingtu result {index}]({asset})")
+        elif normalized.endswith(video_exts):
+            markdown.append(f"![Lingtu video result {index}]({asset})")
+    return markdown
+
+
+def extension_from_url(asset: str) -> str | None:
+    parsed = urllib.parse.urlparse(asset)
+    suffix = Path(parsed.path).suffix
+    return suffix if suffix else None
+
+
+def extension_from_response(asset: str, content_type: str | None) -> str:
+    if content_type:
+        extension = mimetypes.guess_extension(content_type.split(";", 1)[0].strip())
+        if extension:
+            return extension
+    return extension_from_url(asset) or ".bin"
+
+
+def save_remote_asset_with_urllib(asset: str, output_dir: Path, index: int) -> str | None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    headers = {
+        "Accept": "*/*",
+        "User-Agent": "Mozilla/5.0",
+    }
+    request = urllib.request.Request(asset, headers=headers)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
+                data = response.read()
+                extension = extension_from_response(asset, response.headers.get("Content-Type"))
+            path = output_dir / f"lingtu-output-{index}{extension}"
+            path.write_bytes(data)
+            if path.stat().st_size > 0:
+                return str(path.resolve())
+        except (urllib.error.URLError, TimeoutError, OSError):
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+    return None
+
+
+def save_remote_asset_with_curl(asset: str, output_dir: Path, index: int) -> str | None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    extension = extension_from_url(asset) or ".bin"
+    path = output_dir / f"lingtu-output-{index}{extension}"
+    command = [
+        "curl",
+        "-L",
+        "--fail",
+        "--retry",
+        "3",
+        "--retry-delay",
+        "2",
+        "--connect-timeout",
+        "30",
+        "--max-time",
+        "300",
+        "-A",
+        "Mozilla/5.0",
+        "-o",
+        str(path),
+        asset,
+    ]
+    completed = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if completed.returncode == 0 and path.exists() and path.stat().st_size > 0:
+        return str(path.resolve())
+    if path.exists():
+        path.unlink()
+    return None
+
+
+def save_remote_asset(asset: str, output_dir: Path, index: int) -> str:
+    saved = save_remote_asset_with_urllib(asset, output_dir, index)
+    if saved:
+        return saved
+
+    saved = save_remote_asset_with_curl(asset, output_dir, index)
+    if saved:
+        return saved
+
+    return asset
+
+
+def save_assets(assets: list[str], output_dir: Path) -> list[str]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    saved: list[str] = []
+    for index, asset in enumerate(assets, start=1):
+        if asset.startswith(("http://", "https://")):
+            saved.append(save_remote_asset(asset, output_dir, index))
+            continue
+
+        mime = None
+        payload = asset
+        if asset.startswith("data:") and "," in asset:
+            meta, payload = asset.split(",", 1)
+            mime = meta.split(";", 1)[0].removeprefix("data:")
+        extension = mimetypes.guess_extension(mime or "") or extension_from_url(asset) or ".bin"
+        path = output_dir / f"lingtu-output-{index}{extension}"
+        path.write_bytes(base64.b64decode(payload))
+        saved.append(str(path.resolve()))
+    return saved
+
+
+def format_path(path: str, **values: Any) -> str:
+    quoted = {key: urllib.parse.quote(str(value), safe="") for key, value in values.items()}
+    return path.format(**quoted)
+
+
+def build_create_payload(
+    args: argparse.Namespace,
+    references: list[str],
+    video_file_ids: list[int] | None = None,
+    audio_file_ids: list[int] | None = None,
+) -> dict[str, Any]:
+    try:
+        extra_payload = json.loads(args.payload_json)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid --payload-json: {exc}") from exc
+    if not isinstance(extra_payload, dict):
+        raise ValueError("--payload-json must be a JSON object.")
+
+    params: dict[str, Any] = {
+        "prompt": args.prompt,
+        "model": args.model,
+    }
+    kind = args.kind.lower()
+    if kind == "video":
+        params.update(
+            {
+                "seconds": args.seconds,
+                "size": args.size,
+                "watermark": args.watermark,
+            }
+        )
+        task_type = expected_task_type(kind)
+    elif kind == "image":
+        params["aspectRatio"] = args.aspect_ratio
+        task_type = expected_task_type(kind)
+    else:
+        task_type = expected_task_type(kind)
+
+    if kind == "image" and references:
+        params["inputReferences"] = references
+    elif len(references) == 1:
+        params["inputReference"] = references[0]
+    elif len(references) > 1:
+        params["inputReferences"] = references
+
+    if kind == "video" and video_file_ids:
+        params["videoFileIds"] = video_file_ids
+    if kind == "video" and audio_file_ids:
+        params["audioFileIds"] = audio_file_ids
+
+    payload: dict[str, Any] = {
+        "type": task_type,
+        "params": params,
+        "nums": args.nums,
+    }
+    payload.update(extra_payload)
+    payload.setdefault("taskId", args.client_task_id)
+    return payload
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Create and poll a Lingtu AI content schedule.")
+    parser.add_argument("--kind", required=True, help="Media type, such as image or video.")
+    parser.add_argument(
+        "--prompt",
+        help="Generation prompt. Required when creating a new task; optional when polling an existing task/schedule.",
+    )
+    parser.add_argument(
+        "--model",
+        help="One-time model override; does not change saved preferences. Without it use the saved model, then the built-in default. Video: wan3.0-video (default), gemini-omni-video, veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
+    )
+    preferences = parser.add_mutually_exclusive_group()
+    preferences.add_argument("--show-default-model", action="store_true", help="Show the saved or built-in model for --kind; no API call.")
+    preferences.add_argument("--set-default-model", metavar="MODEL", help="Save a default model for --kind for future conversations, then exit; no generation.")
+    preferences.add_argument("--reset-default-model", action="store_true", help="Remove the saved model for --kind and restore the built-in default, then exit.")
+    parser.add_argument(
+        "--seconds",
+        type=int,
+        help="Video duration in seconds. wan3.0-video accepts -1 (adaptive) or 1-30 and defaults to 15; other defaults vary by model.",
+    )
+    parser.add_argument("--size", default="480x854", help="Video size; defaults to portrait 480p (480x854). Use 854x480 for landscape 480p.")
+    parser.add_argument("--aspect-ratio", default="9:16", help="Image aspect ratio; defaults to portrait 9:16. Override for other ratios such as 1:1.")
+    parser.add_argument("--nums", type=int, default=1, help="Number of outputs to create.")
+    parser.add_argument("--watermark", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument(
+        "--reference-image",
+        action="append",
+        default=[],
+        help="Reference image as a remote http(s) url, or a local path that will be uploaded to /v1/file/upload first. Repeat for multiple images; order is preserved.",
+    )
+    parser.add_argument(
+        "--reference-video",
+        action="append",
+        default=[],
+        help="wan3.0-video reference video as a local file path or positive Lingtu file id. Repeat for multiple videos.",
+    )
+    parser.add_argument(
+        "--reference-audio",
+        "--reference-dubbing",
+        dest="reference_audio",
+        action="append",
+        default=[],
+        help="wan3.0-video reference voiceover as a local audio path or positive Lingtu file id. Repeat for multiple audio files.",
+    )
+    parser.add_argument("--payload-json", default="{}", help="Additional top-level JSON fields merged into the create request.")
+    parser.add_argument(
+        "--client-task-id",
+        default=os.getenv("LINGTU_AI_CLIENT_TASK_ID"),
+        help="Optional caller-generated task id. Defaults to a generated 8-character id.",
+    )
+    parser.add_argument(
+        "--create-mode",
+        choices=["auto", "direct", "schedule"],
+        default=os.getenv("LINGTU_AI_CREATE_MODE", "auto"),
+        help="Create through the schedule API by default, or direct task API when explicitly requested.",
+    )
+    parser.add_argument(
+        "--poll-task-id",
+        help="Poll an existing task id without creating a new task. Use after a crash/network error during polling.",
+    )
+    parser.add_argument(
+        "--poll-schedule-id",
+        help="Poll an existing schedule id without creating a new schedule. Use after a crash/network error during polling.",
+    )
+    parser.add_argument("--base-url", default=os.getenv("LINGTU_AI_BASE_URL", "https://api.ailingtu.com"))
+    parser.add_argument("--create-path", default=os.getenv("LINGTU_AI_CREATE_PATH", "/v1/ai/task/create"))
+    parser.add_argument("--status-path", default=os.getenv("LINGTU_AI_STATUS_PATH", "/v1/ai/task/query?taskId={task_id}"))
+    parser.add_argument("--schedule-create-path", default=os.getenv("LINGTU_AI_SCHEDULE_CREATE_PATH", "/v1/ai/schedule/create"))
+    parser.add_argument(
+        "--task-list-path",
+        default=os.getenv(
+            "LINGTU_AI_TASK_LIST_PATH",
+            "/v1/ai/task/listByScheduleId?scheduleId={schedule_id}",
+        ),
+    )
+    parser.add_argument("--timeout", type=int, default=300)
+    parser.add_argument("--interval", type=int, default=5)
+    parser.add_argument("--output-dir", default=".")
+    args = parser.parse_args()
+    args.seconds_was_set = args.seconds is not None
+    args.size_was_set = "--size" in sys.argv
+    return args
+
+
+def resolve_model_name(model: str) -> str:
+    key = model.strip()
+    alias = LEGACY_MODEL_ALIASES.get(key.lower())
+    if alias:
+        print(
+            json.dumps(
+                {"warning": f"Model '{key}' is deprecated; using '{alias}' instead."},
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
+        return alias
+    return key
+
+
+def validate_model_args(args: argparse.Namespace) -> None:
+    kind = args.kind.lower()
+    model = args.model
+    if kind == "image":
+        if model not in IMAGE_MODELS:
+            raise ValueError(
+                f"Unknown image model '{model}'. Supported: {', '.join(sorted(IMAGE_MODELS))}."
+            )
+        return
+    if kind == "video":
+        if model not in VIDEO_MODELS:
+            raise ValueError(
+                f"Unknown video model '{model}'. Supported: {', '.join(sorted(VIDEO_MODELS))}."
+            )
+        default_seconds, allowed_seconds, allowed_sizes = VIDEO_MODELS[model]
+        if args.seconds is None:
+            args.seconds = default_seconds
+        elif args.seconds not in allowed_seconds:
+            allowed = ", ".join(str(value) for value in sorted(allowed_seconds))
+            raise ValueError(
+                f"Model '{model}' does not support --seconds {args.seconds}. Allowed: {allowed}."
+            )
+        if args.size not in allowed_sizes:
+            allowed = ", ".join(sorted(allowed_sizes))
+            raise ValueError(
+                f"Model '{model}' does not support --size {args.size}. Allowed: {allowed}."
+            )
+        if model != "wan3.0-video" and (
+            getattr(args, "reference_video", []) or getattr(args, "reference_audio", [])
+        ):
+            raise ValueError("Reference video and reference audio are currently supported only by wan3.0-video.")
+        return
+    raise ValueError(f"Unsupported kind '{args.kind}'. Use image or video.")
+
+
+def default_video_seconds(model: str) -> int:
+    """Return the default duration for a given video model."""
+    info = VIDEO_MODELS.get(model.lower())
+    if info:
+        return info[0]
+    return 8  # conservative fallback
+
+
+def resolve_create_mode(args: argparse.Namespace) -> str:
+    if args.create_mode != "auto":
+        return args.create_mode
+    return "schedule"
+
+
+def extract_assets_from_response(response: dict[str, Any], output_dir: Path) -> tuple[list[str], list[str]]:
+    assets = dedupe_assets(flatten_assets(collect_values(response, ASSET_KEYS)))
+    saved = save_assets(assets, output_dir) if assets else []
+    return saved, markdown_for_assets(saved)
+
+
+def print_success(
+    identifier: dict[str, Any],
+    status: Any,
+    assets: list[str],
+    markdown: list[str],
+    response: dict[str, Any],
+    output_dir: Path,
+) -> None:
+    print(
+        json.dumps(
+            {
+                **identifier,
+                "status": status,
+                "output_dir": str(output_dir.resolve()),
+                "assets": assets,
+                "markdown": markdown,
+                "response": response,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+def error_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **payload,
+        "contact_developer": DEVELOPER_CONTACT,
+        "message": payload.get("message") or DEVELOPER_CONTACT_MESSAGE,
+    }
+
+
+def print_error(payload: dict[str, Any], *, stderr: bool = False) -> None:
+    print(json.dumps(error_payload(payload), ensure_ascii=False, indent=2), file=sys.stderr if stderr else sys.stdout)
+
+
+def validate_task_type(response: dict[str, Any], expected_type: str, identifier: dict[str, Any]) -> bool:
+    actual_type = deep_get(response, ["type", "data.type", "task.type", "data.task.type"])
+    if actual_type and str(actual_type).upper() != expected_type:
+        print_error(
+            {
+                **identifier,
+                "error": "Task type mismatch.",
+                "expected_type": expected_type,
+                "actual_type": actual_type,
+                "response": response,
+            }
+        )
+        return False
+    return True
+
+
+def poll_task(args: argparse.Namespace, api_key: str, task_id: Any) -> int:
+    deadline = time.monotonic() + args.timeout
+    last_response: dict[str, Any] = {}
+    expected_type = expected_task_type(args.kind)
+    consecutive_errors = 0
+    while time.monotonic() < deadline:
+        status_path = format_path(args.status_path, task_id=task_id)
+        status_url = build_url(args.base_url, status_path)
+        try:
+            last_response = http_json("GET", status_url, api_key)
+        except RuntimeError as exc:
+            consecutive_errors += 1
+            if consecutive_errors >= 5:
+                print_error({"task_id": task_id, "error": f"Too many consecutive poll errors: {exc}", "last_response": last_response})
+                return 1
+            time.sleep(args.interval)
+            continue
+        consecutive_errors = 0
+        status = deep_get(last_response, ["status", "state", "data.status", "data.state"])
+        normalized = str(status or "").lower()
+
+        if normalized in SUCCESS_STATUSES:
+            if not validate_task_type(last_response, expected_type, {"task_id": task_id}):
+                return 1
+            assets, markdown = extract_assets_from_response(last_response, Path(args.output_dir))
+            print_success({"task_id": task_id}, status, assets, markdown, last_response, Path(args.output_dir))
+            return 0
+
+        if normalized in FAILURE_STATUSES:
+            print_error({"task_id": task_id, "status": status, "response": last_response})
+            return 1
+
+        time.sleep(args.interval)
+
+    print_error({"task_id": task_id, "error": "Timed out while polling task.", "last_response": last_response})
+    return 1
+
+
+def record_matches_request(
+    record: dict[str, Any],
+    args: argparse.Namespace,
+    create_started_at: float,
+    schedule_id: Any,
+    task_ids: list[str],
+) -> bool:
+    record_schedule_id = deep_get(record, ["scheduleId", "data.scheduleId", "schedule.scheduleId"])
+    if record_schedule_id and str(record_schedule_id) != str(schedule_id):
+        return False
+
+    if task_ids:
+        record_task_ids = normalize_task_ids(
+            deep_get(record, ["taskId", "id", "data.taskId", "data.id", "assetDistDetail.0.taskId"])
+        )
+        if record_task_ids and not any(record_task_id in task_ids for record_task_id in record_task_ids):
+            return False
+        if record_task_ids and any(record_task_id in task_ids for record_task_id in record_task_ids):
+            return True
+
+    if args.client_task_id:
+        record_ids = [
+            deep_get(record, ["taskId", "data.taskId"]),
+            deep_get(record, ["businessId", "data.businessId"]),
+            deep_get(record, ["assetDistDetail.0.taskId"]),
+        ]
+        if any(str(record_id) == args.client_task_id for record_id in record_ids if record_id):
+            return True
+
+    record_type = deep_get(record, ["type", "data.type"])
+    if record_type and str(record_type).upper() != expected_task_type(args.kind):
+        return False
+
+    prompt = deep_get(record, ["params.prompt", "inputData.prompt", "inputData.params.prompt", "data.params.prompt"])
+    if args.prompt and prompt and prompt != args.prompt:
+        return False
+
+    model = deep_get(record, ["params.model", "inputData.model", "model"])
+    if args.model and model and model != args.model:
+        return False
+
+    created_at = parse_created_at(deep_get(record, ["createdAt", "created_at", "data.createdAt"]))
+    if created_at is not None and created_at < create_started_at - 120:
+        return False
+
+    return True
+
+
+def poll_schedule(args: argparse.Namespace, api_key: str, schedule_id: Any, task_ids: list[str], create_started_at: float) -> int:
+    deadline = time.monotonic() + args.timeout
+    last_task_list_response: dict[str, Any] = {}
+    expected_type = expected_task_type(args.kind)
+    asset_type = asset_type_for_kind(args.kind)
+    consecutive_errors = 0
+
+    while time.monotonic() < deadline:
+        task_list_path = format_path(args.task_list_path, asset_type=asset_type, task_type=expected_type, schedule_id=schedule_id)
+        task_list_url = build_url(args.base_url, task_list_path)
+        try:
+            last_task_list_response = http_json("GET", task_list_url, api_key)
+        except RuntimeError as exc:
+            consecutive_errors += 1
+            if consecutive_errors >= 5:
+                print_error(
+                    {
+                        "schedule_id": schedule_id,
+                        "error": f"Too many consecutive poll errors: {exc}",
+                        "last_response": {"task_list": last_task_list_response},
+                    }
+                )
+                return 1
+            time.sleep(args.interval)
+            continue
+        consecutive_errors = 0
+        records = [
+            record
+            for record in extract_list_response(last_task_list_response)
+            if record_matches_request(record, args, create_started_at, schedule_id, task_ids)
+        ]
+
+        result_records: list[dict[str, Any]] = []
+        assets: list[str] = []
+        for record in records:
+            if not validate_task_type(record, expected_type, {"schedule_id": schedule_id, "task_id": record.get("taskId")}):
+                return 1
+            status = str(record.get("status") or "").lower()
+            record_assets = dedupe_assets(flatten_assets(collect_values(record, ASSET_KEYS)))
+            if status in SUCCESS_STATUSES and record_assets:
+                result_records.append(record)
+                assets.extend(record_assets)
+
+        assets = dedupe_assets(assets)
+        requested_count = max(1, args.nums)
+        if len(assets) >= requested_count:
+            assets = assets[:requested_count]
+            saved = save_assets(assets, Path(args.output_dir))
+            print_success(
+                {
+                    "schedule_id": schedule_id,
+                    "task_ids": task_ids or [record.get("taskId") for record in result_records if record.get("taskId")],
+                },
+                "COMPLETED",
+                saved,
+                markdown_for_assets(saved),
+                {"tasks": result_records},
+                Path(args.output_dir),
+            )
+            return 0
+
+        if records and all(str(record.get("status") or "").lower() in FAILURE_STATUSES for record in records):
+            print_error(
+                {
+                    "schedule_id": schedule_id,
+                    "status": "FAILED",
+                    "response": {"tasks": records},
+                }
+            )
+            return 1
+
+        time.sleep(args.interval)
+
+    print_error(
+        {
+            "schedule_id": schedule_id,
+            "error": "Timed out while polling schedule.",
+            "last_response": {"task_list": last_task_list_response},
+        }
+    )
+    return 1
+
+
+def main() -> int:
+    args = parse_args()
+    args.kind = args.kind.lower()
+    poll_only = bool(args.poll_task_id or args.poll_schedule_id)
+    if args.show_default_model or args.set_default_model is not None or args.reset_default_model:
+        if poll_only or args.prompt or args.model or args.reference_image or args.reference_video or args.reference_audio:
+            print_error({"error": "Model preference commands cannot be combined with generation or polling inputs."}, stderr=True)
+            return 2
+        try:
+            if args.set_default_model is not None:
+                update_model_preference(args.kind, resolve_model_name(args.set_default_model))
+            elif args.reset_default_model:
+                update_model_preference(args.kind, None)
+            print(json.dumps({"kind": args.kind, "model": selected_model(args.kind, None),
+                              "config_path": str(model_preferences_path())}, ensure_ascii=False))
+            return 0
+        except (ValueError, OSError) as exc:
+            print_error({"error": str(exc)}, stderr=True)
+            return 2
+    if args.poll_task_id and args.poll_schedule_id:
+        print_error({"error": "Use only one of --poll-task-id or --poll-schedule-id."}, stderr=True)
+        return 2
+    if not poll_only and not args.prompt:
+        print_error({"error": "--prompt is required when creating a new task."}, stderr=True)
+        return 2
+
+    resolved_mode = resolve_create_mode(args)
+    if not args.client_task_id and not poll_only:
+        args.client_task_id = generate_client_task_id()
+    try:
+        args.model = selected_model(args.kind, args.model, poll_only=poll_only)
+    except (ValueError, OSError) as exc:
+        print_error({"error": str(exc)}, stderr=True)
+        return 2
+    if args.model and not poll_only:
+        try:
+            validate_model_args(args)
+        except ValueError as exc:
+            print_error({"error": str(exc)}, stderr=True)
+            return 2
+    elif args.kind.lower() == "video" and not args.seconds_was_set and args.model:
+        args.seconds = default_video_seconds(args.model)
+
+    try:
+        api_key = require_api_key()
+    except SystemExit as exc:
+        print_error({"error": str(exc)}, stderr=True)
+        return 2
+
+    if poll_only:
+        try:
+            if args.poll_task_id:
+                return poll_task(args, api_key, args.poll_task_id)
+            return poll_schedule(args, api_key, args.poll_schedule_id, [], time.time())
+        except Exception as exc:
+            print_error(
+                {
+                    "task_id": args.poll_task_id,
+                    "schedule_id": args.poll_schedule_id,
+                    "error": f"Unexpected error during polling: {exc}",
+                    "hint": "Re-run with the same --poll-task-id / --poll-schedule-id — the task may still be running.",
+                }
+            )
+            return 1
+
+    try:
+        reference_images = [
+            resolve_reference_image(path_or_url, args.base_url, api_key)
+            for path_or_url in args.reference_image
+        ]
+        reference_video_file_ids = [
+            resolve_reference_file_id(value, args.base_url, api_key, "video")
+            for value in args.reference_video
+        ]
+        reference_audio_file_ids = [
+            resolve_reference_file_id(value, args.base_url, api_key, "audio")
+            for value in args.reference_audio
+        ]
+        payload = build_create_payload(
+            args,
+            reference_images,
+            reference_video_file_ids,
+            reference_audio_file_ids,
+        )
+    except (OSError, ValueError, RuntimeError) as exc:
+        print_error({"error": str(exc)}, stderr=True)
+        return 2
+
+    create_started_at = time.time()
+    created: dict[str, Any] | None = None
+    if resolved_mode == "direct":
+        create_url = build_url(args.base_url, args.create_path)
+        try:
+            created = http_json("POST", create_url, api_key, payload)
+        except RuntimeError as exc:
+            print_error({"error": str(exc), "create_mode": resolved_mode}, stderr=True)
+            return 1
+
+    if resolved_mode == "schedule":
+        schedule_create_url = build_url(args.base_url, args.schedule_create_path)
+        try:
+            created = http_json("POST", schedule_create_url, api_key, payload)
+        except RuntimeError as exc:
+            print_error({"error": str(exc), "create_mode": resolved_mode})
+            return 1
+
+    if created is None:
+        print_error({"error": "No create response.", "create_mode": resolved_mode})
+        return 1
+
+    task_id = deep_get(created, ["task_id", "taskId", "id", "data.task_id", "data.taskId", "data.id"])
+    schedule_id = deep_get(created, ["schedule_id", "scheduleId", "data.schedule_id", "data.scheduleId"])
+    task_ids = normalize_task_ids(deep_get(created, ["taskIds", "task_ids", "data.taskIds", "data.task_ids"]))
+    try:
+        if task_id:
+            return poll_task(args, api_key, task_id)
+        if schedule_id:
+            return poll_schedule(args, api_key, schedule_id, task_ids, create_started_at)
+    except Exception as exc:
+        print_error(
+            {
+                "task_id": task_id,
+                "schedule_id": schedule_id,
+                "task_ids": task_ids,
+                "error": f"Unexpected error during polling: {exc}",
+                "hint": (
+                    "Re-run poll with the same id — the task may still be running. "
+                    f"Example: --kind {args.kind} --poll-schedule-id {schedule_id}"
+                    if schedule_id
+                    else f"Example: --kind {args.kind} --poll-task-id {task_id}"
+                ),
+            }
+        )
+        return 1
+
+    print_error(
+        {
+            "error": "Could not find task id or schedule id in create response.",
+            "create_mode": resolved_mode,
+            "response": created,
+        }
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

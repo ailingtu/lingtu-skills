@@ -12,6 +12,7 @@ Use this repository when a user asks for Lingtu AI OpenAPI developer integration
 ## Available Packages
 
 - `packages/openapi-guide`: public OpenAPI documentation lookup, API Key creation and safe-use guidance, integration code generation/review, and sanitized error diagnosis without making authenticated business API calls.
+- `packages/tiktok-carousel`: TikTok / TikTok Shop shoppable carousel planning; default to a page-by-page plan, then generate images only when requested. Bundles image generation helpers and runs without another installed Skill.
 - `packages/content-create`: media generation from products, images, and prompts; product images and ecommerce videos.
 - `packages/tkshop-query`: TK shop list lookup, daily reports, and shop operations analysis.
 - `packages/tk-blacklist`: batch TikTok creator blacklist lookup by uniqueId, including feedback count, latest feedback time, and reason.
@@ -33,6 +34,8 @@ Use this repository when a user asks for Lingtu AI OpenAPI developer integration
 ## Routing
 
 Use `packages/openapi-guide` for OpenAPI documentation questions, developer API Key creation/use guidance, endpoint discovery, integration examples, SDK/client code, contract review, and sanitized API error diagnosis. Do not use it to execute the business operation being documented.
+
+Use `packages/tiktok-carousel` for TikTok 带货图文、商品轮播图、多图种草 and shoppable photo carousel requests. Plan first by default; proceed to image generation when the user confirms the plan or explicitly requests direct generation. This route takes precedence over generic product-image generation for these requests.
 
 Use `packages/content-create` for product images, ecommerce videos, and media-generation tasks starting from products or prompts. Reference-based script, shot, pacing, and product adaptation also belong here; read `references/viral-remake-workflow.md`.
 
