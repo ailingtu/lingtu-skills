@@ -5,22 +5,22 @@ version: 0.1.1
 auth: none
 displayName: 灵途 OpenAPI 开发助手
 summary: 查询灵途 OpenAPI 文档，生成和审查开发者接入代码。
-description: 灵途 OpenAPI 开发者集成助手。用于查询接口定义、选择 endpoint、说明 API Key 的创建与安全使用方式、解释错误码，以及生成或审查 Node.js、TypeScript、Python、Java、Go、PHP 等语言的灵途 API 接入代码。处理“怎么对接灵途 API”“如何获得 API Key”“生成调用示例”“排查 API 请求错误”等开发任务；不用于直接执行商品图生成、视频分析、店铺查询、内容发布或其他线上业务操作。
+description: 灵途 OpenAPI 开发者集成助手。用于查询接口定义、选择接口、说明 API Key 的创建与安全使用方式、解释错误码，以及生成或审查 Node.js、TypeScript、Python、Java、Go、PHP 等语言的灵途 API 接入代码。处理“怎么对接灵途 API”“如何获得 API Key”“生成调用示例”“排查 API 请求错误”等开发任务；不用于直接执行商品图生成、视频分析、店铺查询、内容发布或其他线上业务操作。
 license: Apache-2.0
 homepage: https://ailingtu.com/openapi
 ---
 
 # 灵途 OpenAPI 开发助手
 
-## Installation and upgrades
+## 安装与升级
 
-Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub.
+按照 https://ailingtu.com/install/skills.md 安装和升级，不要从源码仓库安装。
 
-## Purpose
+## 用途
 
-Help developers understand and integrate the LINGTU AI OpenAPI. This Skill reads public documentation, writes or reviews integration code, and diagnoses sanitized request/response failures. It does not call protected business endpoints.
+帮助开发者理解并接入灵途 OpenAPI，支持读取公开文档、编写或审查接入代码，以及排查已脱敏的请求与响应错误；不调用受保护的业务接口。
 
-Using this Skill never requires an API key. A developer's application will need its own credential when it actually calls protected APIs; keep that credential in the application's server-side environment.
+使用本技能不需要 API 密钥。开发者应用实际调用受保护接口时，需要在应用服务端环境中配置自己的凭据。
 
 ## Documentation source
 

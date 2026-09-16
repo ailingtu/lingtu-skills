@@ -1,4 +1,4 @@
 interface:
-  display_name: "Lingtu Social Monitor"
-  short_description: "Lingtu 社媒达人监控、素材指标、日报与告警"
-  default_prompt: "Use $lingtu-social-monitor to monitor TikTok/Instagram creators and fetch account or single-video metrics."
+  display_name: "灵途社媒达人监控"
+  short_description: "灵途社媒达人监控、素材指标、日报与告警"
+  default_prompt: "使用 $lingtu-social-monitor 监控 TikTok 或 Instagram 达人，查询账号或单条视频的数据指标。"

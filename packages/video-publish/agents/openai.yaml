@@ -1,4 +1,4 @@
 interface:
-  display_name: "Lingtu Video Publish"
-  short_description: "Lingtu 批量视频发布到 TikTok"
-  default_prompt: "Use $lingtu-video-publish to batch publish videos to TikTok Shop and TikTok nurture accounts from CSV schedule templates."
+  display_name: "灵途批量视频发布"
+  short_description: "灵途批量视频发布到 TikTok"
+  default_prompt: "使用 $lingtu-video-publish 根据 CSV 排期表，向 TikTok Shop 和 TikTok 养号账号批量发布视频。"

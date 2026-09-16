@@ -12,36 +12,35 @@ homepage: https://ailingtu.com/skills/tkshop-query
 
 # TK 店铺数据查询与日报
 
-## Installation and upgrades
+## 安装与升级
 
-Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub.
+按照 https://ailingtu.com/install/skills.md 安装和升级，不要从源码仓库安装。
 
-## Overview
+## 能力介绍
 
-Use this skill for TK shop/store data lookup and analysis requests.
+用于查询和分析 TK 店铺经营数据。
 
-Supported API flows:
+支持的接口流程：
 
-- Shop daily report: `GET /v1/report/biz/detail?targetType=SHOP&targetId={shop_id}&reportDate={YYYY-MM-DD}`.
-- All-shops summary report: `GET /v1/report/biz/summary?reportDate={YYYY-MM-DD}`.
-- Shop list: `GET /v1/shop/list`.
-- AI business question: `POST /v1/ai/chat/create`, streaming response.
+- 店铺日报： `GET /v1/report/biz/detail?targetType=SHOP&targetId={shop_id}&reportDate={YYYY-MM-DD}`.
+- 全部店铺汇总日报： `GET /v1/report/biz/summary?reportDate={YYYY-MM-DD}`.
+- 店铺列表： `GET /v1/shop/list`.
+- 经营问题问答：`POST /v1/ai/chat/create`，流式返回结果。
 
-Read `references/api.md` before changing endpoint paths, request fields, response fields, or streaming parsing. Use `scripts/lingtu_shop_data.py` for deterministic calls.
+修改接口路径、请求字段、响应字段或处理逻辑前，先阅读 `references/api.md`。通过 `scripts/lingtu_shop_data.py` 执行调用。
 
-## Configuration
+## 配置
 
-All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
-Installation does not require authentication. If `LINGTU_API_KEY` is missing when
-running a task, ask the user to create or manage a key at https://ailingtu.com/api-keys
-and configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
-Never ask for, display, or store their API key in chat. Do not generate account-binding URLs.
+所有认证请求只读取 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。
+安装技能不需要认证。执行任务时缺少密钥，引导用户前往 https://ailingtu.com/api-keys
+创建或管理密钥，在运行技能的环境中配置 `LINGTU_API_KEY` 后重试。
+不要索取、展示或保存用户密钥，不要生成账号绑定链接。
 
 TikTok Shop 店铺绑定入口是 https://app.ailingtu.com/teamshop 。当用户想绑定 TikTok 店铺、查询不到店铺、或店铺列表为空时，明确让用户打开这个链接完成店铺绑定，然后再执行 `list-shops` 或日报查询。
 
 缺少密钥时，读取 `shared/references/api-key-setup.md`，向用户展示其操作系统对应的完整步骤（如何打开终端、可复制命令、粘贴密钥、重启应用及生效范围），不要只说“配置环境变量”。已知系统时只展示对应部分；未知时同时提供 Mac 和 Windows。配置由用户在自己电脑上完成，不代为读取或填入真实密钥。
 
-Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
+默认接口地址为 `https://api.ailingtu.com`，后续接口文档明确指定其他地址时以文档为准。
 
 ## Workflow
 
@@ -58,9 +57,9 @@ Use `https://api.ailingtu.com` as the default base URL unless a future API refer
 4. For AI business questions, call `/v1/ai/chat/create` with the user's question and stream the answer back. Do not call the daily report API unless the user explicitly asks to retrieve a report.
 5. Return concise results. Include the resolved shop id/name and report date for daily reports, and the report date for summary reports, so the data source is clear.
 
-## Script Usage
+## 脚本用法
 
-List shops:
+查询店铺列表：
 
 ```bash
 python3 scripts/lingtu_shop_data.py list-shops

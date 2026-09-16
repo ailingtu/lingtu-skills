@@ -22,7 +22,7 @@ python3 scripts/lingtu_video_publish.py gen-csv \
 
 # 2. 编辑 schedule.csv（视频：title + video_file；图文：title + image_files），媒体拖入文件夹
 
-# 3. dry-run 预览
+# 3. 模拟执行预览
 python3 scripts/lingtu_video_publish.py publish \
   --folder ~/Desktop/视频发布_2026-07-05
 

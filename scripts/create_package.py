@@ -46,23 +46,19 @@ def skill_markdown(
     auth_section = ""
     if auth == "lingtu-api-key":
         auth_section = """
-## Authentication
+## 认证
 
-All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
-Installation does not require authentication. If `LINGTU_API_KEY` is missing when
-running a task, ask the user to create or manage a key at https://ailingtu.com/api-keys
-and configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
-Never ask for, display, or store their API key in chat. Do not generate account-binding URLs.
-Read `shared/references/api-key-setup.md` when the key is missing. Show the user
-how to open their Mac terminal or Windows PowerShell, the exact setup commands,
-and how to restart the host app. Do not merely tell them to configure a variable.
+所有认证请求只读取 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。
+安装技能不需要认证。执行任务时缺少密钥，引导用户前往 https://ailingtu.com/api-keys
+创建或管理密钥，在运行技能的环境中配置 `LINGTU_API_KEY` 后重试。
+不要索取、展示或保存用户密钥，不要生成账号绑定链接。
+缺少密钥时读取 `shared/references/api-key-setup.md`，向用户说明如何打开 Mac 终端或 Windows PowerShell、具体配置命令和重启应用的步骤，不要仅提示配置环境变量。
 """
     else:
         auth_section = """
-## Authentication
+## 认证
 
-This Skill does not call authenticated Lingtu business APIs and does not read an
-API key or start the account-binding flow.
+本技能不调用需要认证的灵途业务接口，不读取 API 密钥，也不启动账号绑定流程。
 """
 
     return f"""---
@@ -79,12 +75,11 @@ homepage: {homepage}
 
 # {display_name}
 
-## Installation and upgrades
+## 安装与升级
 
-Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this
-Skill from GitHub or another skill store.
+按照 https://ailingtu.com/install/skills.md 安装和升级，不要从源码仓库或其他技能商店安装。
 
-## Purpose
+## 用途
 
 {description}
 {auth_section}
@@ -93,7 +88,7 @@ Skill from GitHub or another skill store.
 
 def openai_yaml(slug: str, display_name: str, summary: str) -> str:
     short_description = ui_short_description(display_name, summary)
-    default_prompt = f"Use ${slug} to help me with this task: {summary}"
+    default_prompt = f"使用 ${slug} 帮我完成以下任务：{summary}"
     return f"""interface:
   display_name: {yaml_string(display_name)}
   short_description: {yaml_string(short_description)}

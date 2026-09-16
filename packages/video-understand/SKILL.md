@@ -12,41 +12,39 @@ homepage: https://ailingtu.com/skills/video-understand
 
 # 视频理解与复刻提示词生成
 
-## Installation and upgrades
+## 安装与升级
 
-Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub.
+按照 https://ailingtu.com/install/skills.md 安装和升级，不要从源码仓库安装。
 
-## Overview
+## 能力介绍
 
-Use this skill to turn a video into a natural-language replication prompt.
+将视频解析为自然语言复刻提示词，用于内容理解、打标和后续视频生成。
 
-Supported inputs:
+支持的输入：
 
-- A public TikTok, Douyin (抖音), Xiaohongshu (小红书), WeChat Channels (视频号), YouTube, or Instagram URL.
-- A local video file (the script uploads it through `/v1/file/upload` first, then replicates by file id).
-- A material/file already uploaded to Lingtu, referenced by `businessId` + `businessType`.
+- TikTok、抖音、小红书、视频号、YouTube 或 Instagram 的公开视频链接。
+- 本地视频文件（脚本先通过 `/v1/file/upload` 上传，再根据文件 ID 生成复刻提示词）。
+- 已上传至灵途的素材或文件，通过 `businessId` + `businessType` 引用。
 
-Supported API flows:
+支持的接口流程：
 
-- File upload: `POST /v1/file/upload`, multipart/form-data with form field `file`.
-- Replication prompt: `POST /v1/material/analysisTask/stream`, server-sent events.
+- 文件上传：`POST /v1/file/upload`，使用 `multipart/form-data`，表单字段为 `file`。
+- 复刻提示词：`POST /v1/material/analysisTask/stream`，通过服务器发送事件返回。
 
-Read `references/api.md` before changing endpoint paths, request fields, response fields, or streaming parsing. Use `scripts/lingtu_video_understand.py` for deterministic calls.
+修改接口路径、请求字段、响应字段或处理逻辑前，先阅读 `references/api.md`。通过 `scripts/lingtu_video_understand.py` 执行调用。
 
-## Configuration
+## 配置
 
-All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
-Installation does not require authentication. If `LINGTU_API_KEY` is missing when
-running a task, ask the user to create or manage a key at https://ailingtu.com/api-keys
-and configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
-Never ask for, display, or store their API key in chat. Do not generate account-binding URLs.
+所有认证请求只读取 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。
+安装技能不需要认证。执行任务时缺少密钥，引导用户前往 https://ailingtu.com/api-keys
+创建或管理密钥，在运行技能的环境中配置 `LINGTU_API_KEY` 后重试。
+不要索取、展示或保存用户密钥，不要生成账号绑定链接。
 
 缺少密钥时，读取 `shared/references/api-key-setup.md`，向用户展示其操作系统对应的完整步骤（如何打开终端、可复制命令、粘贴密钥、重启应用及生效范围），不要只说“配置环境变量”。已知系统时只展示对应部分；未知时同时提供 Mac 和 Windows。配置由用户在自己电脑上完成，不代为读取或填入真实密钥。
 
-Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
+默认接口地址为 `https://api.ailingtu.com`，后续接口文档明确指定其他地址时以文档为准。
 
-The independently installed package includes `shared/scripts`, so authentication,
-HTTP and upload behavior use the same runtime as the other Lingtu Skills.
+独立安装包内置 `shared/scripts`，认证、HTTP 请求和上传与其他灵途技能使用相同的运行时。
 
 ## Do Not
 
@@ -91,24 +89,22 @@ Use the built-in batch command (default concurrency: 3):
 
 ```bash
 python3 scripts/lingtu_video_understand.py batch --urls urls.txt --output-dir results --workers 3
-# Retry failed items while preserving successful results:
+# 保留成功结果，仅重试失败项：
 python3 scripts/lingtu_video_understand.py batch --urls urls.txt --output-dir results --workers 3 --resume
 ```
 
-`urls.txt` contains one URL per line. Duplicate URLs are deduplicated. Each URL gets
-its own JSON file (source, status, task id and prompt on success, or error on failure).
-Progress goes to stderr; stdout contains the batch summary. Any failed item makes
-the command exit non-zero. Workers must be 1–10. No automatic request retry is performed;
-after a transient failure, wait a few seconds before explicitly resuming.
+`urls.txt` 每行一个链接，重复链接会自动去重。每个链接生成独立的 JSON 文件，
+包含来源、状态、任务 ID 和成功时的提示词，失败时记录错误。
+进度输出到标准错误，批量汇总输出到标准输出。存在失败项时命令返回非零退出码。
+并发数必须为 1–10，不自动重试请求；临时失败后等待数秒再显式恢复。
 
-For a single input, use `replicate --url "..." --json` for structured output.
-`--json` and `--raw` are mutually exclusive. `--timeout 300` sets the socket timeout,
-not a total task deadline. Normal text/JSON is emitted only after stream validation;
-`--raw` is diagnostic and may contain incomplete or failed output.
+单个输入可通过 `replicate --url "..." --json` 获取结构化输出。
+`--json` 与 `--raw` 不能同时使用。`--timeout 300` 设置套接字超时时间，而非任务总时限。
+正常文本或 JSON 仅在流式校验通过后输出；`--raw` 用于诊断，可能包含不完整或失败内容。
 
-## Script Usage
+## 脚本用法
 
-Parse a supported public video URL (TikTok / Douyin / Xiaohongshu / WeChat Channels / YouTube / Instagram):
+解析支持平台的公开视频链接（TikTok、抖音、小红书、视频号、YouTube、Instagram）：
 
 ```bash
 python3 scripts/lingtu_video_understand.py replicate --url "https://www.tiktok.com/@user/video/1234567890"
@@ -120,13 +116,13 @@ python3 scripts/lingtu_video_understand.py replicate --url "https://www.xiaohong
 python3 scripts/lingtu_video_understand.py replicate --url "https://channels.weixin.qq.com/web/pages/feed?eid=..."
 ```
 
-Parse a local video file (auto-upload + replicate):
+解析本地视频文件（自动上传并生成复刻提示词）：
 
 ```bash
 python3 scripts/lingtu_video_understand.py replicate --file ./clip.mp4
 ```
 
-Parse an uploaded material/file:
+解析已上传的素材或文件：
 
 ```bash
 python3 scripts/lingtu_video_understand.py replicate --business-id 123456 --business-type MATERIAL

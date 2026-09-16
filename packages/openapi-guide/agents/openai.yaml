@@ -1,4 +1,4 @@
 interface:
-  display_name: "Lingtu OpenAPI Guide"
+  display_name: "灵途 OpenAPI 开发助手"
   short_description: "查询接口文档并生成或审查灵途 API 接入代码"
-  default_prompt: "Use $lingtu-openapi-guide to help me integrate a LINGTU AI OpenAPI operation."
+  default_prompt: "使用 $lingtu-openapi-guide 帮我查询灵途 OpenAPI 文档并完成接口接入。"

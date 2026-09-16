@@ -1,47 +1,47 @@
-# TKShop Query
+# 灵途 TK 店铺数据查询
 
-TKShop Query is a reusable agent package for TK shop operations data. It supports shop list lookup, daily shop reports, and AI business questions through Lingtu AI APIs.
+通过灵途 AI 接口查询和分析 TK 店铺经营数据，支持店铺列表、店铺日报和经营问题问答。
 
-Current package version: `0.2.1`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
+当前版本以 [`SKILL.md`](./SKILL.md) 文件头部的 `version` 字段为准，安装器可据此判断是否需要升级。
 
-## What It Does
+## 主要能力
 
-- Lists available shops through Lingtu AI.
-- Fetches a single-shop daily report by shop id, shop name, and date.
-- Fetches an all-shops summary report by date, with automatic fallback to the first shop's daily report when the summary is empty.
-- Answers shop operations questions through the Lingtu AI chat API.
-- Provides deterministic script entry points for agents that can run local tools.
+- 通过灵途 AI 查询可用店铺列表。
+- 按店铺 ID、店铺名称和日期查询单店日报。
+- 按日期查询全部店铺汇总日报；汇总为空时自动回退至首个店铺的日报。
+- 通过灵途 AI 对话接口回答店铺经营问题。
+- 为可运行本地工具的智能体提供统一脚本入口。
 
-## Requirements
+## 使用要求
 
-All authenticated requests use only the `LINGTU_API_KEY` environment variable and send it as `x-api-key`. If it is missing, ask the user to create or manage a key at https://ailingtu.com/api-keys and configure `LINGTU_API_KEY` in the environment running the Skill before retrying. Never paste the key into chat or commit it or private business data.
+所有认证请求仅从环境变量 `LINGTU_API_KEY` 读取密钥，并通过 `x-api-key` 请求头发送。缺少密钥时，引导用户前往 https://ailingtu.com/api-keys 创建或管理密钥，在运行技能的环境中配置后重试。不要将密钥粘贴到聊天中，也不要将密钥、私人媒体或经营数据提交到仓库。
 
-## Script Usage
+## 脚本用法
 
-List shops:
+查询店铺列表：
 
 ```bash
 python3 scripts/lingtu_shop_data.py list-shops
 ```
 
-Fetch a daily report:
+查询单店日报：
 
 ```bash
 python3 scripts/lingtu_shop_data.py daily-report --date 2026-06-09
 ```
 
-Fetch the all-shops summary report:
+查询全部店铺汇总日报：
 
 ```bash
 python3 scripts/lingtu_shop_data.py summary-report --date 2026-06-09
 ```
 
-Ask a shop operations question:
+询问店铺经营问题：
 
 ```bash
 python3 scripts/lingtu_shop_data.py ask "这个店铺最近经营有什么问题？"
 ```
 
-## API Reference
+## 接口参考
 
-Read [`references/api.md`](./references/api.md) before changing endpoint paths, request fields, response fields, or streaming parsing.
+修改接口路径、请求字段、响应字段或流式解析前，先阅读 [`references/api.md`](./references/api.md)。

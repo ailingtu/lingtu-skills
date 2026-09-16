@@ -3,43 +3,40 @@ name: lingtu-content-create
 slug: lingtu-content-create
 version: 0.4.2
 auth: lingtu-api-key
-displayName: AI 带货视频和 AI 商品图片生成 by 灵途 AI
+displayName: 灵途 AI 带货视频和商品图片生成
 summary: 用灵途 AI 生成电商带货视频、UGC 短视频、商品主图和场景图。
 description: AI 带货视频和 AI 商品图片生成，由灵途 AI 提供。根据商品图片、卖点和提示词生成电商带货视频、UGC 短视频、商品主图、卖点细节图、生活场景图。用户要生成商品图片、优化商品图或制作带货视频时使用。也支持参考源视频结构，结合商品与卖点生成新视频。爆款复刻（语义分段、逐段重绘确认与合成）使用 lingtu-video-remake。
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/content-create
 ---
 
-# AI 带货视频和 AI 商品图片生成 by 灵途 AI
+# 灵途 AI 带货视频和商品图片生成
 
-## Installation and upgrades
+## 安装与升级
 
-Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub.
+按照 https://ailingtu.com/install/skills.md 安装和升级，不要从源码仓库安装。
 
-## Overview
+## 能力介绍
 
 面向电商商家与内容创作者的 AI 带货视频和 AI 商品图片生成 Skill，由灵途 AI 提供。从商品图片、卖点和提示词出发，生成电商带货视频、UGC 短视频、商品主图、卖点细节图和生活场景图。
 
-Use Lingtu AI's shared schedule API to create generated media from a prompt and optional reference images. Treat image and video creation as variants of the same workflow: submit a schedule creation request, poll by the returned schedule id, then return the generated assets.
+使用灵途 AI 的统一任务接口，根据提示词和可选参考图片生成媒体。图片和视频采用相同流程：提交生成任务、根据返回的任务 ID 轮询状态，最后返回生成素材。
 
-This skill also covers product-content workflows around the API:
+支持围绕商品素材生成电商带货视频。用户需要带货视频、用户实拍风格视频、目标市场脚本、多版本内容或商品短广告时，阅读 `references/ecommerce-video-workflow.md`。
 
-- Generating ecommerce selling videos from product references. Read `references/ecommerce-video-workflow.md` when the user asks for selling videos, UGC-style videos, target-market scripts, multiple variants, or short product ads.
+按当前任务需要读取工作流参考，不要默认加载全部文档。
 
-Use only the workflow references needed for the request; do not load all of them by default.
+## 配置
 
-## Configuration
-
-All authenticated requests use only `LINGTU_API_KEY` and send it as `x-api-key`.
-Installation does not require authentication. If `LINGTU_API_KEY` is missing when
-running a task, ask the user to create or manage a key at https://ailingtu.com/api-keys
-and configure `LINGTU_API_KEY` in the environment running the Skill before retrying.
-Never ask for, display, or store their API key in chat. Do not generate account-binding URLs.
+所有认证请求只读取 `LINGTU_API_KEY`，并通过 `x-api-key` 请求头发送。
+安装技能不需要认证。执行任务时缺少密钥，引导用户前往 https://ailingtu.com/api-keys
+创建或管理密钥，在运行技能的环境中配置 `LINGTU_API_KEY` 后重试。
+不要索取、展示或保存用户密钥，不要生成账号绑定链接。
 
 缺少密钥时，读取 `shared/references/api-key-setup.md`，向用户展示其操作系统对应的完整步骤（如何打开终端、可复制命令、粘贴密钥、重启应用及生效范围），不要只说“配置环境变量”。已知系统时只展示对应部分；未知时同时提供 Mac 和 Windows。配置由用户在自己电脑上完成，不代为读取或填入真实密钥。
 
 
-Use `https://api.ailingtu.com` as the default base URL. Read `references/api.md` before changing endpoint paths, request fields, response fields, or status mapping.
+默认接口地址为 `https://api.ailingtu.com`。修改接口路径、请求字段、响应字段或状态映射前，先阅读 `references/api.md`。
 
 ## Workflow
 
@@ -73,7 +70,7 @@ Use `https://api.ailingtu.com` as the default base URL. Read `references/api.md`
 
 参考图片按用户提供的顺序使用，不要求三张固定角色的图片，也不自动增加参考图优化或生成步骤。
 
-## Script Usage
+## 脚本用法
 
 The bundled script supports direct task creation only as an explicit compatibility option. Its default `--create-mode auto` uses schedule creation for both images and videos. Do not submit the same payload through both create APIs for one user request.
 

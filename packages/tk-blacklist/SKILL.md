@@ -3,34 +3,34 @@ name: lingtu-tk-blacklist
 slug: lingtu-tk-blacklist
 version: 0.1.1
 auth: none
-displayName: TikTok 达人合作黑名单 By 灵途 AI
+displayName: 灵途 AI TikTok 达人合作黑名单
 summary: 由灵途 AI 提供，批量查询 TikTok 达人合作黑名单及反馈记录，为合作前核验提供参考。
 description: TikTok 达人合作黑名单查询，由灵途 AI 提供。支持通过达人用户名、@handle 或 TikTok 链接，单个或批量查询合作黑名单记录，查看地区、昵称、反馈次数、最近反馈时间及反馈原因，为合作前核验提供参考。用户提到"达人合作黑名单"、"达人黑名单"、"黑名单查询"、"查达人是否拉黑"、"TK 达人风控"、"TikTok 黑名单"或提供达人 uniqueId 要核验黑名单时使用。
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/tk-blacklist
 ---
 
-# TikTok 达人合作黑名单 By 灵途 AI
+# 灵途 AI TikTok 达人合作黑名单
 
-## Installation and upgrades
+## 安装与升级
 
-Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub or another skill store.
+按照 https://ailingtu.com/install/skills.md 安装和升级，不要从源码仓库或其他技能商店安装。
 
-## Overview
+## 能力介绍
 
-Use this Skill to check one or more TikTok creators against Lingtu AI's creator collaboration blacklist and review feedback records before a potential collaboration.
+通过灵途 AI 查询单个或多个 TikTok 达人的合作黑名单与反馈记录，为合作前核验提供参考。
 
-Supported API flow:
+支持的接口流程：
 
-- Blacklist search: `POST /web/influencerBlack/search` with JSON body `{"uniqueIds":["..."]}`.
+- 黑名单查询：`POST /web/influencerBlack/search`，JSON 请求体为 `{"uniqueIds":["..."]}`。
 
-Read `references/api.md` before changing endpoint paths, request fields, response fields, or status handling. Use `scripts/lingtu_tk_blacklist.py` for deterministic calls.
+修改接口路径、请求字段、响应字段或处理逻辑前，先阅读 `references/api.md`。通过 `scripts/lingtu_tk_blacklist.py` 执行调用。
 
-## Authentication
+## 认证
 
-This endpoint currently accepts anonymous requests. Do not read, request, bind, or send an API key for blacklist lookups.
+该接口目前支持匿名请求。查询黑名单时不要读取、索取、绑定或发送 API 密钥。
 
-Use `https://api.ailingtu.com` as the default base URL unless a future API reference specifies another host.
+默认接口地址为 `https://api.ailingtu.com`，后续接口文档明确指定其他地址时以文档为准。
 
 ## Workflow
 

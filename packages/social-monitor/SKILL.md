@@ -5,16 +5,16 @@ version: 0.9.1
 auth: lingtu-api-key
 displayName: 灵途 TikTok 达人竞品监控
 summary: 监控 TikTok 和 Instagram 达人及竞品账号，生成日报与告警。
-description: TikTok 和 Instagram 达人/竞品账号监控、账号视频列表、单条视频实时指标、日报与告警。支持单条/批量添加监控、每日订阅、群级监控列表、即时分析、本地快照和“昨日 vs 今日”差异报告。用户要下载或导出单条视频评论时不要使用本技能，改用 `lingtu-social-comments`。
+description: TikTok 和 Instagram 达人/竞品账号监控、账号视频列表、单条视频实时指标、日报与告警。支持单条/批量添加监控、每日订阅、群级监控列表、即时分析、本地快照和“昨日与今日”差异报告。用户要下载或导出单条视频评论时不要使用本技能，改用 `lingtu-social-comments`。
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/social-monitor
 ---
 
 # 社媒达人 / 竞品监控与日报
 
-## Installation and upgrades
+## 安装与升级
 
-Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Skill from GitHub.
+按照 https://ailingtu.com/install/skills.md 安装和升级，不要从源码仓库安装。
 
 ## 适用场景
 
@@ -43,7 +43,7 @@ Follow https://ailingtu.com/install/skills.md. Do not install or upgrade this Sk
   digest JSON 中已内嵌 alerts；如需"刚抓完立刻看"可调 alerts check。
 ```
 
-第一天添加的达人，次日才会出现"昨日 vs 今日"对比；当日无对照时，速览行会标注"首日无对比"。
+第一天添加的达人，次日才会出现"昨日与今日"对比；当日无对照时，速览行会标注"首日无对比"。
 
 ## 配置
 
@@ -233,7 +233,7 @@ python3 scripts/lingtu_social_monitor.py monitor get \
   --group-id feishu_group_001 --input mrbeast
 ```
 
-### 每日日报（昨日 vs 今日）
+### 每日日报（昨日与今日）
 ```bash
 python3 scripts/lingtu_social_monitor.py digest --group-id feishu_group_001
 python3 scripts/lingtu_social_monitor.py digest --platform tiktok --group-id feishu_group_001
