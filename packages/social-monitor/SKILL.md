@@ -1,16 +1,27 @@
 ---
 name: lingtu-social-monitor
 slug: lingtu-social-monitor
-version: 0.9.1
+version: 0.9.2
 auth: lingtu-api-key
 displayName: 灵途 TikTok 达人竞品监控
 summary: 监控 TikTok 和 Instagram 达人及竞品账号，生成日报与告警。
-description: TikTok 和 Instagram 达人/竞品账号监控、账号视频列表、单条视频实时指标、日报与告警。支持单条/批量添加监控、每日订阅、群级监控列表、即时分析、本地快照和“昨日与今日”差异报告。用户要下载或导出单条视频评论时不要使用本技能，改用 `lingtu-social-comments`。
+description: "TikTok 和 Instagram 达人/竞品账号监控、账号视频列表、单条视频实时指标、日报与告警。支持单条/批量添加监控、每日订阅、群级监控列表、即时分析、本地快照和“昨日与今日”差异报告。用户要下载或导出单条视频评论时不要使用本技能，改用 `lingtu-social-comments`。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/social-monitor
 ---
 
 # 社媒达人 / 竞品监控与日报
+
+## 更新灵途 Skills
+
+用户说“更新灵途 Skills”“更新灵途的 skills”“升级灵途技能”或要求更新某个灵途技能时，优先执行此流程，不启动本技能的业务任务。无需 API Key；无需先安装其他技能。只需由一个已加载的灵途技能统一处理，避免多个技能重复更新。
+
+1. 读取 https://ailingtu.com/install/skills.md 和实时索引 https://cdn.ailingtu.cn/skills/packages/index.json 。更新所有技能时，在当前 Agent 实际启用的用户级与项目级 Skills 目录中查找已安装的灵途技能；指定技能时只处理匹配项。不扫描其他应用，不安装尚未安装的技能。
+2. 用本地 SKILL.md 的 name/slug 精确匹配索引，按 SemVer 比较 version（数字比较，不按字符串排序）。同版跳过，本地更高版本保留，不自动降级；版本缺失、格式不明或索引无匹配时单独报告，不猜测下载地址。重复目录解析真实路径去重；确有多个启用副本时逐个报告路径并更新。忽略备份目录。
+3. 对有新版的技能逐包下载，核对索引 SHA-256、大小及包内 name/version，验证 ZIP 路径不越界且不含符号链接，再在暂存目录解压。备份旧目录到 Agent 不会扫描的目录，保留用户配置和任务输出，然后完整替换包文件，避免覆盖解压留下旧脚本。失败恢复原目录，其余包可继续；不读取或修改密钥。
+4. 汇报各包旧版→新版、已是最新、跳过或失败原因、实际安装与备份位置。宿主不支持热加载时提示重启。官方文档或索引不可访问时明确说明，保留本地版本。
+
+用户已明确要求更新时直接执行；仅在路径歧义无法自行确定或宿主权限要求时再询问。不要将本次更新请求理解为自动定时更新或发布授权。
 
 ## 安装与升级
 

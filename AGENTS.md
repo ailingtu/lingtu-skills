@@ -4,6 +4,8 @@ Use this repository when a user asks for Lingtu AI OpenAPI developer integration
 
 ## Distribution
 
+- Every Skill must expose the shared Lingtu Skills update intent in its description and a self-contained update workflow. Requests to update Lingtu Skills update only installed packages for the current Agent, require no business API key, and preserve backups outside scanned Skills directories. The scaffold carries this contract for new packages.
+
 - User installation and upgrades must follow https://ailingtu.com/install/skills.md.
 - Do not tell users to install or update Skills with Codeup, GitHub, `git clone`, `git pull`, or another skill store.
 - Codeup https://codeup.aliyun.com/coss/ailingtu/skills is the development source only.
