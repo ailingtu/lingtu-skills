@@ -1,0 +1,40 @@
+{
+  "slug": "video-remake",
+  "category": "creation",
+  "iconKey": "play-circle",
+  "tone": "rose",
+  "sortOrder": 9,
+  "platforms": [
+    "Video"
+  ],
+  "locales": {
+    "zh-CN": {
+      "title": "灵途爆款复刻",
+      "description": "将源视频按语义分段，用 Wan3.0 逐段重绘、确认并合成爆款复刻视频。",
+      "prompt": "把这段视频按语义切成不超过 15 秒的片段，用 Wan3.0 逐段重绘，每段让我确认。",
+      "input": "源视频、改编要求及可选人物照片、声音或台词。",
+      "output": "分段重绘视频、逐段确认记录与最终合成视频。",
+      "requirement": "生成需要配置 LINGTU_API_KEY；转写和视频处理依赖按工作流检查，每段确认后继续。",
+      "categoryLabel": "内容创作",
+      "highlights": [
+        "按语义拆分最多 15 秒的参考片段",
+        "使用 Wan3.0 逐段重绘与确认",
+        "按源视频顺序合成，可恢复任务"
+      ]
+    },
+    "en-US": {
+      "title": "LINGTU Video Remake",
+      "description": "Split a source video into semantic segments, regenerate them with Wan3.0, review, and merge.",
+      "prompt": "Split this video into semantic segments of up to 15 seconds and regenerate each with Wan3.0 for my approval.",
+      "input": "Source video, adaptation requirements, and optional portrait, voice, or dialogue references.",
+      "output": "Regenerated segments, review records, and a merged video.",
+      "requirement": "Generation requires LINGTU_API_KEY. Check transcription and video-processing dependencies; approve each segment before continuing.",
+      "categoryLabel": "Content creation",
+      "highlights": [
+        "Split reference footage into segments of up to 15 seconds",
+        "Regenerate and review each segment with Wan3.0",
+        "Merge in source order and resume saved tasks"
+      ]
+    }
+  }
+}

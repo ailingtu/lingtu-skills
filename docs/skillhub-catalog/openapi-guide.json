@@ -1,0 +1,40 @@
+{
+  "slug": "openapi-guide",
+  "category": "development",
+  "iconKey": "chat-bubble",
+  "tone": "cyan",
+  "sortOrder": 7,
+  "platforms": [
+    "OpenAPI"
+  ],
+  "locales": {
+    "zh-CN": {
+      "title": "灵途 OpenAPI 开发助手",
+      "description": "查询灵途 OpenAPI 文档，生成和审查开发者接入代码。",
+      "prompt": "帮我查找商品图片生成接口，并生成 Python 服务端调用示例。",
+      "input": "开发目标、编程语言、框架或脱敏错误信息。",
+      "output": "接口说明、接入代码与问题排查建议。",
+      "requirement": "查询公开文档无需 API Key；开发者应用调用业务接口时使用自己的服务端密钥。",
+      "categoryLabel": "开发接入",
+      "highlights": [
+        "查询官方接口与字段定义",
+        "生成或审查服务端接入代码",
+        "排查脱敏错误，不执行业务操作"
+      ]
+    },
+    "en-US": {
+      "title": "LINGTU OpenAPI Developer Guide",
+      "description": "Look up LINGTU OpenAPI documentation and generate or review integration code.",
+      "prompt": "Find the product image generation endpoint and write a Python server-side example.",
+      "input": "Integration goals, programming language, framework, or sanitized errors.",
+      "output": "Endpoint guidance, integration code, and debugging suggestions.",
+      "requirement": "Public documentation needs no API key. Developer applications use their own server-side credentials for business APIs.",
+      "categoryLabel": "Developer tools",
+      "highlights": [
+        "Look up official endpoints and field definitions",
+        "Generate or review server-side integration code",
+        "Diagnose sanitized errors without running business operations"
+      ]
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "slug": "tiktok-carousel",
+  "category": "creation",
+  "iconKey": "video-camera",
+  "tone": "violet",
+  "sortOrder": 8,
+  "platforms": [
+    "TikTok",
+    "TikTok Shop"
+  ],
+  "locales": {
+    "zh-CN": {
+      "title": "TikTok 带货图文生成 by 灵途 AI",
+      "description": "从商品资料策划 TikTok 带货图文，确认后生成成套图片与发布文案。",
+      "prompt": "为这款商品策划 5 张面向美国市场的 TikTok 带货图文，先给我逐页方案。",
+      "input": "商品图片、真实卖点、目标市场与语言。",
+      "output": "逐页方案、图片提示词、发布文案及确认后生成的图片。",
+      "requirement": "策划无需 API Key；生成图片时需要配置 LINGTU_API_KEY，不自动发布。",
+      "categoryLabel": "内容创作",
+      "highlights": [
+        "先策划逐页内容与视觉风格",
+        "确认后逐页生成商品图片",
+        "提供目标语言的标题、正文和标签"
+      ]
+    },
+    "en-US": {
+      "title": "TikTok Product Carousels by LINGTU AI",
+      "description": "Plan shoppable TikTok carousels, then generate images and captions after approval.",
+      "prompt": "Plan a five-image TikTok product carousel for the US market; show the page-by-page plan first.",
+      "input": "Product images, supported selling points, target market, and language.",
+      "output": "Page plans, image prompts, captions, and images generated after approval.",
+      "requirement": "Planning needs no API key. Image generation requires LINGTU_API_KEY. Publishing is not automatic.",
+      "categoryLabel": "Content creation",
+      "highlights": [
+        "Plan each page and a consistent visual style",
+        "Generate product images after approval",
+        "Provide localized titles, captions, and hashtags"
+      ]
+    }
+  }
+}
