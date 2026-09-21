@@ -20,7 +20,7 @@
 | [`video-understand`](packages/video-understand/) | 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、参考结构生成和视频拆解。 | 0.9.3 | 2026-09-17 21:10:13 | 许强强 |
 | [`video-remake`](packages/video-remake/) | 爆款复刻：源视频转写、15秒内语义切片、Wan3.0逐段重绘确认和合成；发行包独立运行。参考结构与商品改编生成属于 `packages/content-create`。 | 0.2.5 | 2026-09-17 21:10:13 | 许强强 |
 | [`video-publish`](packages/video-publish/) | TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。 | 0.2.2 | 2026-09-17 21:10:13 | 许强强 |
-| [`tiktok-carousel`](packages/tiktok-carousel/) | 从商品资料策划 TikTok 带货图文，确认后生成成套图片与发布文案。 | 0.1.2 | 2026-09-21 11:00:44 | 郑丹 |
+| [`tiktok-carousel`](packages/tiktok-carousel/) | 从商品资料策划 TikTok 带货图文，确认后生成成套图片与发布文案。 | 0.1.3 | 2026-09-21 14:03:50 | 郑丹 |
 <!-- skills-table:end -->
 
 版本号来自各包的 `SKILL.md`；更新时间记录最近一次成功打包的时间，历史打包时间未记录。

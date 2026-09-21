@@ -21,14 +21,14 @@
 - `caption.txt`：发布标题、正文、标签。
 - `pages/01/` 等：进入生成后保存该页素材及结果记录。
 
-manifest 建议结构：schema_version=1，mode=plan，status=planned，market、language、page_count、aspect_ratio、product_facts（含来源）、assumptions、unresolved、visual_rules、caption、pages。另记录 concept_id、用户选定方案的原话、story_structure、hook_mechanism、page_count_reason、category_first_page、brand_first_page、callback，以及项目专属的使用部位与镜头约束。
+manifest 建议结构：schema_version=1，mode=plan，status=planned，market、language、page_count、aspect_ratio、product_facts（含来源）、assumptions、unresolved、visual_rules、caption、pages。另记录 concept_id、用户选定方案的原话、story_structure、hook_mechanism、page_count_reason、category_first_page、brand_first_page、callback、cta_text、cta_destination_status、内部 shot_plan（逐页新增信息、视角、动作、视线与文字层级），以及项目专属的使用部位与镜头约束。
 每个 page 包含 page_number、purpose、reference_images、image_text、prompt_file、status、client_task_id、schedule_id、task_ids、asset_path、asset_url、review_notes。未生成的 ID 与素材路径为 null，不能填写猜测的 URL。这里是本地清单，不是发布 API 请求体。
 
 商品信息不足可记录 status=needs_input；生成时逐页使用 submitting / processing / generated / needs_revision / failed / unknown 等真实状态。发生超时记录 unknown 和已知 ID，不把它等同于服务端失败。整组状态由实际页面决定，部分完成用 partial。
 
 ## 成品阶段
 
-逐页查看后记录 qa.json（pass / needs_revision 与具体问题）。仅将通过的最终图片复制到 outputs/<project-id>/ready/，以01、02等编号并保留实际格式；附 caption.txt 和简短清单，生成同内容 delivery.zip。常规交付不含 Prompt、参考图、失败图或运行日志；用户明确索取制作资料时另行导出。
+逐页及整套查看后记录 qa.json（pass / needs_revision、首图可读性、信息递进、姿态与镜头变化、真实感、排版和末页 CTA 的观察依据与具体问题）。仅将通过的最终图片复制到 outputs/<project-id>/ready/，以01、02等编号并保留实际格式；附 caption.txt 和简短清单，生成同内容 delivery.zip。常规交付不含 Prompt、参考图、失败图或运行日志；用户明确索取制作资料时另行导出。
 
 按顺序展示图片，给出文件位置与发布文案。多图预览可使用对话内按序展示；宿主提供可靠拼图工具时可额外生成总览图，不把总览图混入发布页序。
 
