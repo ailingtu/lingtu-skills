@@ -1,16 +1,16 @@
 ---
 name: lingtu-video-understand
 slug: lingtu-video-understand
-version: 0.9.3
+version: 0.9.4
 auth: lingtu-api-key
-displayName: 灵途视频拆解分析
+displayName: "AI 视频拆解与复刻提示词 By 灵途 AI"
 summary: 分析多平台视频，生成脚本结构、卖点和复刻提示词。
 description: "视频理解、内容分析与复刻提示词生成。用户要分析、总结、打标、拆解视频或只提取复刻提示词时使用。支持本地文件、已上传素材和 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接，返回自然语言脚本结构并按问题解读。参考视频结构生成新视频时使用 lingtu-content-create；爆款复刻（分段重绘与合成）使用 lingtu-video-remake。处理时只调用脚本，不抓视频网页或搜索引擎快照；批量并发上限为10。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/video-understand
 ---
 
-# 视频理解与复刻提示词生成
+# AI 视频拆解与复刻提示词 By 灵途 AI
 
 ## 更新灵途 Skills
 

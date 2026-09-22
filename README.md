@@ -11,16 +11,18 @@
 <!-- skills-table:start -->
 | 能力包 | 能力说明 | 版本号 | 更新时间（北京时间） | 负责人 |
 | --- | --- | --- | --- | --- |
-| [`openapi-guide`](packages/openapi-guide/) | 面向开发者查询灵途 OpenAPI 文档、说明 API Key 的获取与安全使用方式、选择接口、生成或审查接入代码和排查脱敏错误；Skill 本身不持有 API Key，也不调用线上业务接口。 | 0.1.2 | 2026-09-17 21:10:12 | 许强强 |
-| [`content-create`](packages/content-create/) | 灵途 AI 带货视频和商品图片生成。根据商品素材和提示词生成带货视频、UGC 短视频、商品主图和场景图。 | 0.4.3 | 2026-09-17 20:59:40 | 许强强 |
-| [`tkshop-query`](packages/tkshop-query/) | 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。 | 0.2.2 | 2026-09-17 21:10:13 | 许强强 |
-| [`tk-blacklist`](packages/tk-blacklist/) | 按 TikTok uniqueId 批量查询达人黑名单记录、反馈次数、最近反馈时间和原因。 | 0.1.2 | 2026-09-17 21:10:13 | 许强强 |
-| [`social-monitor`](packages/social-monitor/) | TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据和近期视频情报报告。 | 0.9.2 | 2026-09-17 21:10:13 | 许强强 |
-| [`social-comments`](packages/social-comments/) | 下载和导出 TikTok、Instagram、抖音、视频号及小红书单条视频评论，支持自动分页和 JSON 保存。 | 0.1.2 | 2026-09-17 21:10:13 | 许强强 |
-| [`video-understand`](packages/video-understand/) | 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、参考结构生成和视频拆解。 | 0.9.3 | 2026-09-17 21:10:13 | 许强强 |
-| [`video-remake`](packages/video-remake/) | 爆款复刻：源视频转写、15秒内语义切片、Wan3.0逐段重绘确认和合成；发行包独立运行。参考结构与商品改编生成属于 `packages/content-create`。 | 0.2.5 | 2026-09-17 21:10:13 | 许强强 |
-| [`video-publish`](packages/video-publish/) | TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。 | 0.2.2 | 2026-09-17 21:10:13 | 许强强 |
-| [`tiktok-carousel`](packages/tiktok-carousel/) | 从商品资料策划 TikTok 带货图文，确认后生成成套图片与发布文案。 | 0.1.4 | 2026-09-21 17:27:31 | 郑丹 |
+| [`openapi-guide`](packages/openapi-guide/) | 面向开发者查询灵途 OpenAPI 文档、说明 API Key 的获取与安全使用方式、选择接口、生成或审查接入代码和排查脱敏错误；Skill 本身不持有 API Key，也不调用线上业务接口。 | 0.1.3 | 2026-09-22 20:06:42 | 许强强 |
+| [`content-create`](packages/content-create/) | 灵途 AI 带货视频和商品图片生成。根据商品素材和提示词生成带货视频、UGC 短视频、商品主图和场景图。 | 0.4.4 | 2026-09-22 20:06:42 | 许强强 |
+| [`tkshop-query`](packages/tkshop-query/) | 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。 | 0.2.3 | 2026-09-22 20:06:43 | 许强强 |
+| [`tk-blacklist`](packages/tk-blacklist/) | 按 TikTok uniqueId 批量查询达人黑名单记录、反馈次数、最近反馈时间和原因。 | 0.1.3 | 2026-09-22 20:06:43 | 许强强 |
+| [`social-monitor`](packages/social-monitor/) | TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据和近期视频情报报告。 | 0.9.3 | 2026-09-22 20:06:43 | 许强强 |
+| [`social-comments`](packages/social-comments/) | 下载和导出 TikTok、Instagram、抖音、视频号及小红书单条视频评论，支持自动分页和 JSON 保存。 | 0.1.3 | 2026-09-22 20:06:42 | 许强强 |
+| [`video-understand`](packages/video-understand/) | 视频理解与内容分析：将本地视频或 TikTok/抖音/小红书/视频号/YouTube/Instagram 链接解析为自然语言的复刻提示词，可用于二创、打标、参考结构生成和视频拆解。 | 0.9.4 | 2026-09-22 20:06:43 | 许强强 |
+| [`video-remake`](packages/video-remake/) | 爆款复刻：源视频转写、15秒内语义切片、Wan3.0逐段重绘确认和合成；发行包独立运行。参考结构与商品改编生成属于 `packages/content-create`。 | 0.2.6 | 2026-09-22 20:06:43 | 许强强 |
+| [`video-publish`](packages/video-publish/) | TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。 | 0.2.3 | 2026-09-22 20:06:43 | 许强强 |
+| [`tiktok-carousel`](packages/tiktok-carousel/) | TikTok 爆款带货图文创作 By 灵途 AI：围绕商品真实卖点策划逐页方案，确认后生成图片与发布文案。 | 0.1.5 | 2026-09-22 19:57:40 | 郑丹 |
+| [`video-download`](packages/video-download/) | 根据 TikTok、抖音、视频号和小红书公开链接获取播放与互动数据，并下载无水印视频。 | 0.1.1 | 2026-09-22 18:55:34 | 许强强 |
+| [`skillhub-publish`](packages/skillhub-publish/) | 把 AI Skill 发布到灵途 SkillHub 或腾讯 WorkBuddy（skillhub.cn）。 | 0.1.0 | 2026-09-22 15:29:08 | jasonxu591-cmd |
 <!-- skills-table:end -->
 
 版本号来自各包的 `SKILL.md`；更新时间记录最近一次成功打包的时间，历史打包时间未记录。
@@ -39,6 +41,8 @@ packages/
   video-understand/ # 视频理解与复刻提示词生成
   video-remake/     # 爆款复刻：分段重绘、确认与合成
   video-publish/    # 批量视频发布和排期
+  video-download/   # 公开视频无水印下载与数据获取
+  skillhub-publish/ # 把 AI Skill 发布到灵途 SkillHub 或腾讯 WorkBuddy
 shared/scripts/     # 构建时复制进每个业务 API Skill 的公共运行时
 scripts/            # 单 Skill 构建工具
 docs/               # CDN 单包发布说明
@@ -56,6 +60,8 @@ docs/               # CDN 单包发布说明
 `shared/scripts/lingtu_auth.py`，不依赖本仓库的根目录。
 
 `openapi-guide` 仅访问公开文档，不执行账号绑定，也不读取或使用 API Key。开发者可在 <https://ailingtu.com/api-keys> 登录后创建和管理 API Key；实际运行接入代码时，应在自己的服务端环境中配置凭据。
+
+`skillhub-publish` 不读取 `LINGTU_API_KEY`。发布到灵途 SkillHub 使用后台发布密钥 `LINGTU_SKILLHUB_TOKEN`；发布到腾讯 WorkBuddy（skillhub.cn）使用 `SKILLHUB_KEY`。两把密钥不能混用。
 
 如果用户需要绑定 TikTok Shop 店铺，或店铺/店铺商品列表为空，让用户打开以下链接完成店铺绑定/授权后再继续：
 
@@ -115,7 +121,6 @@ cd packages/content-create
 python3 scripts/lingtu_content_task.py \
   --kind image \
   --prompt "一张白色背景的产品主图" \
-  --model gpt-image-2 \
   --aspect-ratio 1:1 \
   --nums 3 \
   --reference-image /path/to/product.png

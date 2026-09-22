@@ -1,4 +1,4 @@
 interface:
-  display_name: "灵途视频拆解分析"
+  display_name: "AI 视频拆解与复刻提示词 By 灵途 AI"
   short_description: "灵途视频理解与自然语言复刻提示词生成"
   default_prompt: "使用 $lingtu-video-understand 分析视频链接或已上传素材，生成复刻提示词。"

@@ -1,16 +1,16 @@
 ---
 name: lingtu-tiktok-carousel
 slug: lingtu-tiktok-carousel
-version: 0.1.4
+version: 0.1.5
 auth: lingtu-api-key
-displayName: "TikTok 带货图文生成 by 灵途 AI"
-summary: "从商品资料策划 TikTok 带货图文，确认后生成成套图片与发布文案。"
-description: "TikTok / TikTok Shop 带货图文、商品轮播图和多图种草策划与生成。默认先提供可选择的创意方案；用户选定后内部编写提示词，生成有序图片与发布文案。提示词仅在用户索取时展示。适用于带货图文和轮播图，不用于单张商品主图、视频生成或自动发布。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
+displayName: "TikTok 带货图文策划与出图 By 灵途 AI"
+summary: "基于商品真实卖点策划 TikTok 带货图文，确认方案后生成逐页图片与发布文案。"
+description: "TikTok / TikTok Shop 爆款带货图文创作：从商品资料提炼受众动机、首图吸引点和逐页内容，提供可选创意方案；用户选定后生成成套图片与目标市场语言的发布文案。爆款是创作目标，不保证流量或销量。适用于商品轮播图、多图种草；不用于单张商品主图、视频生成或自动发布。也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/tiktok-carousel
 ---
 
-# TikTok 带货图文生成 by 灵途 AI
+# TikTok 带货图文策划与出图 By 灵途 AI
 
 ## 更新灵途 Skills
 
@@ -29,7 +29,7 @@ homepage: https://ailingtu.com/skills/tiktok-carousel
 
 ## 用途
 
-TikTok / TikTok Shop 带货图文、商品轮播图和多图种草策划与生成。默认先提供可选择的创意方案；用户选定后内部编写提示词，生成有序图片与发布文案。提示词仅在用户索取时展示。适用于带货图文和轮播图，不用于单张商品主图、视频生成或自动发布。
+围绕商品真实卖点，为 TikTok / TikTok Shop 策划能吸引目标用户继续浏览的带货图文。先给出不同受众动机的创意方向、首图吸引点和逐页方案；用户选定后，生成成套图片及目标市场语言的标题、正文和标签。适用于商品轮播图、多图种草；不处理单张商品主图、视频生成或自动发布。“爆款”是创作目标，不保证流量、转化或销量。
 
 ## 默认行为与范围
 

@@ -1,16 +1,16 @@
 ---
 name: lingtu-social-monitor
 slug: lingtu-social-monitor
-version: 0.9.2
+version: 0.9.3
 auth: lingtu-api-key
-displayName: 灵途 TikTok 达人竞品监控
+displayName: "TikTok/Ins 达人分析 By 灵途 AI"
 summary: 监控 TikTok 和 Instagram 达人及竞品账号，生成日报与告警。
 description: "TikTok 和 Instagram 达人/竞品账号监控、账号视频列表、单条视频实时指标、日报与告警。支持单条/批量添加监控、每日订阅、群级监控列表、即时分析、本地快照和“昨日与今日”差异报告。用户要下载或导出单条视频评论时不要使用本技能，改用 `lingtu-social-comments`。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/social-monitor
 ---
 
-# 社媒达人 / 竞品监控与日报
+# TikTok/Ins 达人分析 By 灵途 AI
 
 ## 更新灵途 Skills
 

@@ -1,16 +1,16 @@
 ---
 name: lingtu-video-remake
 slug: lingtu-video-remake
-version: 0.2.5
+version: 0.2.6
 auth: lingtu-api-key
-displayName: 灵途爆款复刻
+displayName: "AI 爆款视频分段复刻 By 灵途 AI"
 summary: 将源视频按语义分段，用 Wan3.0 逐段重绘、确认并合成爆款复刻视频。
 description: "爆款复刻：保留源视频顺序，有台词时转写并按语义切片，明确无台词时直接按最多15秒切片，用 Wan3.0 逐段重绘，经用户逐段确认或跳过后合成。用户要求爆款复刻、视频分段重绘或长视频复刻时使用。参考源视频的脚本、镜头、节奏，结合商品和卖点生成新视频属于 lingtu-content-create；仅分析视频或提取提示词使用 lingtu-video-understand。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/video-remake
 ---
 
-# 灵途爆款复刻
+# AI 爆款视频分段复刻 By 灵途 AI
 
 ## 更新灵途 Skills
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI 技能发布到skillhub By 灵途 AI"
+  short_description: "把 AI Skill 发布到灵途 SkillHub 或腾讯 WorkBuddy（skillhub.cn）。"
+  default_prompt: "使用 $lingtu-skillhub-publish 帮我完成以下任务：把 AI Skill 发布到灵途 SkillHub 或腾讯 WorkBuddy（skillhub.cn）。"

@@ -1,16 +1,16 @@
 ---
 name: lingtu-tk-blacklist
 slug: lingtu-tk-blacklist
-version: 0.1.2
+version: 0.1.3
 auth: none
-displayName: 灵途 AI TikTok 达人合作黑名单
+displayName: "TikTok 达人合作黑名单查询 By 灵途 AI"
 summary: 由灵途 AI 提供，批量查询 TikTok 达人合作黑名单及反馈记录，为合作前核验提供参考。
 description: "TikTok 达人合作黑名单查询，由灵途 AI 提供。支持通过达人用户名、@handle 或 TikTok 链接，单个或批量查询合作黑名单记录，查看地区、昵称、反馈次数、最近反馈时间及反馈原因，为合作前核验提供参考。用户提到\"达人合作黑名单\"、\"达人黑名单\"、\"黑名单查询\"、\"查达人是否拉黑\"、\"TK 达人风控\"、\"TikTok 黑名单\"或提供达人 uniqueId 要核验黑名单时使用。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/tk-blacklist
 ---
 
-# 灵途 AI TikTok 达人合作黑名单
+# TikTok 达人合作黑名单查询 By 灵途 AI
 
 ## 更新灵途 Skills
 

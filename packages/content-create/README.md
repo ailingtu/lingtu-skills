@@ -1,4 +1,4 @@
-# 灵途 AI 带货视频和商品图片生成
+# 商品图片与带货视频生成 By 灵途 AI
 
 面向电商商家与内容创作者的 AI 带货视频和 AI 商品图片生成 Skill，由灵途 AI 提供。从商品图片、卖点和提示词出发，生成电商带货视频、UGC 短视频、商品主图、卖点细节图和生活场景图。
 
@@ -24,7 +24,7 @@
 
 ## 模型偏好
 
-视频默认使用 `wan3.0-video`，图片默认使用 `gpt-image-2`。不指定模型时自动读取本机偏好；“这次用”只覆盖当前任务，“以后默认用”则保存到 `~/.config/lingtu/content-create.json`，新对话继续沿用，升级不会覆盖。操作命令见 [模型偏好说明](./references/model-preferences.md)。
+视频默认使用 `wan3.0-video`，图片默认使用 `gpt-image-2.5-ext-flare`。不指定模型时自动读取本机偏好；“这次用”只覆盖当前任务，“以后默认用”则保存到 `~/.config/lingtu/content-create.json`，新对话继续沿用，升级不会覆盖。操作命令见 [模型偏好说明](./references/model-preferences.md)。
 
 ## 脚本用法
 

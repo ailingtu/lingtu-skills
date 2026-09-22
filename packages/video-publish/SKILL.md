@@ -1,16 +1,16 @@
 ---
 name: lingtu-video-publish
 slug: lingtu-video-publish
-version: 0.2.2
+version: 0.2.3
 auth: lingtu-api-key
-displayName: 灵途批量视频发布
+displayName: "TikTok 视频与图文批量发布 By 灵途 AI"
 summary: 按 CSV 排期批量发布 TikTok Shop 带货视频、图文和养号内容。
 description: "灵途批量视频/图文发布 — 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频或带货图文。支持生成 CSV 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、CSV/XLSX 通用读取、模拟执行预览。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/video-publish
 ---
 
-# 灵途批量视频 / 带货图文发布
+# TikTok 视频与图文批量发布 By 灵途 AI
 
 ## 更新灵途 Skills
 

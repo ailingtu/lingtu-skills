@@ -1,16 +1,16 @@
 ---
 name: lingtu-social-comments
 slug: lingtu-social-comments
-version: 0.1.2
+version: 0.1.3
 auth: lingtu-api-key
-displayName: 灵途社交媒体评论下载
+displayName: "TikTok 抖音 小红书等多平台评论下载 By 灵途 AI"
 summary: 下载多平台单条视频评论，自动分页、去重并导出 JSON。
 description: "下载、导出或获取 TikTok、Instagram、抖音、视频号和小红书单条视频的评论数据，支持自动分页、重试限速、跨页去重、限制页数或评论数、原样续传游标、Instagram 热门/最新排序，以及规范化或原始 JSON 输出。用户提到“下载评论”“导出视频评论”“获取这条视频的评论”“抓评论区”“评论区反馈”或提供上述平台的单条视频链接要求评论数据时使用；不用于账号监控、视频指标查询或视频内容理解。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/social-comments
 ---
 
-# 社交媒体评论下载
+# TikTok 抖音 小红书等多平台评论下载 By 灵途 AI
 
 ## 更新灵途 Skills
 

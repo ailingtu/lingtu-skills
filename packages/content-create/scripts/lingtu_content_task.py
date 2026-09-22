@@ -45,6 +45,7 @@ DEVELOPER_CONTACT_MESSAGE = "生成失败或遇到未知问题，请联系开发
 
 IMAGE_MODELS = {
     "gpt-image-2",
+    "gpt-image-2.5-ext-flare",
     "nano-banana-2",
     "nano-banana-2-2k",
     "nano-banana-2-4k",
@@ -66,7 +67,7 @@ LEGACY_MODEL_ALIASES = {
     "seedance-2.0": "seedance2.0-fast",
 }
 
-DEFAULT_MODELS = {"video": "wan3.0-video", "image": "gpt-image-2"}
+DEFAULT_MODELS = {"video": "wan3.0-video", "image": "gpt-image-2.5-ext-flare"}
 
 
 def model_preferences_path() -> Path:
@@ -519,7 +520,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        help="One-time model override; does not change saved preferences. Without it use the saved model, then the built-in default. Video: wan3.0-video (default), gemini-omni-video, veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2 (default), nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
+        help="One-time model override; does not change saved preferences. Without it use the saved model, then the built-in default. Video: wan3.0-video (default), gemini-omni-video, veo3.1-lite-extend, veo3.1-extend, grok-imagine-1.5, seedance2.0-mini, seedance2.0, seedance2.0-fast. Image: gpt-image-2.5-ext-flare (default), gpt-image-2, nano-banana-2, nano-banana-2-2k, nano-banana-2-4k, seedream5.0-lite.",
     )
     preferences = parser.add_mutually_exclusive_group()
     preferences.add_argument("--show-default-model", action="store_true", help="Show the saved or built-in model for --kind; no API call.")

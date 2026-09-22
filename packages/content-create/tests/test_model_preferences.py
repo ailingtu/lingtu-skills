@@ -31,8 +31,17 @@ class ModelPreferencesTests(unittest.TestCase):
 
     def test_builtin_defaults_without_creating_file(self):
         self.assertEqual(CONTENT.selected_model('video', None), 'wan3.0-video')
-        self.assertEqual(CONTENT.selected_model('image', None), 'gpt-image-2')
+        self.assertEqual(CONTENT.selected_model('image', None), 'gpt-image-2.5-ext-flare')
         self.assertFalse(CONTENT.model_preferences_path().exists())
+
+    def test_new_image_model_is_supported_and_used_by_default(self):
+        self.assertIn('gpt-image-2.5-ext-flare', CONTENT.IMAGE_MODELS)
+        argv = [str(SCRIPT), '--kind', 'image', '--prompt', 'demo']
+        with patch.object(sys, 'argv', argv), patch.object(CONTENT, 'require_api_key', return_value='test'), \
+             patch.object(CONTENT, 'http_json', return_value={'data': {'scheduleId': 's'}}) as request, \
+             patch.object(CONTENT, 'poll_schedule', return_value=0):
+            self.assertEqual(CONTENT.main(), 0)
+        self.assertEqual(request.call_args.args[3]['params']['model'], 'gpt-image-2.5-ext-flare')
 
     def test_persistence_across_processes_without_auth(self):
         result = self.cli('--kind', 'video', '--set-default-model', 'gemini-omni-video')

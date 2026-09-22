@@ -1,16 +1,16 @@
 ---
 name: lingtu-tkshop-query
 slug: lingtu-tkshop-query
-version: 0.2.2
+version: 0.2.3
 auth: lingtu-api-key
-displayName: 灵途 TK 店铺数据查询
+displayName: "TikTok 店铺数据查询和对话 By 灵途 AI"
 summary: 查询 TikTok Shop 店铺日报、经营指标并分析业务问题。
 description: "TK 店铺数据查询与日报。通过灵途 AI 接口查询 TK 店铺/商家/商品/订单/客户表现等经营数据，支持按日期或店铺名拉取单店日报、按日期拉取全部店铺汇总日报、列出店铺清单，以及向 AI 提问店铺经营相关问题。用户提到\"店铺日报\"、\"店铺数据\"、\"经营情况\"、\"整体经营\"、\"全部店铺汇总\"、\"大盘\"、\"GMV/订单/客单价\"等场景时使用。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/tkshop-query
 ---
 
-# TK 店铺数据查询与日报
+# TikTok 店铺数据查询和对话 By 灵途 AI
 
 ## 更新灵途 Skills
 

@@ -1,4 +1,4 @@
-# 灵途批量视频 / 带货图文发布
+# TikTok 视频与图文批量发布 By 灵途 AI
 
 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频，或发布 TikTok Shop 带货图文（多图挂车）。
 

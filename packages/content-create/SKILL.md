@@ -1,16 +1,16 @@
 ---
 name: lingtu-content-create
 slug: lingtu-content-create
-version: 0.4.3
+version: 0.4.4
 auth: lingtu-api-key
-displayName: 灵途 AI 带货视频和商品图片生成
+displayName: "商品图片与带货视频生成 By 灵途 AI"
 summary: 用灵途 AI 生成电商带货视频、UGC 短视频、商品主图和场景图。
 description: "AI 带货视频和 AI 商品图片生成，由灵途 AI 提供。根据商品图片、卖点和提示词生成电商带货视频、UGC 短视频、商品主图、卖点细节图、生活场景图。用户要生成商品图片、优化商品图或制作带货视频时使用。也支持参考源视频结构，结合商品与卖点生成新视频。爆款复刻（语义分段、逐段重绘确认与合成）使用 lingtu-video-remake。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/content-create
 ---
 
-# 灵途 AI 带货视频和商品图片生成
+# 商品图片与带货视频生成 By 灵途 AI
 
 ## 更新灵途 Skills
 
@@ -51,7 +51,7 @@ homepage: https://ailingtu.com/skills/content-create
 
 ## Workflow
 
-1. 模型选择遵循本次指定 > 本机偏好 > 内置默认（视频 `wan3.0-video`，图片 `gpt-image-2`）。默认不询问模型，也不传 `--model`，由脚本读取配置；用户要求修改默认、查看设置或临时切换时，读取 `references/model-preferences.md`。
+1. 模型选择遵循本次指定 > 本机偏好 > 内置默认（视频 `wan3.0-video`，图片 `gpt-image-2.5-ext-flare`）。默认不询问模型，也不传 `--model`，由脚本读取配置；用户要求修改默认、查看设置或临时切换时，读取 `references/model-preferences.md`。
    Collect the generation intent: media kind (`image`, `video`, or another supported type), prompt, output requirements, and optional reference images, videos, or voiceovers.
    - 图片默认比例为 `9:16`；本次指定其他比例时通过 `--aspect-ratio` 覆盖。
    - 视频默认 480p，竖屏尺寸 `480x854`；横屏 480p 使用 `854x480`。本次明确指定尺寸时使用用户值。所选模型不支持该尺寸时先说明兼容性限制，不自动升到更高分辨率。
@@ -112,7 +112,7 @@ Video defaults to `wan3.0-video` unless overridden by a saved preference or an e
 
 `wan3.0-video` also supports optional reference videos and reference voiceovers. Pass a local path or an existing positive Lingtu file id with repeated `--reference-video` and `--reference-audio` flags. `--reference-dubbing` is an alias for `--reference-audio`. The script sends the resolved ids as `params.videoFileIds` and `params.audioFileIds`.
 
-Image defaults to `gpt-image-2` unless overridden by a saved preference or an explicit `--model`. Other supported models are listed in `references/api.md`.
+Image defaults to `gpt-image-2.5-ext-flare` unless overridden by a saved preference or an explicit `--model`. Other supported models are listed in `references/api.md`.
 
 Use `--payload-json` for provider-specific fields that are not yet formalized in the script:
 

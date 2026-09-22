@@ -1,4 +1,4 @@
 interface:
-  display_name: "灵途社媒达人监控"
+  display_name: "TikTok/Ins 达人分析 By 灵途 AI"
   short_description: "灵途社媒达人监控、素材指标、日报与告警"
   default_prompt: "使用 $lingtu-social-monitor 监控 TikTok 或 Instagram 达人，查询账号或单条视频的数据指标。"

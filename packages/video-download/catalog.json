@@ -1,0 +1,38 @@
+{
+  "slug": "video-download",
+  "category": "download",
+  "iconKey": "play-circle",
+  "tone": "sky",
+  "platforms": ["TikTok", "Douyin", "WeChat Channels", "Xiaohongshu", "Instagram", "YouTube"],
+  "sortOrder": 12,
+  "locales": {
+    "zh-CN": {
+      "title": "TikTok 抖音 视频号 小红书无水印下载和数据获取 By 灵途 AI",
+      "description": "下载公开链接里的无水印视频，或保存图文笔记的图片，并记录互动数据。",
+      "prompt": "下载这条公开视频的无水印文件；如果是图文，按顺序保存图片，并给出播放和互动数据。",
+      "highlights": [
+        "默认下载视频或图文图片",
+        "优先保存无水印视频直链",
+        "同时记录作者、文案、互动数据和本地路径"
+      ],
+      "input": "一条 TikTok、抖音、视频号、小红书、Instagram 或 YouTube 的公开链接。",
+      "output": "无水印视频或按顺序保存的图文图片，以及旁边的数据 JSON。",
+      "requirement": "需要配置 LINGTU_API_KEY。只说只要数据时不保存文件；说填表时用本次结果填写，不重新请求。",
+      "categoryLabel": "素材下载"
+    },
+    "en-US": {
+      "title": "Watermark-Free Video and Photo Download by LINGTU AI",
+      "description": "Download a watermark-free video or save the images from a photo note, and keep the engagement data.",
+      "prompt": "Download the watermark-free file for this public video, or save the images in order if it is a photo note, and return the engagement data.",
+      "highlights": [
+        "Download the video or photo-note images by default",
+        "Prefer the watermark-free video URL",
+        "Record the creator, caption, engagement, and local file paths"
+      ],
+      "input": "One public TikTok, Douyin, WeChat Channels, Xiaohongshu, Instagram, or YouTube link.",
+      "output": "A watermark-free video or ordered photo-note images, plus a JSON file with the metrics.",
+      "requirement": "Requires LINGTU_API_KEY. Skip files when the user only wants data. Fill a requested table from this result without fetching again.",
+      "categoryLabel": "Media download"
+    }
+  }
+}

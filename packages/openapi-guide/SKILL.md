@@ -1,16 +1,16 @@
 ---
 name: lingtu-openapi-guide
 slug: lingtu-openapi-guide
-version: 0.1.2
+version: 0.1.3
 auth: none
-displayName: 灵途 OpenAPI 开发助手
+displayName: "OpenAPI 文档查询与接入 By 灵途 AI"
 summary: 查询灵途 OpenAPI 文档，生成和审查开发者接入代码。
 description: "灵途 OpenAPI 开发者集成助手。用于查询接口定义、选择接口、说明 API Key 的创建与安全使用方式、解释错误码，以及生成或审查 Node.js、TypeScript、Python、Java、Go、PHP 等语言的灵途 API 接入代码。处理“怎么对接灵途 API”“如何获得 API Key”“生成调用示例”“排查 API 请求错误”等开发任务；不用于直接执行商品图生成、视频分析、店铺查询、内容发布或其他线上业务操作。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/openapi
 ---
 
-# 灵途 OpenAPI 开发助手
+# OpenAPI 文档查询与接入 By 灵途 AI
 
 ## 更新灵途 Skills
 

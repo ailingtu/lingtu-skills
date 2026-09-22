@@ -1,0 +1,38 @@
+{
+  "slug": "skillhub-publish",
+  "category": "publishing",
+  "iconKey": "arrow-up-tray",
+  "tone": "emerald",
+  "platforms": ["Lingtu SkillHub", "WorkBuddy"],
+  "sortOrder": 11,
+  "locales": {
+    "zh-CN": {
+      "title": "AI 技能发布到skillhub By 灵途 AI",
+      "description": "把 AI Skill 发布到灵途 SkillHub 或腾讯 WorkBuddy（skillhub.cn）。",
+      "prompt": "使用 lingtu-skillhub-publish 把这个技能发布到灵途 SkillHub",
+      "highlights": [
+        "发布到灵途 SkillHub，使用独立的发布密钥",
+        "发布到腾讯 WorkBuddy 应用市场（skillhub.cn）",
+        "发布前先预览，确认后才提交"
+      ],
+      "input": "本地 Skill 目录，以及目标平台各自的发布密钥。",
+      "output": "发布结果、版本号和平台回执",
+      "requirement": "灵途发布需要后台发布密钥；WorkBuddy 需要 skillhub.cn 的 API Key 和 CLI。其它平台接入中。",
+      "categoryLabel": "发布运营"
+    },
+    "en-US": {
+      "title": "Publish AI Skills to SkillHub by LINGTU AI",
+      "description": "Publish an AI Skill to LINGTU SkillHub or Tencent WorkBuddy (skillhub.cn).",
+      "prompt": "Use lingtu-skillhub-publish to publish this skill to LINGTU SkillHub",
+      "highlights": [
+        "Publish to LINGTU SkillHub with its own publisher credential",
+        "Publish to the Tencent WorkBuddy marketplace at skillhub.cn",
+        "Preview first and submit only after confirmation"
+      ],
+      "input": "A local Skill directory and the publisher credential for the selected platform.",
+      "output": "Publish result, version, and platform receipt",
+      "requirement": "LINGTU publishing needs the admin publisher credential. WorkBuddy needs a skillhub.cn API key and the CLI. Other marketplaces are not available yet.",
+      "categoryLabel": "Publishing"
+    }
+  }
+}

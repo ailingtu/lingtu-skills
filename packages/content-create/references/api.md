@@ -110,7 +110,7 @@ Image request:
   "type": "IMAGE_GENERATION",
   "params": {
     "prompt": "text prompt",
-    "model": "gpt-image-2",
+    "model": "gpt-image-2.5-ext-flare",
     "aspectRatio": "1:1",
     "inputReferences": ["https://static.ailingtu.com/ai-images/<id>.jpg"]
   },
@@ -119,7 +119,7 @@ Image request:
 ```
 
 Image models seen in app.ailingtu:
-`gpt-image-2`, `nano-banana-2`, `nano-banana-2-2k`, `nano-banana-2-4k`, `seedream5.0-lite`.
+`gpt-image-2.5-ext-flare` (built-in default), `gpt-image-2`, `nano-banana-2`, `nano-banana-2-2k`, `nano-banana-2-4k`, `seedream5.0-lite`.
 
 Image aspect ratios seen in app.ailingtu:
 `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`.

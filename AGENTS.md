@@ -1,6 +1,6 @@
 # Lingtu AI Agent Instructions
 
-Use this repository when a user asks for Lingtu AI OpenAPI developer integration, content generation, TK shop data analysis, TikTok/Instagram creator or competitor monitoring, social-media comment downloads, single-video metrics, video understanding, long-video segment remaking, or TikTok/TikTok Shop video publishing.
+Use this repository when a user asks for Lingtu AI OpenAPI developer integration, content generation, TK shop data analysis, TikTok/Instagram creator or competitor monitoring, social-media comment downloads, watermark-free public video download, single-video metrics, video understanding, long-video segment remaking, TikTok/TikTok Shop video publishing, or publishing an AI Skill to LINGTU SkillHub or Tencent WorkBuddy (skillhub.cn).
 
 ## Distribution
 
@@ -20,14 +20,17 @@ Use this repository when a user asks for Lingtu AI OpenAPI developer integration
 - `packages/tk-blacklist`: batch TikTok creator blacklist lookup by uniqueId, including feedback count, latest feedback time, and reason.
 - `packages/social-monitor`: TikTok/Instagram creator or competitor monitoring, account video lists, single-video material metrics, group-level lists, daily subscriptions, and yesterday-vs-today digest reports.
 - `packages/social-comments`: TikTok, Instagram, Douyin, WeChat Channels, and Xiaohongshu single-video comment download and JSON export with pagination.
+- `packages/video-download`: watermark-free download and public metrics for one TikTok, Douyin, WeChat Channels, or Xiaohongshu video through `POST /v1/material/fetch`. The same endpoint also accepts Instagram and YouTube links.
 - `packages/video-understand`: video understanding for local files and TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URLs — produces a natural-language replication prompt for remixing, tagging, or video breakdown.
 - `packages/video-remake`: viral video remaking (爆款复刻): semantic cuts, muted reference clips, Wan3.0 segment generation, per-segment user approval, and final merge.
 - `packages/video-publish`: batch video publishing to TikTok Shop / TikTok creator accounts, schedule CSV generation, creator/product lookup, dry-run validation, and confirmed publishing.
+- `packages/skillhub-publish`: publish one local Skill to LINGTU SkillHub or Tencent WorkBuddy (skillhub.cn). Other marketplaces are not available yet.
 
 ## Shared Rules
 
 - Installing a Skill does not require authentication. When a Lingtu task needs `LINGTU_API_KEY` and it is missing, direct the user to https://ailingtu.com/api-keys to create or manage a key and configure `LINGTU_API_KEY` in the environment running the Skill before retrying. Account-binding URL generation has been removed. Read `shared/references/api-key-setup.md` and show OS-specific terminal opening, setup commands, and app restart steps; do not just tell users to configure an environment variable. Never ask for, display, or store their API key.
 - `packages/openapi-guide` is the exception: it reads public documentation and must never start account binding, inspect credentials, or call protected business endpoints. Developer applications use their own server-side credentials when run outside the Skill.
+- `packages/skillhub-publish` does not call business APIs and must not read `LINGTU_API_KEY`. LINGTU SkillHub uses `LINGTU_SKILLHUB_TOKEN` (`blg_` publisher credential, `Authorization: Bearer`). Tencent WorkBuddy uses `SKILLHUB_KEY` (`skh_` API key) only with the skillhub.cn CLI. Do not reuse one platform credential for the other.
 - Every authenticated Lingtu request must read only `LINGTU_API_KEY` and send it as the `x-api-key` header. Do not introduce alternate key environment variables or store API keys in this repository.
 - Every `packages/*/SKILL.md` must declare `auth: lingtu-api-key` or `auth: none`. Use `python3 scripts/create_package.py ...` for new packages so this contract and the UI metadata are scaffolded consistently.
 - Read the package `references/api.md` before changing endpoint paths, request fields, response fields, or status handling.
@@ -47,10 +50,14 @@ Use `packages/tk-blacklist` when the user asks whether one or more TikTok creato
 
 Use `packages/social-monitor` for TikTok/Instagram creator links, usernames, 达人/竞品监控, group-level monitoring lists, daily digest subscriptions, yesterday-vs-today content reports, single-video metric refreshes, and TikTok/Instagram 素材数据.
 
-Use `packages/social-comments` for “导出视频评论”, “下载评论”, “获取这条 TikTok/Instagram/抖音/视频号/小红书评论”, “抓评论区”, or “评论区反馈”. It only downloads comment data; it does not monitor accounts or query video metrics.
+Use `packages/social-comments` for “导出视频评论”, “下载评论”, “获取这条 TikTok/Instagram/抖音/视频号/小红书评论”, “抓评论区”, or “评论区反馈”. It only downloads comment data; it does not monitor accounts, download the video file, or query video metrics.
+
+Use `packages/video-download` for 无水印下载 and 图文图片下载 of one public TikTok, Douyin, WeChat Channels, or Xiaohongshu link. Default to downloading the video or images and returning metrics plus local paths. If the user only wants data, skip the files. If the user asks to fill a table, use that saved result. Call only `POST /v1/material/fetch`. Instagram and YouTube public links use the same Skill. Do not use it for comment export, account monitoring, video understanding, or publishing.
 
 Use `packages/video-understand` when the user asks to analyze, summarize, tag, break down, or 二创 a single video — local file, uploaded material, or TikTok/Douyin/Xiaohongshu/WeChat Channels/YouTube/Instagram URL — and wants a replication prompt or content readout.
 
 Use `packages/video-remake` for 爆款复刻: transcribe and split the source video into semantic clips no longer than 15 seconds, mute reference clips, regenerate each with Wan3.0, get per-segment approval, and concatenate. This applies to short and long sources. Adapting a reference script/shot structure to a product is video generation under `packages/content-create`. The distributed package bundles its helpers and runs without other installed Skills.
 
 Use `packages/video-publish` when the user asks to publish videos, batch publish TikTok/TikTok Shop videos, create a publishing schedule table, look up authorized publishing creators, search products for publishing, preview/dry-run a schedule, or confirm a video publishing batch.
+
+Use `packages/skillhub-publish` when the user asks to publish an AI Skill, list a Skill on LINGTU SkillHub, or submit a Skill to Tencent WorkBuddy / skillhub.cn. Preview first and publish only after confirmation. Do not use it to publish TikTok videos.
