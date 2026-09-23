@@ -1,0 +1,30 @@
+{
+  "slug": "skill-finder",
+  "category": "discovery",
+  "iconKey": "chat-bubble",
+  "tone": "cyan",
+  "platforms": ["Codex", "Claude Code", "Cursor", "Other Skill-compatible agents"],
+  "sortOrder": 13,
+  "locales": {
+    "zh-CN": {
+      "title": "跨境电商 AI 技能查找和安装推荐 By 灵途 AI",
+      "description": "根据自然语言需求查询实时官方目录，推荐适合的灵途技能并按需安装。",
+      "highlights": ["实时读取官方目录，无需维护内置技能清单", "根据需求与输入输出推荐，并检查当前 Agent 安装情况", "遵循官方流程按需安装或更新，无需业务 API Key"],
+      "prompt": "帮我找一个能下载视频评论的灵途技能，并检查我是否已安装。",
+      "input": "自然语言描述的任务目标、平台、已有素材或期望结果。",
+      "output": "匹配的技能、推荐理由、使用要求、安装状态，以及用户要求的安装或更新结果。",
+      "requirement": "需要访问官方公开目录；发现和安装无需 API Key。业务执行要求以对应技能为准。",
+      "categoryLabel": "技能发现"
+    },
+    "en-US": {
+      "title": "Skill Finder & Installation by LINGTU AI",
+      "description": "Find suitable Lingtu Skills from the live official catalog using natural-language goals, and install them when requested.",
+      "highlights": ["Read the live official catalog without a bundled skill list", "Match goals and expected outputs, and check installation in the current agent", "Follow official installation and update instructions without a business API key"],
+      "prompt": "Find a Lingtu Skill that downloads video comments and check whether I have it installed.",
+      "input": "A natural-language task, platform, available assets, or desired output.",
+      "output": "Recommended skills, reasons, requirements, installation status, and requested installation or update results.",
+      "requirement": "Access to the public official catalog is required. Discovery and installation need no API key; business execution follows the selected skill's requirements.",
+      "categoryLabel": "Skill discovery"
+    }
+  }
+}

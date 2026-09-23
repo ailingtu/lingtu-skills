@@ -1,0 +1,4 @@
+interface:
+  display_name: "小红书爆款种草图文批量照抄 By 灵途 AI"
+  short_description: "参考小红书图文的内容结构与视觉方式，用自有素材重新创作成套种草图文与发布文案。"
+  default_prompt: "使用 $lingtu-xhs-remake，分析我提供的小红书图文链接和素材，先给出逐页复刻方案，确认后生成整套带字图片、标题、正文和标签。"

@@ -13,8 +13,10 @@ Use this repository when a user asks for Lingtu AI OpenAPI developer integration
 
 ## Available Packages
 
+- `packages/skill-finder`: discover and recommend Lingtu Skills from the live official catalog, check current-Agent installation status, and install requested matches through the official installation workflow without a business API key.
 - `packages/openapi-guide`: public OpenAPI documentation lookup, API Key creation and safe-use guidance, integration code generation/review, and sanitized error diagnosis without making authenticated business API calls.
 - `packages/tiktok-carousel`: TikTok / TikTok Shop shoppable carousel planning; default to a page-by-page plan, then generate images only when requested. Bundles image generation helpers and runs without another installed Skill.
+- `packages/xhs-remake`: Xiaohongshu photo-note structure and visual-style remaking from one public reference note plus user-provided images or a material folder; produces a reviewed page plan, generated images, title, caption, and tags for non-shoppable seeding content.
 - `packages/content-create`: media generation from products, images, and prompts; product images and ecommerce videos.
 - `packages/tkshop-query`: TK shop list lookup, daily reports, and shop operations analysis.
 - `packages/tk-blacklist`: batch TikTok creator blacklist lookup by uniqueId, including feedback count, latest feedback time, and reason.
@@ -38,9 +40,13 @@ Use this repository when a user asks for Lingtu AI OpenAPI developer integration
 
 ## Routing
 
+Use `packages/skill-finder` when the user asks which Lingtu Skill to install, what capabilities are available, or wants to find and install a Skill for a natural-language task. Read the live catalog instead of maintaining an embedded package list. Recommendation alone does not authorize installation; an explicit find-and-install request does. Existing installed business Skills continue to handle their own tasks.
+
 Use `packages/openapi-guide` for OpenAPI documentation questions, developer API Key creation/use guidance, endpoint discovery, integration examples, SDK/client code, contract review, and sanitized API error diagnosis. Do not use it to execute the business operation being documented.
 
 Use `packages/tiktok-carousel` for TikTok 带货图文、商品轮播图、多图种草 and shoppable photo carousel requests. Plan first by default; proceed to image generation when the user confirms the plan or explicitly requests direct generation. This route takes precedence over generic product-image generation for these requests.
+
+Use `packages/xhs-remake` when the user provides one public Xiaohongshu photo-note link plus a material folder or selected images and wants to recreate its content structure and visual language as a new non-shoppable seeding post. It generates a page plan first by default, then images, title, caption, and tags. Do not route Xiaohongshu video notes, exact copying, automatic publishing, or multi-reference fusion here.
 
 Use `packages/content-create` for product images, ecommerce videos, and media-generation tasks starting from products or prompts. Reference-based script, shot, pacing, and product adaptation also belong here; read `references/viral-remake-workflow.md`.
 
