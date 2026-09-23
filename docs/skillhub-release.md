@@ -6,8 +6,9 @@ Skill 时，先完整阅读本文，再执行构建、上传或官网发布。
 ## 核心原则
 
 - 每次只构建和发布一个 Skill。
-- 正常发布必须传入 `--package lingtu-<package-id>`；不要无参数发布整个
-  `dist/packages/` 目录。
+- 正常发布统一使用按 <https://ailingtu.com/install/skills.md> 安装的
+  `lingtu-skillhub-publish` Skill，先预览、后确认发布。不要调用官网仓库里的脚本，
+  不要手工请求后台发布 API，也不要发布整个 `dist/packages/` 目录。
 - 官方索引采用增量合并：只替换指定 slug 的记录，其余记录的版本、URL、哈希和
   文件大小必须保持不变。
 - 用户安装和升级统一使用 <https://ailingtu.com/install/skills.md>。Codeup 只是
@@ -21,16 +22,15 @@ Skill 时，先完整阅读本文，再执行构建、上传或官网发布。
 开发源码仓库为 <https://codeup.aliyun.com/coss/ailingtu/skills>，Git 远程地址为
 `git@codeup.aliyun.com:coss/ailingtu/skills.git`。
 
-默认使用以下相邻项目：
+默认源码项目：
 
 ```text
 /Users/jason/www/lingtuai/skills.ailingtu   # Skill 源码、构建和测试
-/Users/jason/www/lingtuai/www.ailingtu    # TOS/CDN 发布器和 SkillHub 官网
 ```
 
 构建器根据脚本位置定位源码根目录，改名后仍输出到本仓库的 `dist/packages/`。
-官网发布器默认读取相邻的 `../skills.ailingtu/dist/packages`；非默认目录布局应
-显式传入产物目录，如下方示例。
+正式发布不依赖相邻官网仓库；发布 Skill 会本地校验目标目录、打包，并调用线上
+SkillHub 发布接口。
 
 ## 更新已有 Skill
 
@@ -50,31 +50,31 @@ python3 scripts/build_package.py tk-blacklist
 构建产物位于 `dist/packages/`，包括最新版 ZIP、校验文件和元数据。ZIP 解压后
 根目录必须直接包含 `SKILL.md`。
 
-5. 先从官网项目运行定向 dry-run：
+5. 确认当前 Agent 已按官方安装文档安装 `lingtu-skillhub-publish`，然后用该 Skill
+   对目标技能目录运行密钥状态检查、Lint 和预览。预览不上传：
 
 ```bash
-cd /Users/jason/www/lingtuai/www.ailingtu
-npm run skills:publish -- \
-  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
-  --package lingtu-tk-blacklist \
-  --dry-run
+python3 ~/.codex/skills/lingtu-skillhub-publish/scripts/lingtu_skillhub_publish.py status
+python3 ~/.codex/skills/lingtu-skillhub-publish/scripts/lingtu_skillhub_publish.py lint \
+  /Users/jason/www/lingtuai/skills.ailingtu/packages/tk-blacklist --platform lingtu
+python3 ~/.codex/skills/lingtu-skillhub-publish/scripts/lingtu_skillhub_publish.py lingtu \
+  /Users/jason/www/lingtuai/skills.ailingtu/packages/tk-blacklist
 ```
 
-检查输出中的目标 slug、版本和最终索引记录数。索引记录数应等于当前线上记录数，
-不能因为发布单包而减少。
+检查输出中的目标 slug、版本、平台、目录文案和预览结果。
 
-6. dry-run 正确后，执行同一个目标的正式发布：
+6. 预览正确并得到用户明确确认后，通过同一个发布 Skill 正式发布：
 
 ```bash
-npm run skills:publish -- \
-  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
-  --package lingtu-tk-blacklist
+python3 ~/.codex/skills/lingtu-skillhub-publish/scripts/lingtu_skillhub_publish.py lingtu \
+  /Users/jason/www/lingtuai/skills.ailingtu/packages/tk-blacklist --confirm
 ```
 
 发布器上传并校验不可变版本 ZIP，事务更新数据库，再导出索引并更新兼容下载别名。安装索引使用不可变 URL；其他 Skill 记录保持不变。
 
 7. 发布器现在事务更新 MySQL 目录与版本记录，再从数据库导出 CDN 索引。官网通过 API 动态读取，因此普通 Skill 发布不修改或部署官网代码。完整中英文文案更新可用 `--catalog /path/catalog.json`，也可放在包根目录 `catalog.json`；已有包不传时保留数据库文案，以 SKILL.md 同步中文名称和简介。
-8. 发布命令必须使用经核对的目标数据库环境与 TOS 凭证。默认 npm 命令读取 `.env.local`；生产环境应显式加载对应环境文件，详情见 `www.ailingtu/docs/SKILL_CATALOG.md`。首次数据库切换须先按 `DEPLOY.md` 完成备份确认、建表迁移、目录导入和一次官网部署；未完成前不得执行新版数据库发布器。
+8. 发布只读取 `LINGTU_SKILLHUB_TOKEN`，不读取业务 API Key、官网数据库连接串或
+   TOS 凭证。线上 API 负责数据库、不可变 ZIP、索引和兼容下载别名的一致性。
 
 ## 新增 Skill
 
@@ -99,18 +99,16 @@ python3 scripts/create_package.py creator-insights \
 python3 scripts/build_package.py creator-insights
 ```
 
-4. 使用完整发布 slug 做定向 dry-run 和正式发布：
+4. 使用 `lingtu-skillhub-publish` 对新技能目录执行 Lint 和预览，得到用户明确确认后
+   加 `--confirm` 正式发布：
 
 ```bash
-cd /Users/jason/www/lingtuai/www.ailingtu
-npm run skills:publish -- \
-  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
-  --package lingtu-creator-insights \
-  --dry-run
-
-npm run skills:publish -- \
-  /Users/jason/www/lingtuai/skills.ailingtu/dist/packages \
-  --package lingtu-creator-insights
+python3 ~/.codex/skills/lingtu-skillhub-publish/scripts/lingtu_skillhub_publish.py lint \
+  /Users/jason/www/lingtuai/skills.ailingtu/packages/creator-insights --platform lingtu
+python3 ~/.codex/skills/lingtu-skillhub-publish/scripts/lingtu_skillhub_publish.py lingtu \
+  /Users/jason/www/lingtuai/skills.ailingtu/packages/creator-insights
+python3 ~/.codex/skills/lingtu-skillhub-publish/scripts/lingtu_skillhub_publish.py lingtu \
+  /Users/jason/www/lingtuai/skills.ailingtu/packages/creator-insights --confirm
 ```
 
 新增包会追加到线上索引；已有记录必须保持原样。
@@ -137,7 +135,7 @@ npm run skills:publish -- \
 
 - 不要上传整个 `skills.ailingtu` 仓库。
 - 不要把多个 `packages/*` 合并成一个 ZIP。
-- 不要在日常更新中省略 `--package`。
+- 不要绕过 `lingtu-skillhub-publish` 使用官网仓库脚本或手工调用后台 API。
 - 不要复用已发布版本号覆盖不可变版本包。
 - 不要从 Codeup、GitHub、其他 Skill 商店或浏览器手工上传替代官方 TOS/CDN 流程。
 - 不要把 API Key 写入仓库、命令、日志或聊天。

@@ -1,0 +1,38 @@
+{
+  "slug": "xhs-remake",
+  "category": "content-creation",
+  "iconKey": "eye",
+  "tone": "rose",
+  "platforms": ["Xiaohongshu", "Codex", "Claude Code", "Cursor"],
+  "sortOrder": 14,
+  "locales": {
+    "zh-CN": {
+      "title": "小红书爆款种草图文批量照抄 By 灵途 AI",
+      "description": "参考小红书图文的内容结构与视觉方式，用自有素材重新创作成套种草图文与发布文案。",
+      "prompt": "参考这篇小红书图文笔记的结构和视觉方式，用我提供的素材重新创作一套种草图文，并输出可以直接交给素人发布的图片和发布计划。",
+      "highlights": [
+        "拆解公开小红书图文笔记的内容结构、页序节奏和视觉语法",
+        "结合素材文件夹、指定图片和品牌素材逐页重新创作",
+        "输出按日期、系列和编号命名的 JPG 成品包与发布计划"
+      ],
+      "input": "一篇公开的小红书图文笔记链接，以及素材文件夹或若干指定图片；可选主题、受众、系列名和输出目录。",
+      "output": "每套独立目录中的按页序 JPG 图片和发布计划.md，内部素材分析与生成档案单独保存。",
+      "requirement": "图片生成需要配置 LINGTU_API_KEY。只支持小红书图文笔记，不处理视频笔记、自动发布或原作逐字复制。",
+      "categoryLabel": "图文创作"
+    },
+    "en-US": {
+      "title": "Xiaohongshu Photo-Post Remake by LINGTU AI",
+      "description": "Recreate a Xiaohongshu photo post with your own assets while following the reference structure and visual language.",
+      "prompt": "Use this public Xiaohongshu photo post as a structural and visual reference, remake it with my assets, and deliver images plus a posting plan that I can hand directly to a creator.",
+      "highlights": [
+        "Break down the content roles, page sequence, pacing, and visual grammar of a public photo post",
+        "Recreate every page with selected images, material folders, and reusable brand assets",
+        "Deliver JPG packages named by date, series, and sequence together with a posting plan"
+      ],
+      "input": "One public Xiaohongshu photo-post URL plus a material folder or selected images, with optional topic, audience, series name, and output directory.",
+      "output": "One delivery folder per set containing ordered JPG images and 发布计划.md, with generation work files stored separately.",
+      "requirement": "Image generation requires LINGTU_API_KEY. Photo posts only; video notes, automatic publishing, and verbatim copying are not supported.",
+      "categoryLabel": "Photo content creation"
+    }
+  }
+}
