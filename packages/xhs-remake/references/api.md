@@ -21,8 +21,8 @@
 python3 scripts/lingtu_video_download.py download \
   --video-url 'XIAOHONGSHU_URL' \
   --photo-only \
-  --output /absolute/path/to/job/reference \
-  --metadata /absolute/path/to/job/reference/metadata.json
+  --output /absolute/path/to/work-dir/reference \
+  --metadata /absolute/path/to/work-dir/reference/metadata.json
 ```
 
 脚本名称沿用共享下载运行时；本技能只接受小红书图文链接，不因脚本支持其他平台而扩大范围。
@@ -33,7 +33,7 @@ python3 scripts/lingtu_video_download.py download \
 python3 scripts/lingtu_xhs_manifest.py \
   --material /absolute/path/to/material-folder \
   --material /absolute/path/to/selected-image.jpg \
-  --output /absolute/path/to/job/assets-manifest.json
+  --output /absolute/path/to/work-dir/assets-manifest.json
 ```
 
 支持 JPG、PNG、WebP、GIF、HEIC、HEIF 和 AVIF。脚本记录绝对路径、字节数、SHA-256、可读取的尺寸及内容重复项；语义描述必须在实际查看图片后补入 `assets-analysis.json`。

@@ -39,10 +39,10 @@ python3 scripts/lingtu_content_task.py \
   --kind image \
   --aspect-ratio 3:4 \
   --nums 1 \
-  --prompt-file /absolute/path/to/job/prompts/01.txt \
-  --reference-image /absolute/path/to/job/reference/01.jpg \
+  --prompt-file /absolute/path/to/work-dir/versions/00-原始版/prompts/01.txt \
+  --reference-image /absolute/path/to/work-dir/reference/01.jpg \
   --reference-image /absolute/path/to/user/material.jpg \
-  --output-dir /absolute/path/to/job/drafts/01
+  --output-dir /absolute/path/to/work-dir/versions/00-原始版/drafts/01
 ```
 
 创建成功后保留脚本输出的 `scheduleId`。需要继续轮询时使用脚本提供的 poll 参数，不为同一页静默重复提交任务。
