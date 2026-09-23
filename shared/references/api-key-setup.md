@@ -1,10 +1,10 @@
-# 配置灵途 API Key
+# 配置灵途密钥
 
 还没有配置 `LINGTU_API_KEY`。按下面步骤配置一次，再回来重试。
 
 ## 1. 获取密钥
 
-打开 https://ailingtu.com/api-keys ，登录后创建或复制 API Key。
+打开 https://ailingtu.com/api-keys ，登录后创建或复制密钥。
 密钥只粘贴到你自己电脑的终端中，不要发送到聊天里。
 
 ## 2. 按电脑系统配置
@@ -12,10 +12,10 @@
 ### Mac
 
 1. 按 **Command（⌘）+ 空格**，输入“终端”或 `Terminal`，按回车打开。
-2. 将下面命令中的 `你的_API_Key` 替换为自己的真实密钥，保留两侧的英文单引号，然后整行粘贴到终端，按回车执行。
+2. 将下面命令中的 `你的_密钥` 替换为自己的真实密钥，保留两侧的英文单引号，然后整行粘贴到终端，按回车执行。
 
 ```sh
-export LINGTU_API_KEY='你的_API_Key'; launchctl setenv LINGTU_API_KEY "$LINGTU_API_KEY"
+export LINGTU_API_KEY='你的_密钥'; launchctl setenv LINGTU_API_KEY "$LINGTU_API_KEY"
 ```
 
 3. 完全退出使用 Skill 的应用（**Command + Q**），再重新打开，重试原来的任务。只关闭窗口不一定会退出应用。若使用命令行工具，在刚才这个终端中启动它。
@@ -25,10 +25,10 @@ export LINGTU_API_KEY='你的_API_Key'; launchctl setenv LINGTU_API_KEY "$LINGTU
 ### Windows
 
 1. 按 **Win + R**，输入 `powershell`，按回车打开 Windows PowerShell。无需管理员权限。
-2. 将下面命令中的 `你的_API_Key` 替换为自己的真实密钥，保留两侧的英文单引号，然后整行粘贴到 PowerShell，按回车执行。命令会同时配置当前窗口并保存到当前 Windows 用户，重启电脑后仍然有效。
+2. 将下面命令中的 `你的_密钥` 替换为自己的真实密钥，保留两侧的英文单引号，然后整行粘贴到 PowerShell，按回车执行。命令会同时配置当前窗口并保存到当前 Windows 用户，重启电脑后仍然有效。
 
 ```powershell
-$env:LINGTU_API_KEY = '你的_API_Key'; [Environment]::SetEnvironmentVariable('LINGTU_API_KEY', $env:LINGTU_API_KEY, 'User')
+$env:LINGTU_API_KEY = '你的_密钥'; [Environment]::SetEnvironmentVariable('LINGTU_API_KEY', $env:LINGTU_API_KEY, 'User')
 ```
 
 3. 完全退出使用 Skill 的应用，再重新打开，重试原来的任务。如果应用有托盘图标，也要从托盘退出。若使用命令行工具，可直接在刚才这个 PowerShell 中启动它。

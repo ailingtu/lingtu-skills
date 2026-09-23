@@ -21,7 +21,7 @@
 | [`video-remake`](packages/video-remake/) | 爆款复刻：源视频转写、15秒内语义切片、Wan3.0逐段重绘确认和合成；发行包独立运行。参考结构与商品改编生成属于 `packages/content-create`。 | 0.2.6 | 2026-09-22 20:06:43 | 许强强 |
 | [`video-publish`](packages/video-publish/) | TikTok Shop / TikTok 普通视频批量发布、CSV 排期生成、达人/商品查询和 dry-run 校验。 | 0.2.3 | 2026-09-22 20:06:43 | 许强强 |
 | [`tiktok-carousel`](packages/tiktok-carousel/) | TikTok 爆款带货图文创作 By 灵途 AI：围绕商品真实卖点策划逐页方案，确认后生成图片与发布文案。 | 0.1.5 | 2026-09-22 19:57:40 | 郑丹 |
-| [`xhs-remake`](packages/xhs-remake/) | 参考一篇小红书图文的内容结构和视觉方式，用自有素材重新创作非挂车种草图文、标题、正文与标签。 | 0.1.4 | 2026-09-23 18:25:06 | jasonxu591-cmd |
+| [`xhs-remake`](packages/xhs-remake/) | 参考一篇小红书图文的内容结构和视觉方式，用自有素材重新创作非挂车种草图文、标题、正文与标签。 | 0.1.5 | 2026-09-23 18:54:48 | jasonxu591-cmd |
 | [`video-download`](packages/video-download/) | 根据 TikTok、抖音、视频号和小红书公开链接获取播放与互动数据，并下载无水印视频。 | 0.1.1 | 2026-09-22 18:55:34 | 许强强 |
 | [`skillhub-publish`](packages/skillhub-publish/) | 把 AI Skill 发布到灵途 SkillHub 或腾讯 WorkBuddy（skillhub.cn）。 | 0.1.0 | 2026-09-22 15:29:08 | jasonxu591-cmd |
 | [`skill-finder`](packages/skill-finder/) | 根据自然语言需求查询实时官方目录，推荐适合的灵途技能并按需安装。 | 0.1.0 | 2026-09-23 13:54:01 | jasonxu591-cmd |
