@@ -170,7 +170,20 @@ def list_creator_accounts(
         # 后端期望 true/false 小写；Python urlencode(True) 会变成 "True"
         params["hasPhotoPermission"] = "true" if has_photo_permission else "false"
 
-    return _request_json("GET", CREATOR_PAGE_LIST_PATH, query_params=params)
+    items = []
+    while True:
+        result = _request_json("GET", CREATOR_PAGE_LIST_PATH, query_params=params)
+        data = result.get("data") or {}
+        page = data.get("list") or []
+        items.extend(page)
+        total_pages = data.get("totalPages")
+        if not page or (total_pages is not None and params["pageNumber"] >= int(total_pages)):
+            break
+        if total_pages is None and (len(page) < page_size or len(items) >= int(data.get("total", len(items) + 1))):
+            break
+        params["pageNumber"] += 1
+    result["data"]["list"] = items
+    return result
 
 
 def _creator_summary(item: dict[str, Any], fallback_username: str = "") -> dict[str, Any]:
@@ -326,6 +339,8 @@ def create_post(
     photo_post_type: str = "MULTI_PHOTO_ONE_ANCHOR",
     product_links: list[dict[str, str]] | None = None,
     music_info: dict[str, str] | None = None,
+    options: dict[str, Any] | None = None,
+    cover: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """创建发布任务。
 
@@ -340,7 +355,9 @@ def create_post(
     """
     from .config import PLATFORM_API_MAP
 
-    api_platform = PLATFORM_API_MAP.get(platform, "TIKTOK")
+    if platform not in PLATFORM_API_MAP:
+        raise SystemExit(f"不支持的平台：{platform}")
+    api_platform = PLATFORM_API_MAP[platform]
     normalized_media = (media_type or "VIDEO").strip().upper()
     if normalized_media not in ("VIDEO", "PHOTO"):
         raise SystemExit(f"无效 mediaType：{media_type}（可选：VIDEO / PHOTO）")
@@ -362,7 +379,16 @@ def create_post(
     if oauth_region:
         body["oauthRegion"] = oauth_region
 
-    if is_photo:
+    if platform == "tiktok_business":
+        if is_photo:
+            ids = [str(i) for i in (business_ids or [business_id])]
+            if not ids or any(not i.isdigit() or int(i) <= 0 for i in ids):
+                raise SystemExit("高级版图文需要有效整数fileId")
+            body["businessId"] = ids[0]
+            body["tiktokBusinessPhoto"] = {"businessIds": [int(i) for i in ids]}
+        else:
+            body["tiktokBusiness"] = {}
+    elif is_photo:
         if platform != "tiktok_shop":
             raise SystemExit("带货图文 (mediaType=PHOTO) 仅支持 platform=tiktok_shop")
         # 顺序必须保持用户上传顺序；首图作 businessId
@@ -427,6 +453,13 @@ def create_post(
             "brandOrganicToggle": False,
         }
 
+    from .publish_options import apply_options
+    opts = dict(options or {})
+    if music_info and "musicInfo" not in opts:
+        opts["musicInfo"] = music_info
+    body = apply_options(body, opts, platform, "photo" if is_photo else "video", cover=cover)
+    if platform == "tiktok_business" and is_photo and not body["tiktokBusinessPhoto"].get("privacyLevel"):
+        raise SystemExit("高级版图文必须填写账号允许的隐私范围")
     result = _request_json("POST", POST_CREATE_PATH, body=body)
     return result.get("data") or {}
 
@@ -467,3 +500,33 @@ def list_showcase_products(
         params["pageToken"] = page_token
 
     return _request_json("GET", PRODUCT_SHOWCASE_LIST_PATH, query_params=params)
+
+
+def list_posts(post_id: str) -> list[dict[str, Any]]:
+    """Read exact publishing task status, without inferring success from creation."""
+    result = _request_json("GET", "/v1/creator/post/pageList", query_params={
+        "pageSize": 200, "pageNumber": 1, "postId": post_id,
+    })
+    return (result.get("data") or {}).get("list") or []
+
+
+def find_product_title(username: str, product_id: str, source: str = "SHOP") -> str:
+    """Match exact product ID across pages; never search the ID as a title keyword."""
+    info = resolve_creator_id(username, platform="tiktok_shop")
+    if not info or not info.get("id"):
+        raise SystemExit(f"达人 {username} 未授权或缺少账号 id")
+    token = None
+    seen = set()
+    while True:
+        if source.upper() == "SHOWCASE":
+            result = list_showcase_products(info["id"], page_token=token)
+        else:
+            result = list_shop_products(info["id"], page_token=token)
+        data = result.get("data") or {}
+        for product in data.get("products") or []:
+            if str(product.get("id")) == product_id:
+                return str(product.get("title") or "")
+        token = data.get("nextPageToken")
+        if not token or token in seen:
+            return ""
+        seen.add(token)

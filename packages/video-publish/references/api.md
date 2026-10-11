@@ -14,8 +14,9 @@
 | `POST /v1/file/confirm` | 确认上传完成 |
 | `GET /v1/creatorAccount/pageList` | 获取已授权达人列表 |
 | `POST /v1/creator/post/create` | 创建视频 / 带货图文发布任务 |
-| `GET /v1/creator/tiktok/product/listByShop` | 搜索店铺商品 |
-| `GET /v1/creator/tiktok/product/listByShowcase` | 搜索橱窗商品 |
+| `GET /v1/creator/post/pageList` | 按 postId 查询发布任务状态 |
+| `GET /v1/creator/tiktokshop/product/listByShop` | 搜索店铺商品 |
+| `GET /v1/creator/tiktokshop/product/listByShowcase` | 搜索橱窗商品 |
 
 ---
 
@@ -247,7 +248,7 @@ Body: raw file bytes
 
 ## 商品查询
 
-### GET /v1/creator/tiktok/product/listByShop
+### GET /v1/creator/tiktokshop/product/listByShop
 
 搜索店铺商品。
 
@@ -259,7 +260,7 @@ Body: raw file bytes
 | pageToken | string | 否 | 分页 token |
 | titleKeyword | string | 否 | 标题关键词 |
 
-### GET /v1/creator/tiktok/product/listByShowcase
+### GET /v1/creator/tiktokshop/product/listByShowcase
 
 搜索橱窗商品。参数同上（无 titleKeyword）。
 
@@ -290,3 +291,34 @@ Body: raw file bytes
 | 401 | 未授权（x-api-key 缺失或无效） |
 
 错误响应包含 `message`（string）字段。
+
+## 发布记录查询（2026-10-11 核对公开规范）
+
+来源：https://ailingtu.com/openapi/operations/listCreatorPosts.json （OpenAPI 1.10.0）。
+
+`GET /v1/creator/post/pageList`，必填 `pageSize`（1～200）、`pageNumber`（从 1 起）。可选 `postId` 为灵途发布任务 ID；另支持 beginTime/endTime（毫秒）、status、creatorUsername、platform 等筛选。CLI 对每个保存的 postId 精确查询，读取 `data.list`。
+
+记录包含 `postId`、`status`、`reason`、`platformPostId`、`scheduledAt`、`scheduledTz`、`publishedAt`。创建成功不是平台发布完成；`SUCCESS` / `COMPLETED` 可报平台成功，`PRE_CHECK_PASSED` 仅预检通过。失败类为 `FAILED` / `SUBMIT_FAILED` / `PRE_CHECK_REJECTED`；`CANCELLED` 表示取消；其他状态保持原值。
+
+查询不到或请求失败不证明未提交。没有 postId 的未知提交不能按相似 caption 自动匹配或重发。CLI 未实现服务端取消/更新任务，不自动重发已创建但最终失败的任务。
+
+## 网页功能迁移合同
+
+按用户要求，将 app.ailingtu/src/api/admin/creatorAccount.ts 与 creatorPostDraft.ts 的 `/admin` 前缀统一替换为 `/v1`，仍只用 `LINGTU_API_KEY` / `x-api-key`。没有公开规范的迁移路径不宣称已完成服务端联调；若服务端 404/403，报告对应路径，不回退 `/admin` 或登录令牌。
+
+- GET `/v1/creatorAccount/tiktok/publishConfig?id=账号主键`：privacyLevelOptions、commentDisabled、duetDisabled、stitchDisabled、maxVideoPostDurationSec。
+- GET `/v1/creator/tiktokshop/searchMusic`：id（账号主键）、keyword、pageSize、region、language；翻页带 pageToken 与 searchId。返回 music、hasMore、nextPageToken、searchId。
+- GET `/v1/creator/tiktokshop/music/favorites`：pageNumber/pageSize/title。POST favorite：musicId/title/author/duration/coverUrl/playUrl；POST unfavorite：musicId。
+- GET `/v1/creator/tiktokBusiness/trendingMusic`：id、genre、countryCode、dateRange（1DAY/7DAY/30DAY/90DAY）。返回 music；发布必须使用 musicSoundId，不使用 commercialMusicId。
+- GET `/v1/creator/tiktokBusiness/searchLocation`：id、searchQuery；返回 locations，locationId 与 locationName 成对。
+- POST `/v1/creator/tiktokshop/uploadPhoto`：multipart form 的 id、file、returnCoverFileId=true；返回 photoFile.photoUri、coverFileId。
+- Business 账号 authSource=TIKTOK_BUSINESS_ACCOUNT_API，platform=TIKTOK_BUSINESS。视频使用 tiktokBusiness（不传 privacyLevel），图文使用 tiktokBusinessPhoto（要求 privacyLevel，有序整数 businessIds，最多15张 JPG/JPEG/WEBP，每张≤10MB）。
+- Shop 视频 tiktokShop 可传 musicInfo、preCheck、preCheckOvertime（开启超时固定1800秒）、isAiGenerated、coverUri、coverTimestampMs。图文仍只传 tiktokShopPhoto 的图片、商品、musicInfo，不混入视频字段。
+- Business 视频 musicSoundInfo={musicSoundId,musicSoundName,musicSoundArtist,musicSoundVolume,videoOriginalSoundVolume}，音量0～100；Business图文去掉两个音量。locationInfo 的 ID/名称成对。品牌声明和AI标识按各场景发送。
+- 顶层 coverFileId 与上传封面返回值一致；有上传封面时不传截帧。Login Kit仅支持截帧，不支持平台音乐或上传封面。
+- POST `/v1/creator/post/{cancel,delete,submit,sync}`：postId。update：postId/title/scheduledAt/scheduledTz及各场景配置，不替换主素材。reschedule：postIds/durationHours（1～24），返回 successCount/failedList。
+- GET `/v1/creator/post/{detail,monthlyAccountQuota,stats,stats/dailyAccount}`：detail传postId；统计按日期时区账号等筛选。
+- POST `/v1/creatorAccount/sync`：id；POST `/v1/creator/tiktokshop/product/addToShowcase`：id、addType以及productIds或productLink。
+- 云草稿 `/v1/creator/postDraft/{create,update,detail,pageList,rename,delete,complete}` 沿用网页的schemaVersion=1与lockVersion合同；JSON载荷须为完整网页V1格式，不能直接提交本地plan.json。
+
+所有创建任务只报“已提交”。平台 SUCCESS/COMPLETED 才报发布完成，PRE_CHECK_PASSED 只报预审通过。写操作先预览参数，用户确认后执行，不自动重试提交类请求。

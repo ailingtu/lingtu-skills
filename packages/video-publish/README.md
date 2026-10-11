@@ -1,64 +1,33 @@
 # TikTok 视频与图文批量发布 By 灵途 AI
 
-从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频，或发布 TikTok Shop 带货图文（多图挂车）。
-
-## 快速开始
+从素材文件夹生成可审核的发布方案，确认后上传素材、创建定时任务，再按任务 ID 查询结果。保留 CSV/XLSX 排期入口。
 
 ```bash
-# 1. 生成 CSV 排期模板（在桌面创建文件夹）
-python3 scripts/lingtu_video_publish.py gen-csv \
-  --platform tiktok_shop \
-  --region US \
-  --date 2026-07-05 \
-  --product-id pid_001234
+# 选定达人后准备方案（每份素材只分配给一个达人）
+python3 scripts/lingtu_video_publish.py plan \
+  --media-folder /path/to/videos --output-dir /path/to/batch \
+  --platform tiktok --creators alice,bob --distribution distribute \
+  --date 2026-10-12 --count 2 --title "Reviewed caption"
 
-# 带货图文
-python3 scripts/lingtu_video_publish.py gen-csv \
-  --platform tiktok_shop \
-  --media-type photo \
-  --region US \
-  --date 2026-07-05 \
-  --product-id pid_001234
+# 修改草稿；逐行内容也可由 Agent 编辑 CSV
+python3 scripts/lingtu_video_publish.py fill --folder /path/to/batch --col title --row 0 --value "Caption A"
 
-# 2. 编辑 schedule.csv（视频：title + video_file；图文：title + image_files），媒体拖入文件夹
+# 校验、展示实际发布内容，用户确认后提交
+python3 scripts/lingtu_video_publish.py publish --folder /path/to/batch
+python3 scripts/lingtu_video_publish.py publish --folder /path/to/batch --confirm
 
-# 3. 模拟执行预览
-python3 scripts/lingtu_video_publish.py publish \
-  --folder ~/Desktop/视频发布_2026-07-05
-
-# 4. 确认发布
-python3 scripts/lingtu_video_publish.py publish \
-  --folder ~/Desktop/视频发布_2026-07-05 \
-  --confirm
+# 查询最终状态
+python3 scripts/lingtu_video_publish.py status --folder /path/to/batch --refresh
 ```
 
-不传 `--timezone` 时会按达人授权区域自动推断时区；美国达人默认美西。需要美东等指定时区时再传 `--timezone EST`。`--region US` 对带货达人列表生效；普通 TikTok / 养号视频不按国家筛选列表，且不需要产品 ID。
+图文用 `--platform tiktok_shop --media-type photo`，每个直接子文件夹是一篇图文。挂车提供 `--product-id`，自动查标题；可用 `--product-title` 明确指定。多账号的分配必须选择 distribute 或 all，后者每个账号都发全部素材。每日条数为 1～7，素材多则延伸日期，不循环素材。
 
-不同日期发布条数不同时，仍生成一个排期文件夹和一份 CSV：
+方案保存 schedule.csv、plan.json、发布方案.md；校验通过保存 review.json；提交结果逐条保存 publish-journal.json。素材或账号身份变化需重新审核。重复执行跳过已有任务；只有提交前明确失败的条目可加 `--retry-failed` 重试。创建请求中断或超时后状态不明，禁止自动重发。去重只覆盖同一方案目录，保留目录及提交记录。
 
-```bash
-python3 scripts/lingtu_video_publish.py gen-csv \
-  --platform tiktok \
-  --region US \
-  --date 2026-07-06 \
-  --daily-counts 2026-07-06=2,2026-07-07=3
-```
+任务创建成功并不代表平台发布成功。查询 SUCCESS / COMPLETED 后才报成功；PRE_CHECK_PASSED 仅预检通过。已提交条目的方案修改不会更新旧服务端任务；先处理旧任务再确认新方案，使用 posts detail/update/cancel 管理旧服务端任务，不把本地修改误报成服务端已修改。
 
-## 命令
+命令：plan、creators、products search、fill、publish、status、gen-csv。新增 music、location、configure、publish-config、quota、posts、draft 和 service。完整操作参见 SKILL.md、references/migrated-workflow.md 和 `--help`。
 
-| 命令 | 说明 |
-|------|------|
-| gen-csv | 生成 CSV 排期模板 |
-| creators | 列出已授权达人 |
-| publish | 执行发布 |
-| products search | 搜索商品 |
+支持5种网页发布场景，接口统一/v1。云草稿提供网页V1 JSON接口管理，不自动转换本地CSV。非带货视频需要ffprobe读取时长。
 
-## 依赖
-
-- Python 3.9+
-
-默认 CSV 流程不需要第三方依赖；只有读取或编辑旧版 `schedule.xlsx` 时才需要 `openpyxl`。
-
-## 配置
-
-所有需要认证的请求只使用 `LINGTU_API_KEY` 环境变量，并通过 `x-api-key` 请求头发送。如果缺少，引导用户前往 https://ailingtu.com/api-keys 创建或管理密钥，并在运行 Skill 的环境中配置 `LINGTU_API_KEY` 后重试。不要在聊天中发送、展示或保存真实 Key。
+Python 3.9+，CSV 无第三方依赖；旧 XLSX 需要 openpyxl。认证只使用 LINGTU_API_KEY，通过 x-api-key 发送。密钥配置见 https://ailingtu.com/api-keys ，不在聊天或文件中保存真实密钥。

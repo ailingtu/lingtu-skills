@@ -32,6 +32,7 @@ from .api import (
     require_api_key,
     resolve_creator_batch,
     upload_file,
+    find_product_title,
 )
 from .config import (
     DEFAULT_DESKTOP,
@@ -68,6 +69,9 @@ from .excel_utils import (
 )
 from .report import format_creators, format_products, format_publish_results
 from .scheduler import auto_assign_schedule, build_schedule_rows, compute_schedule_times
+from .plan import batch_lock, read_json, write_json, row_fingerprint, render_plan
+from .publish_options import parse_options, validate_scenario, settings_from_config, video_duration
+from .services import get_publish_config, upload_cover
 
 
 def print_json(data: Any) -> None:
@@ -130,12 +134,15 @@ def _format_preview_table(rows_data: list[dict[str, str]], times: list[str], tz:
 
 
 def _csv_columns_for_platform(platform: str, media_type: str = "video") -> tuple[str, ...]:
+    return _base_csv_columns(platform, media_type) + ("publish_options",)
+
+
+def _base_csv_columns(platform: str, media_type: str = "video") -> tuple[str, ...]:
     is_photo = parse_media_type(media_type) == "photo"
-    if platform == "tiktok":
+    if platform in ("tiktok", "tiktok_business"):
         return (
-            "creator_username", "platform", "media_type",
-            "title", "timezone",
-            "scheduled_at", "video_file",
+            "creator_username", "platform", "media_type", "title", "timezone", "scheduled_at",
+            "image_files" if is_photo else "video_file", "music_id", "music_title", "music_author", "music_duration",
         )
     if is_photo:
         return (
@@ -151,7 +158,7 @@ def _csv_columns_for_platform(platform: str, media_type: str = "video") -> tuple
         "product_id", "product_title",
         "product_source", "title",
         "timezone", "scheduled_at",
-        "video_file",
+        "video_file", "music_id", "music_title", "music_author", "music_duration",
     )
 
 def _timezone_from_creator_info(creator_info: dict[str, Any]) -> str:
@@ -228,7 +235,7 @@ def _parse_daily_counts(raw: str, start_year: int) -> dict[str, int]:
 def command_gen_csv(args: argparse.Namespace) -> None:
     platform = args.platform
     media_type = parse_media_type(getattr(args, "media_type", None) or "video")
-    if media_type == "photo" and platform != "tiktok_shop":
+    if media_type == "photo" and platform not in ("tiktok_shop", "tiktok_business"):
         raise SystemExit("带货图文 (media-type=photo) 仅支持 --platform tiktok_shop")
     date_str = parse_date_for_filename(args.date)
     tz_iana = parse_timezone(args.timezone) if args.timezone else ""
@@ -250,7 +257,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     times = compute_schedule_times(preview_count)
 
     product_id = args.product_id or ""
-    if platform == "tiktok":
+    if platform != "tiktok_shop":
         product_id = ""
 
     # 获取达人列表（dry-run 先不调 API，用用户输入直接预览）
@@ -275,7 +282,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
     # ── 正式生成：调 API 验证达人 ──
     require_api_key()
 
-    photo_filter = True if media_type == "photo" else None
+    photo_filter = True if media_type == "photo" and platform == "tiktok_shop" else None
 
     if raw_creators:
         creator_list = raw_creators
@@ -289,7 +296,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
         data = result.get("data") or {}
         items = data.get("list") or []
         # 服务端 hasPhotoPermission 为主；客户端再兜底一次
-        if media_type == "photo":
+        if media_type == "photo" and platform == "tiktok_shop":
             items = [item for item in items if _item_can_publish_photo(item)]
         creator_list = [item.get("username", "") for item in items if item.get("username")]
         if not creator_list:
@@ -321,7 +328,7 @@ def command_gen_csv(args: argparse.Namespace) -> None:
                 )
             else:
                 print(f"⚠ 以下达人未找到或未授权：{', '.join(not_found)}", file=sys.stderr)
-        if media_type == "photo" and found:
+        if media_type == "photo" and platform == "tiktok_shop" and found:
             photo_ok: dict[str, dict[str, Any]] = {}
             photo_blocked: list[str] = []
             for uname, info in found.items():
@@ -504,6 +511,14 @@ def command_creators(args: argparse.Namespace) -> None:
 
 def command_publish(args: argparse.Namespace) -> None:
     folder = Path(args.folder).expanduser()
+    if not folder.is_dir():
+        raise SystemExit(f"排期文件夹不存在：{folder}")
+    with batch_lock(folder):
+        _command_publish_locked(args)
+
+
+def _command_publish_locked(args: argparse.Namespace) -> None:
+    folder = Path(args.folder).expanduser()
     if not folder.exists():
         raise SystemExit(f"文件夹不存在：{folder}")
     if not folder.is_dir():
@@ -535,7 +550,7 @@ def command_publish(args: argparse.Namespace) -> None:
 
     # 自动分配时间为空的行
     if valid_rows:
-        rows_with_empty_time = [r for r in valid_rows if not (r.get("scheduled_at") or "").strip()]
+        rows_with_empty_time = [r for r in valid_rows if not (r.get("scheduled_at") or "").strip() and not parse_options(r.get("publish_options")).get("publishImmediately")]
         if rows_with_empty_time and not args.date:
             raise SystemExit("存在未填写时间的行，请使用 --date 指定日期以自动分配时间。")
         if rows_with_empty_time and args.date:
@@ -543,7 +558,7 @@ def command_publish(args: argparse.Namespace) -> None:
 
     # 图文：校验达人须 TikTok Shop + PHOTO_SHOPPABLE_PERMISSION_PRODUCT
     row_index_by_id = {id(row): idx + 2 for idx, row in enumerate(rows)}
-    photo_rows = [r for r in valid_rows if _row_media_type(r) == "photo"]
+    photo_rows = [r for r in valid_rows if _row_media_type(r) == "photo" and r["platform"] == "tiktok_shop"]
     if photo_rows:
         require_api_key()
         photo_usernames = list({r["creator_username"].strip() for r in photo_rows if r.get("creator_username")})
@@ -554,7 +569,7 @@ def command_publish(args: argparse.Namespace) -> None:
         )
         still_valid: list[dict[str, Any]] = []
         for row in valid_rows:
-            if _row_media_type(row) != "photo":
+            if _row_media_type(row) != "photo" or row["platform"] != "tiktok_shop":
                 still_valid.append(row)
                 continue
             username = (row.get("creator_username") or "").strip()
@@ -581,9 +596,72 @@ def command_publish(args: argparse.Namespace) -> None:
             still_valid.append(row)
         valid_rows = still_valid
 
-    # dry-run
+    # Settings and live account capabilities are part of the reviewed plan.
+    config_cache = {}
+    for row in valid_rows:
+        options = parse_options(row.get("publish_options"))
+        if _row_music_info(row):
+            if "musicInfo" in options and options["musicInfo"] != _row_music_info(row):
+                raise SystemExit("音乐列与发布设置中的曲目不一致，请只保留一种来源")
+            options["musicInfo"] = _row_music_info(row)
+        if row["platform"] != "tiktok_shop":
+            key = (row["platform"], row["creator_username"].lower())
+            if key not in config_cache:
+                info = resolve_creator_batch([row["creator_username"]], platform=row["platform"])[0].get(key[1])
+                if not info or not info.get("id"):
+                    raise SystemExit("达人未授权或缺少账号主键，无法读取发布配置")
+                config_cache[key] = get_publish_config(info["id"])
+            options = settings_from_config(options, config_cache[key], row["platform"], _row_media_type(row))
+            if _row_media_type(row) == "video":
+                path = _resolve_media_path(folder, _row_media_filenames(row)[0])
+                duration = video_duration(path)
+                maximum = config_cache[key].get("maxVideoPostDurationSec")
+                if maximum and duration is None:
+                    raise SystemExit("无法读取视频时长，请安装ffprobe并确认文件可播放后重试")
+                if maximum and duration > maximum:
+                    raise SystemExit(f"视频时长 {duration:.1f} 秒超过账号限制 {maximum} 秒")
+        row["_options"] = options
+        validate_scenario(options, row["platform"], _row_media_type(row))
+
+    def fingerprint_for(row):
+        paths = [str(_resolve_media_path(folder, name).resolve()) for name in _row_media_filenames(row)]
+        if row["_options"].get("coverFile"):
+            paths.append(str(_resolve_media_path(folder, row["_options"]["coverFile"]).resolve()))
+        return row_fingerprint(row, folder, paths)
+
+    fingerprints = [fingerprint_for(row) for row in valid_rows]
+    # Previously implemented identity and review checks apply to the richer row.
+    if len(set(fingerprints)) != len(fingerprints):
+        raise SystemExit("方案有完全重复的发布条目，请去重后重新预览。")
+    review_payload = {"rows": valid_rows, "fingerprints": fingerprints}
+    if (folder / "plan.json").exists() and not validation_errors:
+        from datetime import datetime, timezone
+        bindings = {}
+        for row_platform in {r["platform"] for r in valid_rows}:
+            names = list({r["creator_username"] for r in valid_rows if r["platform"] == row_platform})
+            found, missing = resolve_creator_batch(names, platform=row_platform)
+            if missing:
+                raise SystemExit("方案达人已失效，请重新选择并确认：" + ", ".join(missing))
+            for name, info in found.items():
+                bindings[row_platform + ":" + name] = info["creatorId"]
+        review_payload["creators"] = bindings
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        for row in valid_rows:
+            if not row["_options"].get("publishImmediately") and parse_datetime_to_epoch_ms(row["scheduled_at"], row["timezone"]) <= now_ms + 300000:
+                raise SystemExit("方案包含已过期或距离当前不足5分钟的时间，请调整排期后重新预览。")
+    journal_path = folder / "publish-journal.json"
+    journal = read_json(journal_path, {"entries": {}})
+
+    # dry-run: persist the exact reviewed content; credentials are never persisted.
     if not args.confirm:
         results = _build_validation_results(rows, valid_rows, validation_errors, mode="dry-run")
+        if not validation_errors:
+            write_json(folder / "review.json", review_payload)
+        else:
+            (folder / "review.json").unlink(missing_ok=True)
+        if (folder / "plan.json").exists():
+            plan = read_json(folder / "plan.json")
+            (folder / "发布方案.md").write_text(render_plan(rows, plan["distribution"]), encoding="utf-8")
 
         if args.format == "json":
             print_json(results)
@@ -600,13 +678,20 @@ def command_publish(args: argparse.Namespace) -> None:
             print(format_publish_results(results))
         return
 
+    if (folder / "plan.json").exists() or (folder / "review.json").exists() or any(r["platform"] == "tiktok_business" or r.get("publish_options") for r in valid_rows):
+        if read_json(folder / "review.json") != review_payload:
+            raise SystemExit("方案或素材已变化，请重新运行 publish 预览并让用户确认。")
+
     # 批量查 creatorId（图文优先按 TikTok Shop 源解析）
-    usernames = list({r["creator_username"].strip() for r in valid_rows})
-    creator_map, not_found = resolve_creator_batch(usernames)
+    creator_map = {}
+    for row_platform in {r["platform"] for r in valid_rows}:
+        platform_names = list({r["creator_username"].strip() for r in valid_rows if r["platform"] == row_platform})
+        found, _ = resolve_creator_batch(platform_names, platform=row_platform)
+        creator_map.update({(row_platform, name): info for name, info in found.items()})
     photo_usernames = list({
         r["creator_username"].strip()
         for r in valid_rows
-        if _row_media_type(r) == "photo"
+        if _row_media_type(r) == "photo" and r["platform"] == "tiktok_shop"
     })
     if photo_usernames:
         shop_map, _ = resolve_creator_batch(
@@ -614,7 +699,7 @@ def command_publish(args: argparse.Namespace) -> None:
             platform="tiktok_shop",
             has_photo_permission=True,
         )
-        creator_map.update(shop_map)
+        creator_map.update({("tiktok_shop", name): info for name, info in shop_map.items()})
 
     results: dict[str, Any] = {
         "mode": "live",
@@ -646,15 +731,32 @@ def command_publish(args: argparse.Namespace) -> None:
             "post_id": None,
             "video_url": None,
             "post_status": None,
+            "timezone": row.get("timezone", ""),
+            "publish_options": row.get("_options", {}),
             "errors": [],
         }
 
+        fingerprint = fingerprints[idx]
+        legacy_row = {key: value for key, value in row.items() if key != "_options"}
+        legacy_fingerprint = row_fingerprint(legacy_row, folder, [str(_resolve_media_path(folder, name).resolve()) for name in media_names])
+        prior = journal["entries"].get(fingerprint) or journal["entries"].get(legacy_fingerprint)
+        if prior and (prior.get("status") != "failed" or not getattr(args, "retry_failed", False)):
+            entry.update({"status": "skipped", "post_id": prior.get("post_id"),
+                          "post_status": prior.get("post_status"),
+                          "errors": ["已有提交记录，跳过；状态不明时请先核实，禁止自动重发。"]})
+            results["rows"].append(entry)
+            results["skipped_count"] = results.get("skipped_count", 0) + 1
+            continue
+        submission_started = False
         try:
-            creator_info = creator_map.get(username.lower())
+            creator_info = creator_map.get((row["platform"], username.lower()))
             if not creator_info:
                 raise SystemExit(f"未找到创作者账号：{username}。请确认该账号已授权。")
 
-            if media_type == "photo":
+            expected_id = review_payload.get("creators", {}).get(row["platform"] + ":" + username.lower())
+            if expected_id and creator_info.get("creatorId") != expected_id:
+                raise SystemExit("达人身份在执行期间已变化，请重新预览确认。")
+            if media_type == "photo" and row["platform"] == "tiktok_shop":
                 ok, reason = creator_can_publish_photo(creator_info)
                 if not ok:
                     raise SystemExit(reason)
@@ -666,7 +768,7 @@ def command_publish(args: argparse.Namespace) -> None:
             last_url = ""
             for media_name in media_names:
                 media_path = _resolve_media_path(folder, media_name)
-                print(f"[{idx + 2}/{len(valid_rows)}] 上传：{media_name}", file=sys.stderr)
+                print(f"[{idx + 1}/{len(valid_rows)}] 上传：{media_name}", file=sys.stderr)
                 default_ct = "image/jpeg" if media_type == "photo" else "video/mp4"
                 upload_result = upload_file(str(media_path), default_content_type=default_ct)
                 file_id = str(upload_result.get("id", "") or "")
@@ -685,12 +787,29 @@ def command_publish(args: argparse.Namespace) -> None:
                 scheduled_at = parse_datetime_to_epoch_ms(row["scheduled_at"].strip(), tz_str)
                 scheduled_tz = tz_str
 
-            print(f"[{idx + 2}/{len(valid_rows)}] 发布：{username} - {row.get('title', '')}", file=sys.stderr)
-            clean_title = sanitize_post_title(row.get("title", "") or "Untitled")
+            print(f"[{idx + 1}/{len(valid_rows)}] 发布：{username} - {row.get('title', '')}", file=sys.stderr)
+            clean_title = row.get("title", "").strip()
             raw_product_title = row.get("product_title") or ""
             clean_product_title = sanitize_product_title(raw_product_title) if raw_product_title else ""
             music_info = _row_music_info(row)
 
+            cover = None
+            if row["_options"].get("coverFile"):
+                cover = upload_cover(creator_info["id"], _resolve_media_path(folder, row["_options"]["coverFile"]))
+            if row["_options"].get("publishImmediately"):
+                scheduled_at = int(time.time() * 1000)
+                scheduled_tz = tz_str or None
+            # Recheck actual media immediately before submission.
+            if fingerprint_for(row) != fingerprint:
+                raise SystemExit("素材在执行期间已变化，请重新预览确认。")
+            if scheduled_at is not None and not row["_options"].get("publishImmediately") and scheduled_at <= int(time.time() * 1000) + 300000:
+                raise SystemExit("距离发布时间不足5分钟，请重新调整方案")
+            entry["status"] = "unknown"
+            entry["creator_id"] = creator_info["creatorId"]
+            entry["file_ids"] = file_ids
+            journal["entries"][fingerprint] = dict(entry)
+            write_json(journal_path, journal)
+            submission_started = True
             post_result = create_post(
                 creator_id=creator_info["creatorId"],
                 title=clean_title or "Untitled",
@@ -706,8 +825,12 @@ def command_publish(args: argparse.Namespace) -> None:
                 business_ids=file_ids if media_type == "photo" else None,
                 photo_post_type=DEFAULT_PHOTO_POST_TYPE,
                 music_info=music_info,
+                options=row["_options"],
+                cover=cover,
             )
 
+            if not post_result.get("postId"):
+                raise SystemExit("服务端未返回 postId，提交状态不明，请核实发布记录，不能自动重发。")
             entry["status"] = "success"
             entry["post_id"] = post_result.get("postId") or str(post_result.get("id", ""))
             entry["post_status"] = post_result.get("status", "")
@@ -718,6 +841,10 @@ def command_publish(args: argparse.Namespace) -> None:
         except Exception as exc:
             entry["errors"].append(f"{type(exc).__name__}: {exc}")
 
+        if entry["errors"]:
+            entry["status"] = "unknown" if submission_started else "failed"
+        journal["entries"][fingerprint] = dict(entry)
+        write_json(journal_path, journal)
         results["rows"].append(entry)
         if entry["status"] == "success":
             results["succeeded"] += 1
@@ -763,6 +890,10 @@ def _build_validation_results(
             "video_file": row.get("video_file", ""),
             "image_files": row.get("image_files", ""),
             "scheduled_at": row.get("scheduled_at", ""),
+            "timezone": row.get("timezone", ""),
+            "product_id": row.get("product_id", ""),
+            "product_title": row.get("product_title", ""),
+            "publish_options": row.get("_options", {}),
             "status": "dry-run",
         })
     for ve in validation_errors:
@@ -832,11 +963,15 @@ def _row_media_filenames(row: dict[str, Any]) -> list[str]:
 
 def _resolve_media_path(folder: Path, name: str) -> Path:
     path = folder / name
-    if path.exists():
+    if path.is_file():
         return path
-    candidates = list(folder.glob(name))
-    if candidates:
+    if path.exists():
+        raise SystemExit(f"媒体路径不是文件：{name}")
+    candidates = [p for p in folder.glob(name) if p.is_file()]
+    if len(candidates) == 1:
         return candidates[0]
+    if len(candidates) > 1:
+        raise SystemExit(f"媒体匹配多个文件，请填写明确文件名：{name}")
     raise SystemExit(f"媒体文件不存在：{name}")
 
 
@@ -880,8 +1015,17 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     title = (row.get("title") or "").strip()
     if not title:
         errors.append("title 为空")
-    elif has_unsupported_plain_text(title, POST_TITLE_MAX_LENGTH, allowed_symbols="#"):
-        errors.append(f"title 不能超过 {POST_TITLE_MAX_LENGTH} 字符，且不能包含表情、标点或特殊符号（# 可用于 hashtag）")
+    elif len(title) > (POST_TITLE_MAX_LENGTH if platform == "tiktok_shop" else 2000):
+        errors.append("文案超过当前发布场景字符限制（带货4000，非带货2000）")
+    try:
+        options = parse_options(row.get("publish_options"))
+        validate_scenario(options, platform, media_type)
+        if options.get("coverFile"):
+            cover_path = _resolve_media_path(folder, options["coverFile"])
+            if cover_path.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp") or not 0 < cover_path.stat().st_size <= 10 * 1024 * 1024:
+                errors.append("封面需为JPG/PNG/WEBP且不超过10MB")
+    except SystemExit as exc:
+        errors.append(str(exc))
 
     if platform == "tiktok_shop":
         product_id = (row.get("product_id") or "").strip()
@@ -893,6 +1037,10 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
         elif has_unsupported_plain_text(product_title, PRODUCT_TITLE_MAX_LENGTH):
             errors.append(f"购物车标题不能超过 {PRODUCT_TITLE_MAX_LENGTH} 字符，且不能包含表情、标点或特殊符号")
 
+    if platform == "tiktok_shop" and (row.get("product_source") or "SHOP") not in ("SHOP", "SHOWCASE"):
+        errors.append("商品来源必须为 SHOP 或 SHOWCASE")
+    if media_type == "video" and len(split_media_filenames(row.get("video_file"))) > 1:
+        errors.append("每条视频任务只能有一个视频文件")
     scheduled_at = (row.get("scheduled_at") or "").strip()
     if scheduled_at:
         import re
@@ -902,7 +1050,9 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
     tz_raw = (row.get("timezone") or "").strip()
     if tz_raw:
         try:
-            parse_timezone(tz_raw)
+            tz = parse_timezone(tz_raw)
+            if scheduled_at:
+                parse_datetime_to_epoch_ms(scheduled_at, tz)
         except SystemExit as exc:
             errors.append(str(exc))
     elif scheduled_at:
@@ -950,7 +1100,17 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
                 errors.append(f"图片文件不存在：{name}")
                 missing = True
         if not missing:
-            errors.extend(validate_photo_files(resolved))
+            if platform == "tiktok_business":
+                from .image_utils import read_image_dimensions
+                if not 1 <= len(resolved) <= 15:
+                    errors.append("高级版图文需1～15张图片")
+                for photo in resolved:
+                    if photo.suffix.lower() not in (".jpg", ".jpeg", ".webp"):
+                        errors.append("高级版图文只支持JPG/JPEG/WEBP")
+                    if not 0 < photo.stat().st_size <= 10 * 1024 * 1024 or not read_image_dimensions(photo):
+                        errors.append(f"图片损坏、为空或超过10MB：{photo.name}")
+            else:
+                errors.extend(validate_photo_files(resolved))
     else:
         for name in media_names:
             try:
@@ -959,8 +1119,8 @@ def _validate_row(row: dict[str, str], idx: int, folder: Path) -> list[str]:
                 errors.append(f"视频文件不存在：{name}")
 
     music_id = (row.get("music_id") or "").strip()
-    if music_id and media_type != "photo":
-        errors.append("music_id 仅用于带货图文（媒体类=photo）")
+    if music_id and platform == "tiktok":
+        errors.append("Login Kit 普通视频不支持平台选曲")
 
     return errors
 
@@ -972,6 +1132,8 @@ def _video_type_from_rows(rows: list[dict[str, Any]]) -> str:
         return "带货图文"
     if platforms == {"tiktok_shop"}:
         return "带货"
+    if platforms == {"tiktok_business"}:
+        return "高级版不带货图文" if media_types == {"photo"} else "高级版不带货"
     if platforms == {"tiktok"}:
         return "普通/养号"
     return "混合"
@@ -1017,40 +1179,30 @@ def command_fill(args: argparse.Namespace) -> None:
 
     updated = 0
 
-    # 自动填产品标题
+    # 自动填产品标题，与 CSV 一致使用商品 ID 精确匹配。
     if args.auto_product_title:
+        if target_col != "product_title":
+            raise SystemExit("--auto-product-title 仅用于购物车标题。")
         require_api_key()
-        pid_col_idx = col_map.get("product_id", -1)
-        updated_count = 0
+        if "product_id" not in col_map:
+            raise SystemExit("排期表缺少产品ID列。")
+        cache = {}
         for row_idx in range(2, ws.max_row + 1):
-            pid = str(ws.cell(row=row_idx, column=pid_col_idx + 1).value or "").strip()
-            if not pid:
+            if args.row is not None and row_idx != args.row + 2:
                 continue
-            creator = str(ws.cell(row=row_idx, column=col_map.get("creator_username", 0) + 1).value or "").strip()
-            if not creator:
+            creator = str(ws.cell(row_idx, col_map.get("creator_username", 0) + 1).value or "").strip()
+            if args.creator and creator.lower() != args.creator.lower():
                 continue
-            try:
-                # 尝试从 shop 产品搜索获取标题
-                from .api import list_shop_products, resolve_creator_batch
-                found, _ = resolve_creator_batch([creator])
-                cinfo = found.get(creator.lower(), {})
-                # 商品接口用 pageList 整数 id，不是 creatorId
-                account_id = (cinfo or {}).get("id") or ""
-                if account_id:
-                    result = list_shop_products(creator_id=account_id, page_size=5, title_keyword=pid)
-                    products = (result.get("data") or {}).get("products") or []
-                    # 匹配 product id
-                    for p in products:
-                        if str(p.get("id", "")) == pid:
-                            from .excel_utils import sanitize_product_title
-                            title = sanitize_product_title(p.get("title", ""))
-                            ws.cell(row=row_idx, column=col_idx + 1).value = title
-                            updated_count += 1
-                            break
-            except SystemExit:
-                pass  # 单个失败跳过，继续其他行
-        updated = updated_count
-        print(f"已自动填入 {updated} 个购物车标题", file=sys.stderr)
+            pid = str(ws.cell(row_idx, col_map["product_id"] + 1).value or "").strip()
+            source = str(ws.cell(row_idx, col_map["product_source"] + 1).value or "SHOP") if "product_source" in col_map else "SHOP"
+            if not pid or not creator:
+                continue
+            key = (creator, pid, source)
+            if key not in cache:
+                cache[key] = sanitize_product_title(find_product_title(*key))
+            if cache[key]:
+                ws.cell(row_idx, col_idx + 1).value = cache[key]
+                updated += 1
 
     # 按行号填充
     elif args.row is not None:
@@ -1093,8 +1245,24 @@ def command_fill_csv(args: argparse.Namespace, schedule_file: Path) -> None:
 
     updated = 0
     if args.auto_product_title:
-        raise SystemExit("CSV 模式暂不支持 --auto-product-title，请直接填 product_title 或改用具体 --value。")
-    if args.row is not None:
+        if target_col != "product_title":
+            raise SystemExit("--auto-product-title 仅用于购物车标题。")
+        require_api_key()
+        cache = {}
+        for index, row in enumerate(rows):
+            if args.row is not None and index != args.row:
+                continue
+            if args.creator and row.get("creator_username", "").lower() != args.creator.lower():
+                continue
+            if row.get("platform") != "tiktok_shop" or not row.get("product_id"):
+                continue
+            key = (row.get("creator_username", ""), row["product_id"], row.get("product_source") or "SHOP")
+            if key not in cache:
+                cache[key] = sanitize_product_title(find_product_title(*key))
+            if cache[key]:
+                row[target_col] = cache[key]
+                updated += 1
+    elif args.row is not None:
         if args.row < 0 or args.row >= len(rows):
             raise SystemExit(f"行号超出范围：{args.row}（当前 {len(rows)} 行数据）")
         rows[args.row][target_col] = args.value
@@ -1174,6 +1342,32 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="灵途批量视频发布。")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    from .workflow import command_plan, command_status
+    p = subparsers.add_parser("plan", help="从素材文件夹生成发布方案，不复制素材。")
+    p.add_argument("--media-folder", required=True)
+    p.add_argument("--output-dir", required=True)
+    p.add_argument("--platform", choices=SUPPORTED_PLATFORMS, required=True)
+    p.add_argument("--media-type", choices=SUPPORTED_MEDIA_TYPES, default="video")
+    p.add_argument("--creators", required=True, help="已选定的达人，逗号分隔。")
+    p.add_argument("--distribution", choices=("distribute", "all"))
+    p.add_argument("--date", required=True)
+    p.add_argument("--count", type=int, default=3)
+    p.add_argument("--times", default="", help="每日具体时间，逗号分隔，个数与count一致")
+    p.add_argument("--skip-existing-days", action="store_true", help="查询账号已有排期，跳过占用日期")
+    p.add_argument("--timezone", default="")
+    p.add_argument("--region", default="")
+    p.add_argument("--title", default="", help="审核用文案草稿，也可生成后按行填入。")
+    p.add_argument("--product-id", default="")
+    p.add_argument("--product-title", default="")
+    p.set_defaults(func=command_plan)
+    p = subparsers.add_parser("status", help="查看批次记录，可刷新平台发布状态。")
+    p.add_argument("--folder", required=True)
+    p.add_argument("--refresh", action="store_true")
+    p.set_defaults(func=command_status)
+
+    from .extras import add_commands
+    add_commands(subparsers)
+
     # gen-csv
     p = subparsers.add_parser("gen-csv", help="生成排期 CSV 模板（桌面文件夹）。")
     p.add_argument("--platform", choices=SUPPORTED_PLATFORMS, required=True, help="发布平台。")
@@ -1215,6 +1409,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--folder", required=True, help="排期文件夹路径。")
     p.add_argument("--date", default="", help="自动排期日期 YYYY-MM-DD（未填时间的行必传）。")
     p.add_argument("--confirm", action="store_true", help="确认发布（默认 dry-run）。")
+    p.add_argument("--retry-failed", action="store_true", help="重试明确在提交前失败的条目；已提交或状态不明的条目仍跳过。")
     p.add_argument("--sleep-ms", type=int, default=500, help="每行操作间隔毫秒，默认 500。")
     add_format_argument(p, default="text")
     p.set_defaults(func=command_publish)

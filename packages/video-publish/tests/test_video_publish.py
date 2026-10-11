@@ -159,7 +159,7 @@ class TextLimitTests(unittest.TestCase):
 
             errors = _validate_row(row, 0, folder)
 
-        self.assertTrue(any("title 不能超过 4000 字符" in error for error in errors))
+        self.assertFalse(any("文案超过当前发布场景字符限制" in error for error in errors))
         self.assertTrue(any("购物车标题不能超过 30 字符" in error for error in errors))
 
     def test_validate_allows_hashtag_in_post_title(self) -> None:
@@ -198,7 +198,7 @@ class TextLimitTests(unittest.TestCase):
 
             errors = _validate_row(row, 0, folder)
 
-        self.assertTrue(any("title 不能超过 4000 字符" in error for error in errors))
+        self.assertTrue(any("文案超过当前发布场景字符限制" in error for error in errors))
 
 
 class CreatorRegionFlowTests(unittest.TestCase):
@@ -751,7 +751,7 @@ class PublishReportTests(unittest.TestCase):
             ],
         })
 
-        self.assertIn("发布完成，发布 2 条 带货 视频。", text)
+        self.assertIn("已提交 2 条 带货 视频任务，等待平台发布。", text)
         self.assertIn("发布基本信息：", text)
         self.assertIn("请前往发布记录确认发布内容：", text)
         self.assertIn(PUBLISH_RECORDS_URL, text)
@@ -775,7 +775,7 @@ class PublishReportTests(unittest.TestCase):
                 "post_status": "SCHEDULED",
             }],
         })
-        self.assertIn("发布完成，发布 1 条带货图文。", text)
+        self.assertIn("已提交 1 条带货图文任务，等待平台发布。", text)
 
     def test_validation_rows_are_reported_as_needs_edit_not_failure(self) -> None:
         text = format_publish_results({

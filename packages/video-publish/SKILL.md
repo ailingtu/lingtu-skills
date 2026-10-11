@@ -1,11 +1,11 @@
 ---
 name: lingtu-video-publish
 slug: lingtu-video-publish
-version: 0.2.3
+version: 0.4.1
 auth: lingtu-api-key
 displayName: "TikTok 视频与图文批量发布 By 灵途 AI"
-summary: 按 CSV 排期批量发布 TikTok Shop 带货视频、图文和养号内容。
-description: "灵途批量视频/图文发布 — 从 CSV 排期表批量向 TikTok Shop / TikTok 养号账号发布视频或带货图文。支持生成 CSV 模板（达人/时间/产品预填）、已授权达人查询、产品搜索、CSV/XLSX 通用读取、模拟执行预览。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
+summary: 从素材文件夹生成可审核的发布方案，确认后提交并查询 TikTok 发布结果。
+description: "灵途视频/图文发布 — 从素材文件夹生成发布方案、自动分配素材和排期，审核确认后向 TikTok Shop / TikTok 账号提交任务并查询结果。支持带货视频/图文、普通及高级版视频/图文、选曲收藏、音量、封面、地域、发布配置、任务管理、云草稿接口、CSV/XLSX与重复提交保护。 也用于“更新灵途 Skills”“升级灵途技能”或更新指定灵途技能。"
 license: Apache-2.0
 homepage: https://ailingtu.com/skills/video-publish
 ---
@@ -27,431 +27,139 @@ homepage: https://ailingtu.com/skills/video-publish
 
 按照 https://ailingtu.com/install/skills.md 操作，不要从 GitHub 安装或升级本 Skill。
 
-## 适用场景
+## 网页发布能力迁移
 
-当用户在群里说"帮我发布带货视频"、"批量发布视频"、"我要发视频"、"发布图文"、"带货图文"、"多图带货"、"生成排期表"等需求时调用本技能。
+先读 [迁移工作流](references/migrated-workflow.md) 和 [接口合同](references/api.md)。统一 `/v1`，只用 API Key，不使用网页登录令牌。支持5种场景；选曲、封面、地域及平台设置进入同一份发布方案审核。服务端未开放的迁移路径报告404/403，不回退admin。
 
-## Bot 调用指南
+## 默认工作流：素材 → 发布方案 → 确认提交 → 查询结果
 
-当用户触发关键词（帮我发布视频 / 我要发视频 / 发布带货视频 / 批量发布）时，先查询当前用户的已授权达人列表，并从返回结果里取 2-3 个真实用户名作为示例；不要在话术里写死示例达人。
+用户给出素材文件夹及发布目标即可开始。CSV 是可选编辑入口，不要求用户逐行填写文件名或把素材搬到新文件夹。旧排期表继续支持。
 
-如果用户说要绑定 TikTok 店铺，或查询 TikTok Shop 店铺商品时发现没有店铺/没有店铺商品，让用户打开 https://app.ailingtu.com/teamshop 完成 TikTok Shop 店铺绑定。
+### 1. 理解需求并查看素材
 
-如果查询 TikTok Shop 带货达人或普通 TikTok 发布达人时发现没有已授权达人、达人未找到或未授权，让用户打开 https://app.ailingtu.com/video-post 完成达人授权。授权完成后再回来继续生成排期或发布。
+复用用户已经提供的素材、达人、商品、日期、频率、语言和时区，不重复收集。先查看文件夹中的媒体和已有文案，并查询授权达人；只有缺失信息会影响实际发布时才追问。
 
-美国带货视频示例查询：
+- 视频默认一条文件对应一条内容。支持子目录递归扫描，按自然文件名排序。
+- 图文每个直接子文件夹对应一篇，图片按自然文件名排序。根目录散图不能猜分组；先展示图片，让用户确认分篇和顺序，再整理子目录。不要更改原素材，必要时在新目录准备副本。
+- 多达人必须明确是“每份素材分配给一个达人”，还是“每个达人都发全部素材”。先说明两种方案的条数和重复内容，不能默认全账号重复发布。
+- 只有一个符合需求的账号或用户已指定账号时直接选入草稿。不要默认全授权账号发布。
+- 带货达人可按地区筛选，普通 TikTok 达人不按地区筛选。带货图文只选 TikTok Shop 授权且有 `PHOTO_SHOPPABLE_PERMISSION_PRODUCT` 的账号；不带货图文使用高级版 Business 账号。
+- 无达人或未授权：引导 https://app.ailingtu.com/video-post 。无店铺或商品：引导 https://app.ailingtu.com/teamshop 。
 
-```bash
-python3 scripts/lingtu_video_publish.py creators \
-  --platform tiktok_shop \
-  --region US
-```
-
-仅可发带货图文的达人（服务端 `hasPhotoPermission=true`）：
-
-```bash
-python3 scripts/lingtu_video_publish.py creators \
-  --platform tiktok_shop \
-  --region US \
-  --has-photo-permission
-```
-
-普通视频 / 养号视频示例查询：
+查询命令：
 
 ```bash
-python3 scripts/lingtu_video_publish.py creators \
-  --platform tiktok
+python3 scripts/lingtu_video_publish.py creators --platform tiktok_shop --region US
+python3 scripts/lingtu_video_publish.py creators --platform tiktok_shop --has-photo-permission
+python3 scripts/lingtu_video_publish.py creators --platform tiktok
+python3 scripts/lingtu_video_publish.py products search --creator-username alice --source shop
 ```
 
-拿到列表后再**一次性引导**收集信息：
+### 2. 自动准备草稿
 
-```
-收到，生成发布排期表需要以下信息：
+已有文案优先沿用。没有文案时，根据能确认的素材内容、商品卖点和目标语言生成草稿，不编造折扣或功效，不把文件名当发布文案。通过 `fill` 写入，随方案供用户审核。文案保留标点、表情和hashtag，带货≤4000字符、非带货≤2000；购物车标题仍需去标点和表情并限制30字符。
 
-① 发布类型
-   A. TikTok 带货视频   B. TikTok 不带货视频   C. TikTok Shop 带货图文（多图挂车）
-
-② 要发布的达人名字，以及带货的话每个达人带什么产品
-   示例：达人 <从你的授权列表里取 2-3 个用户名> 带产品 176118111232433423
-   （不写达人 = 拉取全部已授权达人）
-   发布美国带货视频时，不写达人可直接筛选带货达人列表里的美国达人。
-   发布美国普通视频 / 养号视频 / 不带货视频时，达人列表不能按国家筛选；不需要产品 ID，地区只用于默认时区。
-
-③ 时区（可选）
-   默认按达人授权区域自动选择：美国达人默认美西 America/Los_Angeles。
-   用户可指定覆盖，例如美东时间（EST / America/New_York）。
-
-④ 发布频率：每天发几条、发哪几天
-   示例：每天 2 条，7 月 5 号开始发 3 天
-   如果不同日期条数不同，也要生成同一个排期文件夹，不要拆多个文件夹。
-   示例：7 月 6 号各发 2 条，7 月 7 号各发 3 条
-
-发布时间不用让用户指定。默认按早上 / 中午 / 晚上三档分配，并按达人错开分钟，避免完全重合；用户后续可在 CSV 的「发布时间」列自行修改。
-
-⑤ 产品信息（选 ①-A 的话需要产品 ID）
-   如果你给我产品 ID，我可以搜到产品标题帮你预填。
-   购物车标题也可以你自己后续在 CSV 里补充。
-
-你可以直接这样告诉我：
-"带货，达人 <授权列表里的达人A>、<授权列表里的达人B> 带产品 176118111232433423，
- 每天 2 条，7 月 5 号起 3 天"
-```
-
-用户补齐信息后调用 gen-csv（不足的用默认值：每达人每天 3 条、全部已授权达人）：
+商品有明确 ID 时自动查找对应标题并预填购物车标题；查不到时保持草稿并说明，不猜商品对应关系。不同素材挂不同商品时通过逐行填值实现。不要随机将多商品分配给素材。
 
 ```bash
-# 带货视频
-python3 scripts/lingtu_video_publish.py gen-csv \
-  --platform tiktok_shop \
-  --region US \
-  --creators "<授权列表里的达人A>,<授权列表里的达人B>" \
-  --date 2026-07-05 \
-  --days 3 \
-  --count 2 \
-  --product-id 176118111232433423
-
-# 带货图文（多图挂车）
-python3 scripts/lingtu_video_publish.py gen-csv \
-  --platform tiktok_shop \
-  --media-type photo \
-  --region US \
-  --creators "<授权列表里的达人A>" \
-  --date 2026-07-05 \
-  --count 1 \
-  --product-id 176118111232433423
+python3 scripts/lingtu_video_publish.py plan \
+  --media-folder /path/to/videos --output-dir /path/to/batch \
+  --platform tiktok_shop --creators alice,bob \
+  --distribution distribute --date 2026-10-12 --count 2 \
+  --product-id PRODUCT_ID --title "Reviewed caption #product"
 ```
 
-如果用户指定了不同日期的不同条数，优先用 `--daily-counts` 生成一份 CSV：
+- `--distribution distribute`：按顺序轮流分配，每份素材只发一次。
+- `--distribution all`：每个达人发全部素材，方案明确提示重复发布。
+- `--count`：每达人每天 1～7 条，素材多时自动延伸日期，不循环复用素材。
+- 图文加 `--media-type photo`，支持 `tiktok_shop` 带货或 `tiktok_business` 不带货图文。
+- 普通视频用 `--platform tiktok`，不需要商品。
+- 日期和时区应按目标市场解释，明确展示当地日期。时区优先按目标市场推断，美国默认美西；用户指定覆盖用 `--timezone EST` 或 IANA。
+- `plan` 保存 `schedule.csv`、`plan.json`、`发布方案.md`，引用原素材绝对路径，不复制媒体。已有方案目录不能覆盖。
+- 留空文案或商品字段的方案是草稿，不能提交。
+
+用户希望每天不同条数或已经有排期表时，仍可使用旧 `gen-csv`、`fill` 流程。Agent 可以直接编辑 CSV 的素材映射和具体时间，不要求用户操作表格。
 
 ```bash
-python3 scripts/lingtu_video_publish.py gen-csv \
-  --platform tiktok \
-  --region US \
-  --creators "<授权列表里的达人A>,<授权列表里的达人B>" \
-  --date 2026-07-06 \
-  --daily-counts 2026-07-06=2,2026-07-07=3
+python3 scripts/lingtu_video_publish.py fill --folder /path/to/batch --col title --row 0 --value "Caption A"
+python3 scripts/lingtu_video_publish.py fill --folder /path/to/batch --col product_title --auto-product-title
+python3 scripts/lingtu_video_publish.py fill --folder /path/to/batch --col product_id --row 1 --value PRODUCT_B
 ```
 
-如果用户明确指定美东、美西或其他时区，再传 `--timezone EST|PST|IANA` 覆盖自动推断。
+`fill` 可按 `--row`（0 为第一条）、`--creator` 或全表填值。CSV 自动商品标题按商品 ID 精确匹配，支持 SHOP/SHOWCASE 分页，查不到保持原值并报告实际更新数。
 
-**生成结果返回给用户：**
-
-```
-已在桌面生成排期文件夹：视频发布_2026-07-05_to_2026-07-07/
-  ├── schedule.csv  ← 排期表，达人/时间已填好
-  └── （请把视频文件拖进这个文件夹）
-
-如果是 TikTok 不带货视频，打开 schedule.csv，只需要填：
-  · 视频文案内容 — 视频的 caption，最多 4000 字符，不支持表情、标点或特殊符号；`#` 可用于 hashtag
-  · 视频文件名 — 拖进来的视频文件名，如 video1.mp4
-
-如果是 TikTok Shop 带货视频，打开 schedule.csv，你需要填：
-  · 购物车标题 — 产品展示名，最多 30 字符，不支持表情、标点或特殊符号
-  · 视频文案内容 — 视频的 caption，最多 4000 字符，不支持表情、标点或特殊符号；`#` 可用于 hashtag
-  · 视频文件名 — 拖进来的视频文件名，如 video1.mp4
-
-如果是 TikTok Shop 带货图文，打开 schedule.csv，你需要填：
-  · 购物车标题 — 产品展示名，最多 30 字符
-  · 视频文案内容 — caption，最多 4000 字符；`#` 可用于 hashtag
-  · 图片文件名 — 多图用英文逗号分隔，如 a.jpg,b.jpg,c.png（顺序即发布顺序）
-  · 图片约束 — 1～15 张；单张 ≤10MB；JPG/JPEG/PNG/WEBP/HEIC/BMP；宽高比 9:16～16:9
-  · 音乐（可选）— 音乐ID / 音乐标题 / 音乐作者 / 音乐时长
-
-然后我帮你填表，不用自己手动改 CSV。
-```
-
-### 第三步：自动填表
-
-用户确认预览后，调用 gen-csv 生成 CSV。然后主动帮用户填。
-
-不带货视频的 CSV 不应出现「产品ID」「购物车标题」「商品来源」三列；只需要填视频文案和视频文件名。
-
-**1. 购物车标题 — 仅带货视频需要，自动从产品信息填入：**
+### 3. 展示可直接确认的方案
 
 ```bash
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/视频发布_2026-07-05_to_2026-07-07 \
-  --col product_title --auto-product-title
+python3 scripts/lingtu_video_publish.py publish --folder /path/to/batch
 ```
 
-带货视频填完后告知用户：
-```
-购物车标题已从产品信息自动填入 ✓
-```
+dry-run 不上传素材、不创建发布任务；带货图文会查询达人权限，普通与高级版查询账号当前发布配置；文件夹方案核对账号身份及定时时间。非带货视频需要ffprobe检查账号时长限制。成功校验保存 `review.json`，包含方案内容、素材内容指纹及达人 ID。
 
-**2. 视频文案 — 问用户后批量填：**
+向用户展示：
 
-```
-视频文案内容要统一吗？
-统一的话告诉我一句话（如 "Summer Sale 2026"），我帮你填到所有行。
-```
+- 总素材数、总任务数、达人分配规则、每人条数、日期范围、当地时区、商品。
+- 每条的素材预览（视频或图片）、达人、实际文案、商品/购物车标题、当地时间、校验结果。
+- 缺字段、失效账号、错误图片等以“需修改”说明。默认整批阻止；用户明确选择先发可用部分时，准备独立方案再确认，不能静默丢弃错误行。
 
-用户回复后：
+用户可直接说“第二条换达人”“晚上发”“文案短一点”。Agent 修改 CSV 后重新运行校验，更新并展示方案。确认的是具体内容和数量，不是抽象的“允许发布”。
+
+### 4. 用户确认后提交
 
 ```bash
-# 统一文案
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col title --value "Summer Sale 2026"
-
-# 按达人不同文案
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col title --creator <授权列表里的达人A> --value "文案A"
-
-# 指定某行
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col title --row 0 --value "第一条文案"
+python3 scripts/lingtu_video_publish.py publish --folder /path/to/batch --confirm
 ```
 
-**3. 媒体文件名 — 用户告知后填：**
+- 新方案要求先成功预览；内容、媒体内容或账号 ID 变化时拒绝提交，需重新校验并确认。旧 CSV 保持兼容，但 Agent 必须先预览并取得用户确认。
+- 同一方案目录加进程锁，防止并发提交。
+- 每条提交结果即时保存在 `publish-journal.json`。原方案重跑时跳过已有提交或状态不明的条目。
+- 上传/账号等提交前失败可使用 `--confirm --retry-failed` 重试。已提交的任务不会因重复执行而重发。
+- 创建请求超时、响应无 postId 或中断，标记为状态不明并阻止自动重发；先核实发布记录，不能将查不到记录等同于未提交。
+- 不删除提交记录，不移到新目录绕过去重。去重范围是该方案目录，不保证跨目录或跨设备。
+- 方案改变不是修改已经创建的服务端任务。已提交条目的调整必须说明会产生新任务，先处理旧任务；使用 posts detail/update/cancel 管理服务端旧任务，先展示变更再确认。
 
-```
-视频/图片拖进文件夹了吗？告诉我文件名对应哪行就行。
-图文多图用逗号：a.jpg,b.jpg
-```
-
-```bash
-# 视频：按达人填
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col video_file --creator <授权列表里的达人A> --value "video1.mp4"
-
-# 视频：按行填
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col video_file --row 0 --value "video1.mp4"
-
-# 图文：按行填多图
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col image_files --row 0 --value "a.jpg,b.jpg"
-```
-
-全部填完后展示最终排期表，用户确认即发布。
-
-用户编辑 CSV 时可能新增或删除行。行数变化本身不算失败；如果新增行缺字段或格式不对，dry-run / confirm 阶段只提示「需修改」，让用户补齐或删除该行后再确认发布，不要把它表述为发布失败。
-
-### 第四步：执行发布
-
-用户说"发布"或"确认发布"，先 dry-run 校验：
-
-```bash
-python3 scripts/lingtu_video_publish.py publish \
-  --folder ~/Desktop/视频发布_2026-07-05_to_2026-07-07
-```
-
-校验结果贴给用户。无问题后加 `--confirm`：
-
-```bash
-python3 scripts/lingtu_video_publish.py publish \
-  --folder ~/Desktop/视频发布_2026-07-05_to_2026-07-07 \
-  --confirm
-```
-
-返回每条结果：成功 → postId + status，失败 → 原因。
-
-发布完成后必须给用户这段信息，并且必须包含发布记录链接：
-
-```
-发布完成，发布 X 条 XX 视频/图文。
-发布基本信息：类型、达人、发布时间范围、成功/失败数量。
-请前往发布记录确认发布内容：
+提交成功只表示任务创建成功。向用户报告“已提交 X 个定时发布任务”、失败或状态不明数量、跳过数量、日期时区，并始终附：
 https://app.ailingtu.com/video-center?tab=records
+
+### 5. 查询结果与后续处理
+
+```bash
+# 本地记录，不联网
+python3 scripts/lingtu_video_publish.py status --folder /path/to/batch
+# 按保存的 postId 查询平台状态并保存
+python3 scripts/lingtu_video_publish.py status --folder /path/to/batch --refresh
 ```
 
----
+- `SUCCESS`、`COMPLETED`：平台成功；`PRE_CHECK_PASSED` 仅预检通过，不报已发布。
+- `FAILED`、`SUBMIT_FAILED`、`PRE_CHECK_REJECTED`：报告服务端原因。
+- `CANCELLED`：已取消；其他状态显示原始状态并说明仍在流程中。
+- 查询失败或没查到记录保留上次状态，并明确本次未确认；没有 postId 的状态不明条目需用户核实发布记录，不能按相似文案猜匹配。
+- 本地已提交的任务即使平台随后失败，也不能用 `--retry-failed` 新建重复任务；先审核原因，再通过 posts submit 或 posts reschedule 处理原服务端任务，保留记录。
+- 用户问“昨天那批怎么样”时找到该批次目录刷新状态。没有目录上下文时询问批次位置，不猜账号全部记录。
+- 用户要求完成提醒时再创建自动跟踪；默认不设定时任务。
 
-## 命令参考
+## 旧 CSV / XLSX 入口
 
-### gen-csv — 生成排期模板
+保留 `gen-csv`（默认每日 3 条，支持 `--daily-counts`）、`creators`、`fill`、`products search`、`publish`。
 
-在桌面创建文件夹，内含 `schedule.csv`。
-`tiktok_shop` 带货视频会生成带货字段，用户需补「购物车标题」「视频文案内容」「视频文件名」。
-`tiktok_shop --media-type photo` 带货图文会生成「图片文件名」与可选音乐列，用户需补「购物车标题」「视频文案内容」「图片文件名」。
-`tiktok` 不带货视频不会生成「产品ID」「购物车标题」「商品来源」三列，用户只需补「视频文案内容」「视频文件名」。
-购物车标题最多 30 字符，不支持表情、标点或特殊符号；视频文案内容最多 4000 字符，不支持表情、标点或特殊符号，但 `#` 可用于 hashtag。
-
-```
-python3 scripts/lingtu_video_publish.py gen-csv \
-  --platform {tiktok_shop,tiktok} \
-  [--media-type video|photo] \
-  --date YYYY-MM-DD \
-  [--timezone EST|PST|CN|...] \
-  [--region US|GB|JP|...] \
-  [--creators "@a,@b"] \
-  [--days 1] \
-  [--count 3] \
-  [--daily-counts YYYY-MM-DD=N,YYYY-MM-DD=N] \
-  [--product-id xxx] \
-  [--output-dir /custom/path]
+```bash
+python3 scripts/lingtu_video_publish.py gen-csv --platform tiktok --creators alice --date 2026-10-12 --count 2
+python3 scripts/lingtu_video_publish.py gen-csv --platform tiktok_shop --media-type photo --creators alice --date 2026-10-12 --product-id PRODUCT_ID
+python3 scripts/lingtu_video_publish.py --help
+python3 scripts/lingtu_video_publish.py plan --help
 ```
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| --platform | 是 | tiktok_shop（带货）或 tiktok（养号） |
-| --media-type | 否 | video（默认）或 photo（带货图文，仅 tiktok_shop） |
-| --date | 是 | 起始日期 YYYY-MM-DD |
-| --timezone | 否 | 时区短码或 IANA。不传则按达人授权区域推断；美国默认美西 |
-| --region / --country | 否 | 目标地区。`tiktok_shop` 且不指定达人时用于筛选带货达人列表；`tiktok` 普通/养号视频不筛选列表，仅用于默认时区 |
-| --creators | 否 | 逗号分隔达人，不传=全部已授权 |
-| --days | 否 | 连续发布天数，默认 1 |
-| --count | 否 | 每达人每日条数，默认 3 |
-| --daily-counts | 否 | 按日期指定每达人条数，如 `2026-07-06=2,2026-07-07=3`；传入后生成同一个文件夹和一份 CSV |
-| --product-id | 仅带货 | 产品 ID |
-| --output-dir | 否 | 自定义输出目录，默认桌面 |
+CSV 中文或英文表头均可，优先 `schedule.csv`，兼容 `schedule.xlsx`。带货表可混排视频与图文。
 
-### creators — 查看已授权达人
+| 内容 | 字段 |
+|---|---|
+| 通用 | 达人用户名、平台、视频文案内容、时区、发布时间 |
+| 带货 | 产品ID、购物车标题、商品来源（SHOP / SHOWCASE） |
+| 视频 | 视频文件名（每行一个，支持绝对路径） |
+| 图文 | 媒体类=photo、图片文件名（逗号分隔，顺序即发布顺序） |
+| 音乐可选 | 音乐ID、音乐标题、音乐作者、音乐时长 |
 
-```
-python3 scripts/lingtu_video_publish.py creators \
-  [--platform tiktok_shop|tiktok] \
-  [--region US] \
-  [--username keyword] \
-  [--format json|text]
-```
-
-`creators --region` 仅对 `--platform tiktok_shop` 生效；普通 TikTok / 养号达人列表当前不支持按国家筛选。
-
-### fill — 更新 CSV 单元格
-
-用于 bot 根据对话自动填表，用户无需手动编辑 CSV。
-
-```
-# 自动从产品 API 搜索并填入购物车标题
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... \
-  --col product_title --auto-product-title
-
-# 所有行统一值
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col title --value "Summer Sale"
-
-# 按达人筛选填充
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col title --creator <授权列表里的达人A> --value "文案A"
-
-# 指定行填充（--row 0 = 第一行数据）
-python3 scripts/lingtu_video_publish.py fill \
-  --folder ~/Desktop/... --col video_file --row 0 --value "video1.mp4"
-```
-
-| 参数 | 说明 |
-|------|------|
-| --folder | 排期文件夹路径 |
-| --col | 列名（英文 key 或中文名均可） |
-| --value | 填充的值 |
-| --auto-product-title | 自动搜产品填购物车标题 |
-| --creator | 只填充指定达人的行 |
-| --row | 只填充指定行（0=第一行数据） |
-
-### publish — 执行发布
-
-```
-python3 scripts/lingtu_video_publish.py publish \
-  --folder ~/Desktop/视频发布_2026-07-05_to_2026-07-07 \
-  [--date YYYY-MM-DD] \
-  [--confirm] \
-  [--sleep-ms 500] \
-  [--format json|text]
-```
-
-**安全机制**：不加 `--confirm` 为 dry-run 模式，只校验不发请求。
-
-### products search — 搜索商品
-
-```
-python3 scripts/lingtu_video_publish.py products search \
-  --creator-username @daren \
-  [--source shop|showcase] \
-  [--keyword "关键词"] \
-  [--format json|text]
-```
-
----
-
-## CSV 排期表格式
-
-### TikTok 不带货视频
-
-| 列 | 预填 | 用户操作 |
-|----|------|----------|
-| 达人用户名 | 达人用户名 | 不改 |
-| 平台 | tiktok | 不改 |
-| 视频文案内容 | 空 | **用户填**；最多 4000 字符，不支持表情、标点或特殊符号，`#` 可用于 hashtag |
-| 时区 | 如 America/Los_Angeles | 可改 |
-| 发布时间 | YYYY-MM-DD HH:MM；默认早/中/晚并按达人错峰 | 可改 |
-| 视频文件名 | 空 | **用户填** |
-
-### 媒体类（可写）
-
-排期表列名：**媒体类**（兼容旧表头 **媒体类型**）。
-
-| 可写值 | 含义 |
-|--------|------|
-| `video` / `视频` / `带货视频` / 空 | 视频（默认） |
-| `photo` / `图文` / `图片` / `带货图文` | 带货图文 |
-
-同一张 `tiktok_shop` 表里可混排：某行写 `photo` + 图片文件名，某行写 `video` + 视频文件名。
-
-规则（避免填错列却走错链路）：
-
-- 图文：写 **媒体类=photo**（或只填 **图片文件名** 且媒体类为空），图片必须在「图片文件名」
-- 视频：媒体类=video 或空，文件只写在「视频文件名」
-- **不会**因为「视频文件名」是 `.jpg` 就自动当图文；会提示把图改到「图片文件名」并设媒体类
-
-### TikTok Shop 带货视频
-
-| 列 | 预填 | 用户操作 |
-|----|------|----------|
-| 达人用户名 | 达人用户名 | 不改 |
-| 平台 | tiktok_shop | 不改 |
-| 媒体类 | video | 可改为 photo |
-| 产品ID | 产品 ID | 可改 |
-| 购物车标题 | 空 | **用户填**；最多 30 字符，不支持表情、标点或特殊符号 |
-| 商品来源 | SHOP | 可改为 SHOWCASE |
-| 视频文案内容 | 空 | **用户填**；最多 4000 字符，不支持表情、标点或特殊符号，`#` 可用于 hashtag |
-| 时区 | 如 America/Los_Angeles | 可改 |
-| 发布时间 | YYYY-MM-DD HH:MM；默认早/中/晚并按达人错峰 | 可改 |
-| 视频文件名 | 空 | **用户填** |
-
-### TikTok Shop 带货图文（media-type=photo）
-
-| 列 | 预填 | 用户操作 |
-|----|------|----------|
-| 达人用户名 | 达人用户名 | 不改 |
-| 平台 | tiktok_shop | 不改 |
-| 媒体类 | photo | 可改 |
-| 产品ID | 产品 ID | 可改 |
-| 购物车标题 | 空 | **用户填** |
-| 商品来源 | SHOP | 可改为 SHOWCASE |
-| 视频文案内容 | 空 | **用户填** caption |
-| 时区 | 如 America/Los_Angeles | 可改 |
-| 发布时间 | YYYY-MM-DD HH:MM | 可改 |
-| 图片文件名 | 空 | **用户填**；多图逗号分隔，如 `a.jpg,b.jpg`；1～15 张 |
-| 音乐ID | 空 | 可选 |
-| 音乐标题 | 空 | 可选 |
-| 音乐作者 | 空 | 可选 |
-| 音乐时长 | 空 | 可选（秒） |
-
-图片硬性约束（publish dry-run / confirm 会校验）：
-
-- 张数：至少 1 张，最多 15 张
-- 单张大小：≤ 10MB
-- 格式：JPG, JPEG, PNG, WEBP, HEIC, BMP
-- 宽高比：9:16 ～ 16:9（含边界）
-
-达人资格（发图文必须同时满足）：
-
-- 账号来自 **TikTok Shop** 授权（`authSource` 含 TIKTOK_SHOP），不能用 Login Kit 养号号发图文
-- `permissions` 中包含 **`PHOTO_SHOPPABLE_PERMISSION_PRODUCT`**
-
-`creators` 列表会标注是否可发图文；`gen-csv --media-type photo` 只排可发图文的达人。
-
-API 映射（多图单挂车）：
-
-- `businessId` = **首图** fileId（CSV `图片文件名` 逗号列表第 1 个）
-- `tiktokShopPhoto.businessIds` = **全部**图片 fileId，**按用户填写/上传顺序**
-- `tiktokShopPhoto.productLinks` = **有且仅有 1 个产品**（CSV 一行一个 product_id）
-- `postType` = `MULTI_PHOTO_ONE_ANCHOR`
-- 可选 `musicInfo`
-
----
+图文 1～15 张，单张≤10MB，JPG/JPEG/PNG/WEBP/HEIC/BMP，宽高比 9:16～16:9。视频文件名列不能填图片。购物车标题≤30 字符；带货文案≤4000、非带货≤2000。高级版图文只支持JPG/JPEG/WEBP。非带货视频通过ffprobe校验账号时长，分辨率等其他限制仍由平台判定。
 
 ## 配置
 
@@ -471,6 +179,7 @@ API 映射（多图单挂车）：
 ## 依赖
 
 - Python 3.9+
+- 非带货视频时长检查需要 ffprobe（随 FFmpeg 安装）
 
 默认 CSV 流程不需要第三方依赖。只有读取或编辑旧版 `schedule.xlsx` 时才需要 `openpyxl`。
 

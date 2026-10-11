@@ -1,4 +1,4 @@
 interface:
   display_name: "TikTok 视频与图文批量发布 By 灵途 AI"
-  short_description: "灵途批量视频发布到 TikTok"
-  default_prompt: "使用 $lingtu-video-publish 根据 CSV 排期表，向 TikTok Shop 和 TikTok 养号账号批量发布视频。"
+  short_description: "策划发布方案，选曲配乐，确认后提交和管理任务"
+  default_prompt: "使用 $lingtu-video-publish 从素材文件夹生成可审核的 TikTok 发布方案，确认后提交任务并查询发布结果。"

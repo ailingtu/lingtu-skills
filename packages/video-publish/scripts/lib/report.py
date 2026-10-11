@@ -38,6 +38,8 @@ def _platform_label(auth_source: str) -> str:
         return "TikTok Shop"
     elif auth_source in ("TIKTOK_LOGIN_KIT", "tiktok"):
         return "TikTok (养号)"
+    if auth_source == "TIKTOK_BUSINESS_ACCOUNT_API":
+        return "TikTok (高级版)"
     return auth_source or "-"
 
 
@@ -62,13 +64,13 @@ def format_publish_results(results: dict[str, Any]) -> str:
         )
     else:
         video_type = results.get("video_type") or _video_type_from_rows(rows)
-        if video_type == "带货图文":
-            summary = f"发布完成，发布 {succeeded} 条带货图文。"
+        if "图文" in video_type:
+            summary = f"已提交 {succeeded} 条{video_type}任务，等待平台发布。"
         else:
-            summary = f"发布完成，发布 {succeeded} 条 {video_type} 视频。"
+            summary = f"已提交 {succeeded} 条 {video_type} 视频任务，等待平台发布。"
         lines = [
             summary,
-            f"发布结果：共 {total} 条，成功 {succeeded}，失败 {failed}。",
+            f"提交结果：共 {total} 条，已提交 {succeeded}，失败或状态不明 {failed}，跳过 {results.get('skipped_count', 0)}。",
         ]
         basics = _format_publish_basics(results, rows)
         if basics:
@@ -79,7 +81,8 @@ def format_publish_results(results: dict[str, Any]) -> str:
     lines = [title, ""]
 
     success_rows = [r for r in rows if r.get("status") == "success"]
-    failed_rows = [r for r in rows if r.get("status") == "failed"]
+    failed_rows = [r for r in rows if r.get("status") in ("failed", "unknown")]
+    skipped_rows = [r for r in rows if r.get("status") == "skipped"]
     dry_rows = [r for r in rows if r.get("status") == "dry-run"]
     needs_edit_rows = [r for r in rows if r.get("status") == "needs-edit"]
 
@@ -100,9 +103,13 @@ def format_publish_results(results: dict[str, Any]) -> str:
         for r in failed_rows:
             errors = r.get("errors", [])
             err_text = "; ".join(errors) if errors else "未知错误"
-            lines.append(f"  - 第 {r.get('index', '?')} 行 (@{r.get('creator_username', '?')})：{err_text}")
+            lines.append(f"  - 第 {r.get('index', '?')} 行 (@{r.get('creator_username', '?')}) [{r.get('status')}]：{err_text}")
         lines.append("")
 
+    if skipped_rows:
+        lines.append("跳过（已有记录）：")
+        for r in skipped_rows:
+            lines.append(f"  - @{r.get('creator_username')} postId={r.get('post_id') or '-'}：" + "; ".join(r.get('errors', [])))
     if needs_edit_rows:
         lines.append("需修改：")
         for r in needs_edit_rows:
@@ -119,8 +126,9 @@ def format_publish_results(results: dict[str, Any]) -> str:
             lines.append(
                 f"  - @{r.get('creator_username','?')} "
                 f"[{PLATFORM_LABELS.get(r.get('platform',''), r.get('platform',''))}] "
-                f"时间={r.get('scheduled_at','?')} "
-                f"{media_label}={media}"
+                f"时间={r.get('scheduled_at','?')} 时区={r.get('timezone', '')} "
+                f"文案={r.get('title', '')} 商品={r.get('product_id', '')} 购物车标题={r.get('product_title', '')} "
+                f"{media_label}={media} 设置={r.get('publish_options', {})}"
             )
 
     return "\n".join(lines)
@@ -133,6 +141,8 @@ def _video_type_from_rows(rows: list[dict[str, Any]]) -> str:
         return "带货图文"
     if platforms == {"tiktok_shop"}:
         return "带货"
+    if platforms == {"tiktok_business"}:
+        return "高级版不带货图文" if media_types == {"photo"} else "高级版不带货"
     if platforms == {"tiktok"}:
         return "普通/养号"
     return "混合"

@@ -15,8 +15,8 @@ POST_CREATE_PATH = "/v1/creator/post/create"
 PRODUCT_SHOP_LIST_PATH = "/v1/creator/tiktokshop/product/listByShop"
 PRODUCT_SHOWCASE_LIST_PATH = "/v1/creator/tiktokshop/product/listByShowcase"
 
-SUPPORTED_PLATFORMS = ("tiktok_shop", "tiktok")
-PLATFORM_LABELS = {"tiktok_shop": "TikTok Shop (带货)", "tiktok": "TikTok (养号)"}
+SUPPORTED_PLATFORMS = ("tiktok_shop", "tiktok", "tiktok_business")
+PLATFORM_LABELS = {"tiktok_shop": "TikTok Shop (带货)", "tiktok": "TikTok (养号)", "tiktok_business": "TikTok (高级版)"}
 
 # VIDEO = 视频；PHOTO = 带货图文（仅 tiktok_shop）
 SUPPORTED_MEDIA_TYPES = ("video", "photo")
@@ -34,8 +34,8 @@ PHOTO_MAX_FILE_BYTES = 10 * 1024 * 1024  # 10MB
 PHOTO_ASPECT_RATIO_MIN = 9 / 16
 PHOTO_ASPECT_RATIO_MAX = 16 / 9
 
-PLATFORM_API_MAP = {"tiktok_shop": "TIKTOK_SHOP", "tiktok": "TIKTOK"}
-AUTH_SOURCE_MAP = {"tiktok_shop": "TIKTOK_SHOP_CREATOR", "tiktok": "TIKTOK_LOGIN_KIT"}
+PLATFORM_API_MAP = {"tiktok_shop": "TIKTOK_SHOP", "tiktok": "TIKTOK", "tiktok_business": "TIKTOK_BUSINESS"}
+AUTH_SOURCE_MAP = {"tiktok_shop": "TIKTOK_SHOP_CREATOR", "tiktok": "TIKTOK_LOGIN_KIT", "tiktok_business": "TIKTOK_BUSINESS_ACCOUNT_API"}
 
 TIMEZONE_MAP: dict[str, str] = {
     "EST": "America/New_York",
@@ -128,7 +128,7 @@ CSV_ALL_COLUMNS = (
     "product_source", "title",
     "timezone", "scheduled_at",
     "video_file", "image_files",
-    "music_id", "music_title", "music_author", "music_duration",
+    "music_id", "music_title", "music_author", "music_duration", "publish_options",
 )
 
 COLUMN_LABELS: dict[str, str] = {
@@ -147,6 +147,7 @@ COLUMN_LABELS: dict[str, str] = {
     "music_title": "音乐标题",
     "music_author": "音乐作者",
     "music_duration": "音乐时长",
+    "publish_options": "发布设置",
 }
 
 COLUMN_LABEL_TO_KEY: dict[str, str] = {v: k for k, v in COLUMN_LABELS.items()}
