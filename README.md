@@ -12,7 +12,7 @@
 | 能力包 | 能力说明 | 版本号 | 更新时间（北京时间） | 负责人 |
 | --- | --- | --- | --- | --- |
 | [`openapi-guide`](packages/openapi-guide/) | 面向开发者查询灵途 OpenAPI 文档、说明 API Key 的获取与安全使用方式、选择接口、生成或审查接入代码和排查脱敏错误；Skill 本身不持有 API Key，也不调用线上业务接口。 | 0.1.3 | 2026-09-22 20:06:42 | 许强强 |
-| [`content-create`](packages/content-create/) | 灵途 AI 带货视频和商品图片生成。根据商品素材和提示词生成带货视频、UGC 短视频、商品主图和场景图。 | 0.4.5 | 2026-10-15 20:29:45 | 许强强 |
+| [`content-create`](packages/content-create/) | 灵途 AI 带货视频和商品图片生成。根据商品素材和提示词生成带货视频、UGC 短视频、商品主图和场景图。 | 0.4.5 | 2026-10-15 20:33:28 | 许强强 |
 | [`tkshop-query`](packages/tkshop-query/) | 查询 TK 店铺数据：日报、店铺列表、AI 经营问答。 | 0.2.3 | 2026-09-22 20:06:43 | 许强强 |
 | [`tk-blacklist`](packages/tk-blacklist/) | 按 TikTok uniqueId 批量查询达人黑名单记录、反馈次数、最近反馈时间和原因。 | 0.1.3 | 2026-09-22 20:06:43 | 许强强 |
 | [`social-monitor`](packages/social-monitor/) | TikTok / Instagram 达人竞品监控、账号视频列表、单条视频素材数据和近期视频情报报告。 | 0.9.3 | 2026-09-22 20:06:43 | 许强强 |
