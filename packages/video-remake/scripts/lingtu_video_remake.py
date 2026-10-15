@@ -35,6 +35,8 @@ def _shared_scripts_dir() -> Path:
 
 sys.path.insert(0, str(_shared_scripts_dir()))
 from lingtu_auth import require_api_key
+from lingtu_http import LingtuHttpError
+from lingtu_upload import presign_upload
 
 
 SUCCESS_STATUSES = {"succeeded", "success", "completed", "complete", "done", "finished"}
@@ -486,38 +488,43 @@ def require_lingtu_key() -> str:
         raise WorkflowError(str(exc)) from exc
 
 
-def upload_media(path: Path, base_url: str, upload_path: str, api_key: str, *, image: bool = False) -> int | str:
-    body, boundary = multipart_body({}, path)
-    response = request_json(
-        "POST",
-        build_url(base_url, upload_path),
-        api_key=api_key,
-        body=body,
-        content_type=f"multipart/form-data; boundary={boundary}",
-        timeout=300,
-    )
-    if not isinstance(response, dict):
-        raise WorkflowError("上传接口返回类型不是 JSON 对象。")
-    code = response.get("code")
-    if code not in (None, 0, "0"):
-        raise WorkflowError(f"上传失败：{response.get('message') or response}")
+def upload_media(
+    path: Path,
+    base_url: str,
+    presign_path: str,
+    confirm_path: str,
+    api_key: str,
+    *,
+    image: bool = False,
+) -> int | str:
+    try:
+        result = presign_upload(
+            path,
+            base=base_url,
+            api_key=api_key,
+            presign_path=presign_path,
+            confirm_path=confirm_path,
+            as_system_exit=False,
+        )
+    except (LingtuHttpError, OSError) as exc:
+        raise WorkflowError(f"上传失败：{exc}") from exc
     if image:
-        url = first_value(response, ("data.url", "url"))
+        url = result.get("url")
         if not isinstance(url, str) or urllib.parse.urlparse(url).scheme not in {"http", "https"}:
             raise WorkflowError("图片上传响应缺少合法 data.url。")
         return url
-    file_id = first_value(response, ("data.id", "id"))
+    file_id = result.get("id")
     try:
         normalized = int(file_id)
     except (TypeError, ValueError) as exc:
-        raise WorkflowError(f"上传响应缺少合法 data.id：{response}") from exc
+        raise WorkflowError(f"上传响应缺少合法 data.id：{file_id}") from exc
     if normalized <= 0:
         raise WorkflowError(f"上传响应包含无效 data.id：{file_id}")
     return normalized
 
 
-def upload_video(path: Path, base_url: str, upload_path: str, api_key: str) -> int:
-    return int(upload_media(path, base_url, upload_path, api_key))
+def upload_video(path: Path, base_url: str, presign_path: str, confirm_path: str, api_key: str) -> int:
+    return int(upload_media(path, base_url, presign_path, confirm_path, api_key))
 
 
 def validate_references(values: list[str], *, image: bool) -> list[str]:
@@ -543,7 +550,7 @@ def resolve_references(values: list[str], args: argparse.Namespace, api_key: str
         elif not image and value.isdecimal():
             result.append(int(value))
         else:
-            result.append(upload_media(Path(value), args.base_url, args.upload_path, api_key, image=image))
+            result.append(upload_media(Path(value), args.base_url, args.presign_path, args.confirm_path, api_key, image=image))
     return result
 
 
@@ -731,7 +738,7 @@ def generate_segment(job_dir: Path, manifest: dict[str, Any], segment: dict[str,
 
     image_references = resolve_references(images, args, api_key, image=True)
     audio_file_ids = resolve_references(audio, args, api_key, image=False)
-    file_id = upload_video(source_clip, args.base_url, args.upload_path, api_key)
+    file_id = upload_video(source_clip, args.base_url, args.presign_path, args.confirm_path, api_key)
     schedule_id, task_ids, task_id = create_schedule(
         base_url=args.base_url,
         create_path=args.schedule_create_path,
@@ -863,7 +870,8 @@ def command_prepare(args: argparse.Namespace) -> None:
 
 def add_network_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--base-url", default=os.getenv("LINGTU_AI_BASE_URL", "https://api.ailingtu.com"))
-    parser.add_argument("--upload-path", default=os.getenv("LINGTU_FILE_UPLOAD_PATH", "/v1/file/upload"))
+    parser.add_argument("--presign-path", default=os.getenv("LINGTU_FILE_PRESIGN_PATH", "/v1/file/presign"))
+    parser.add_argument("--confirm-path", default=os.getenv("LINGTU_FILE_CONFIRM_PATH", "/v1/file/confirm"))
     parser.add_argument("--schedule-create-path", default=os.getenv("LINGTU_AI_SCHEDULE_CREATE_PATH", "/v1/ai/schedule/create"))
     parser.add_argument(
         "--task-list-path",

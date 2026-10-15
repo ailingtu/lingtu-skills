@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-understand
 slug: lingtu-video-understand
-version: 0.9.4
+version: 0.9.5
 auth: lingtu-api-key
 displayName: "AI 视频拆解与复刻提示词 By 灵途 AI"
 summary: 分析多平台视频，生成脚本结构、卖点和复刻提示词。
@@ -34,12 +34,12 @@ homepage: https://ailingtu.com/skills/video-understand
 支持的输入：
 
 - TikTok、抖音、小红书、视频号、YouTube 或 Instagram 的公开视频链接。
-- 本地视频文件（脚本先通过 `/v1/file/upload` 上传，再根据文件 ID 生成复刻提示词）。
+- 本地视频文件（脚本先通过 `/v1/file/presign` → `PUT` → `/v1/file/confirm` 上传，再根据文件 ID 生成复刻提示词）。
 - 已上传至灵途的素材或文件，通过 `businessId` + `businessType` 引用。
 
 支持的接口流程：
 
-- 文件上传：`POST /v1/file/upload`，使用 `multipart/form-data`，表单字段为 `file`。
+- 文件上传：`POST /v1/file/presign` → `PUT` 到 `data.uploadUrl` → `POST /v1/file/confirm`。
 - 复刻提示词：`POST /v1/material/analysisTask/stream`，通过服务器发送事件返回。
 
 修改接口路径、请求字段、响应字段或处理逻辑前，先阅读 `references/api.md`。通过 `scripts/lingtu_video_understand.py` 执行调用。
@@ -77,7 +77,7 @@ The replication prompt is a model-generated description, not verified footage or
 
 1. Decide the input shape.
    - If the user provides a TikTok, Douyin, Xiaohongshu, WeChat Channels, YouTube, or Instagram URL, send `{ type: "REPLICATION", url }`. Accept full share links and short links (e.g. `v.douyin.com`, `www.douyin.com`, `xhslink.com`, `www.xiaohongshu.com`, `channels.weixin.qq.com`).
-   - If the user provides a local video file path, upload it first through `POST /v1/file/upload` (form field `file`), then send `{ type: "REPLICATION", businessId: <data.id>, businessType: "FILE" }`.
+   - If the user provides a local video file path, upload it first through the presign flow (`POST /v1/file/presign` → `PUT` to `data.uploadUrl` → `POST /v1/file/confirm`), then send `{ type: "REPLICATION", businessId: <data.fileId>, businessType: "FILE" }`.
    - If the user references an already-uploaded material/file, send `{ type: "REPLICATION", businessId, businessType }` where `businessType` is `MATERIAL` or `FILE`.
 2. Always send `type: "REPLICATION"` for now. The `ANALYSIS` mode is reserved and not used by this skill.
 3. Use the script to validate SSE data and concatenate streaming results. A non-zero exit means the result is unusable; do not interpret raw diagnostic fragments as a completed analysis.

@@ -7,7 +7,7 @@
 ## 主要能力
 
 - 支持 TikTok、抖音、小红书、视频号、YouTube、Instagram 的公开视频链接、本地视频文件，以及灵途素材或文件引用（`businessId` + `businessType`）。
-- 本地文件通过 `POST /v1/file/upload` 上传（多部分表单字段为 `file`），将返回的 `data.id` 作为 `businessId`，并设置 `businessType: "FILE"`。
+- 本地文件通过 `POST /v1/file/presign` → `PUT` 到 `data.uploadUrl` → `POST /v1/file/confirm` 上传，将返回的 `data.fileId` 作为 `businessId`，并设置 `businessType: "FILE"`。
 - 通过 `POST /v1/material/analysisTask/stream` 流式获取复刻提示词（`type: "REPLICATION"`）。
 - 校验流式响应后输出完整提示词；`--json` 包含来源和任务 ID，`--raw` 输出用于诊断的 SSE 原始行，并报告校验失败。
 - 分析 TikTok 或 Instagram 视频时，可通过 `packages/social-monitor` 获取实时指标；通过 `packages/social-comments` 获取 TikTok、Instagram、抖音、视频号或小红书的评论，再结合复刻提示词分析。

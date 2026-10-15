@@ -8,14 +8,17 @@
 
 ## File Upload
 
-Upload a local video before replicating, when no public URL is available.
+Upload a local video before replicating, when no public URL is available. The upload has three steps; file bytes go straight to object storage instead of the API gateway.
+
+Step 1 — presign:
 
 ```http
-POST /v1/file/upload
-Content-Type: multipart/form-data
+POST /v1/file/presign
+Content-Type: application/json
+x-api-key: <api-key>
 ```
 
-Form field: `file` (single binary part).
+Request body: `fileName`, `contentType`, `size` and `hash`. `hash` is the Java-compatible content hash `sha256(hex(raw_bytes).encode("utf-8"))`; files larger than 300M are rejected.
 
 Response:
 
@@ -24,17 +27,22 @@ Response:
   "code": 0,
   "message": "success",
   "data": {
-    "id": 765307,
+    "fileId": 765307,
+    "uploadUrl": "https://<bucket>.tos-.../...&X-Tos-Signature=...",
     "url": "https://static.ailingtu.com/file/2026-06-14/<hash>.mp4",
+    "expiresAt": "2026-06-14T10:20:00",
     "isNew": true
   },
   "timestamp": 1781437383620
 }
 ```
 
-- `data.id` is the file id. Pass it as `businessId` with `businessType: "FILE"` to the replication endpoint.
+Step 2 — `PUT` the raw bytes to `data.uploadUrl` with the same `Content-Type` and no `x-api-key`. Skip PUT and confirm when `data.isNew` is `false`: the same content was uploaded before and the previously stored file is reused.
+
+Step 3 — `POST /v1/file/confirm` with `x-api-key` and body `{"fileId": <data.fileId>}`. It marks the file as usable; without it the file stays unconfirmed and cannot be analysed.
+
+- `data.fileId` is the file id. Pass it as `businessId` with `businessType: "FILE"` to the replication endpoint.
 - `data.url` is the CDN URL of the stored file.
-- `data.isNew` is `false` when the same file content was already uploaded; the API returns the previously stored id instead of duplicating storage.
 - A non-zero `code` indicates an error; surface `message` to the caller.
 
 ## Replication Prompt (streaming)

@@ -9,8 +9,8 @@ Use this file as the source of truth for Lingtu AI media creation endpoints. Kee
 - Shared key config: reads `LINGTU_API_KEY` from the environment.
 - Creation model: create a schedule, receive a schedule id and optional task ids, poll until completion.
 - The script sends a caller-generated 8-character `taskId` by default. In schedule mode, query task lists with `scheduleId`; if the create response returns `taskIds`, use them as an additional precise match.
-- Reference images must be remote CDN URLs. Local files must be uploaded through `POST /v1/file/upload` first; use the returned `data.url` as the reference. Base64 / `data:` URLs are no longer accepted by the create API. Image generation uses `params.inputReferences` as an array; video generation uses `params.inputReference` for one reference or `params.inputReferences` for multiple references.
-- `wan3.0-video` also accepts reference videos and reference voiceovers. Send their Lingtu file ids as integer arrays in `params.videoFileIds` and `params.audioFileIds`. Local video/audio files may be uploaded through `POST /v1/file/upload`; use the returned `data.id`.
+- Reference images must be remote CDN URLs. Local files must first go through the presign upload flow (`POST /v1/file/presign` → `PUT` to `uploadUrl` → `POST /v1/file/confirm`); use the returned `data.url` as the reference. Base64 / `data:` URLs are no longer accepted by the create API. Image generation uses `params.inputReferences` as an array; video generation uses `params.inputReference` for one reference or `params.inputReferences` for multiple references.
+- `wan3.0-video` also accepts reference videos and reference voiceovers. Send their Lingtu file ids as integer arrays in `params.videoFileIds` and `params.audioFileIds`. Local video/audio files use the same presign flow; use the returned `data.fileId`.
 - Intended media types: image and video now; music or other content types may use the same pattern later.
 - Video duration defaults (user-specified duration always wins):
 
@@ -47,27 +47,39 @@ Authentication uses only the `LINGTU_API_KEY` environment variable. If it is mis
 
 ### File Upload
 
-Upload a local image to obtain a remote CDN URL before creating an image/video task. The create API only accepts http(s) URLs for `params.inputReference` / `params.inputReferences`; base64 / data URLs are no longer supported.
+Upload a local file to obtain a remote CDN URL before creating an image/video task. The create API only accepts http(s) URLs for `params.inputReference` / `params.inputReferences`; base64 / data URLs are no longer supported.
+
+The upload has three steps. File bytes are sent straight to object storage, so they never pass through the API gateway:
+
+1. `POST /v1/file/presign`
 
 - Method: `POST`
-- Path: `/v1/file/upload`
+- Path: `/v1/file/presign`
 - Auth: `x-api-key: <key>`
-- Body: `multipart/form-data` with form field `file` (binary file content)
+- Body: `application/json` with `fileName`, `contentType`, `size` and `hash`
+- `hash` is the Java-compatible content hash: `sha256(hex(raw_bytes).encode("utf-8"))`
+- Files larger than 300M are rejected
 - Success response shape:
 
 ```json
 {
   "code": 0,
   "data": {
-    "id": "file id",
-    "url": "https://static.ailingtu.com/...",
+    "fileId": 1710086,
+    "uploadUrl": "https://<bucket>.tos-.../...&X-Tos-Signature=...",
+    "url": "https://static.ailingtu.com/file/2026-06-14/<hash>.png",
+    "expiresAt": "2026-06-14T10:20:00",
     "isNew": true
   }
 }
 ```
 
+2. `PUT` the raw file bytes to `data.uploadUrl` with the same `Content-Type`. Do not send `x-api-key` to object storage. Skip PUT and confirm when `data.isNew` is `false`: the same content was uploaded before and the stored file is reused.
+3. `POST /v1/file/confirm` with `x-api-key` and body `{"fileId": <data.fileId>}`. It marks the file as usable; an unconfirmed file cannot be used by the create API.
+
 - Use `data.url` as the reference image URL when calling schedule/task create.
-- `data.isNew` is `false` when the same file content was already uploaded; the API returns the previously stored id/url.
+- Use `data.fileId` for `params.videoFileIds` / `params.audioFileIds`.
+- `scripts/lingtu_content_task.py` performs all three steps for the local paths passed to `--reference-image`, `--reference-video` and `--reference-audio`.
 
 ### Direct Task Create
 

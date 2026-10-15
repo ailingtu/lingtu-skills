@@ -7,7 +7,6 @@ from pathlib import Path
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
 DEFAULT_DESKTOP = Path.home() / "Desktop"
 
-UPLOAD_PATH = "/v1/file/upload"
 FILE_PRESIGN_PATH = "/v1/file/presign"
 FILE_CONFIRM_PATH = "/v1/file/confirm"
 CREATOR_PAGE_LIST_PATH = "/v1/creatorAccount/pageList"

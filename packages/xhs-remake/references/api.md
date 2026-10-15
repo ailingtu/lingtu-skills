@@ -40,7 +40,7 @@ python3 scripts/lingtu_xhs_manifest.py \
 
 ## 图片生成
 
-本包自带 `scripts/lingtu_content_task.py`。本地参考图先通过 `POST /v1/file/upload` 上传，使用返回的 `data.url`；生成调用 `POST /v1/ai/schedule/create`：
+本包自带 `scripts/lingtu_content_task.py`。本地参考图先通过 `POST /v1/file/presign` → `PUT` 原始字节到 `data.uploadUrl`（不携带 `x-api-key`）→ `POST /v1/file/confirm` 上传（`isNew=false` 时复用已有文件，跳过 PUT 和 confirm），使用返回的 `data.url`；生成调用 `POST /v1/ai/schedule/create`：
 
 ```json
 {

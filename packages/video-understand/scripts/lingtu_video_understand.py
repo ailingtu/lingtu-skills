@@ -26,7 +26,7 @@ shared_scripts_dir = _shared_scripts_dir()
 sys.path.insert(0, str(shared_scripts_dir))
 from lingtu_auth import require_api_key
 from lingtu_http import base_url as shared_base_url
-from lingtu_upload import multipart_upload
+from lingtu_upload import presign_upload
 
 
 DEFAULT_BASE_URL = "https://api.ailingtu.com"
@@ -41,7 +41,7 @@ def base_url():
 
 
 def upload_file(path):
-    return multipart_upload(path, stream=True, progress=True, require_id=True, as_system_exit=True)
+    return presign_upload(path, progress=True, as_system_exit=True)
 
 
 def stream_replication(payload, raw=False, emit=True, timeout=300):
@@ -213,7 +213,7 @@ def main():
 
     rep_parser = subparsers.add_parser("replicate", help="Generate a replication prompt from a video URL, local file, or uploaded material.")
     rep_parser.add_argument("--url", help="Public TikTok, Douyin, Xiaohongshu, WeChat Channels, YouTube, or Instagram URL.")
-    rep_parser.add_argument("--file", help="Local video file path. Uploaded via /v1/file/upload, then replicated as businessType=FILE.")
+    rep_parser.add_argument("--file", help="Local video file path. Uploaded via /v1/file/presign + confirm, then replicated as businessType=FILE.")
     rep_parser.add_argument("--business-id", help="Uploaded material/file id (skip upload).")
     rep_parser.add_argument("--business-type", choices=["FILE", "MATERIAL"], help="Business type when using --business-id.")
     output_group = rep_parser.add_mutually_exclusive_group()
@@ -221,7 +221,7 @@ def main():
     rep_parser.add_argument("--timeout", type=positive_timeout, default=300, help="Socket timeout in seconds (default: 300).")
     output_group.add_argument("--raw", action="store_true", help="Print raw SSE lines instead of the assembled prompt text.")
 
-    upload_parser = subparsers.add_parser("upload", help="Upload a local file to /v1/file/upload and print the file id.")
+    upload_parser = subparsers.add_parser("upload", help="Upload a local file through /v1/file/presign + confirm and print the file id.")
     upload_parser.add_argument("path", help="Local file path to upload.")
 
     batch_parser = subparsers.add_parser("batch", help="Analyze a URL list with isolated JSON results.")

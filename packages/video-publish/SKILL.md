@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-publish
 slug: lingtu-video-publish
-version: 0.4.1
+version: 0.4.2
 auth: lingtu-api-key
 displayName: "TikTok 视频与图文批量发布 By 灵途 AI"
 summary: 从素材文件夹生成可审核的发布方案，确认后提交并查询 TikTok 发布结果。

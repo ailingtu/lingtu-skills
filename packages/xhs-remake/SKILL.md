@@ -1,7 +1,7 @@
 ---
 name: lingtu-xhs-remake
 slug: lingtu-xhs-remake
-version: 0.1.5
+version: 0.1.6
 auth: lingtu-api-key
 displayName: "小红书爆款种草图文批量照抄 By 灵途 AI"
 summary: "参考小红书图文的内容结构与视觉方式，用自有素材重新创作成套种草图文与发布文案。"

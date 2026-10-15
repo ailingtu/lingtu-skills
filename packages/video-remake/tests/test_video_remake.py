@@ -119,17 +119,24 @@ class ReferenceParameterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "reference.png"
             source.write_bytes(b"test")
-            with mock.patch.object(MODULE, "request_json", return_value={"data": {"id": 42, "url": "https://example.test/image.png"}}) as request:
+            # 上传现在由 shared/scripts/lingtu_upload.py 的 presign_upload 发起，MODULE.request_json 不再参与上传，
+            # 因此在这里拦截 presign_upload，避免单元测试真的去调线上接口。
+            with mock.patch.object(MODULE, "presign_upload", return_value={"id": "42", "url": "https://example.test/image.png"}) as upload:
                 self.assertEqual(MODULE.resolve_references([str(source)], args, "test", image=True), ["https://example.test/image.png"])
                 self.assertEqual(MODULE.resolve_references([str(source)], args, "test", image=False), [42])
-                self.assertEqual(request.call_count, 2)
-            with mock.patch.object(MODULE, "request_json") as request:
+                self.assertEqual(upload.call_count, 2)
+                self.assertEqual(upload.call_args.kwargs["presign_path"], "/v1/file/presign")
+                self.assertEqual(upload.call_args.kwargs["confirm_path"], "/v1/file/confirm")
+            with mock.patch.object(MODULE, "presign_upload") as upload:
                 self.assertEqual(MODULE.resolve_references(["42"], args, "test", image=False), [42])
                 self.assertEqual(MODULE.resolve_references(["https://example.test/a.png"], args, "test", image=True), ["https://example.test/a.png"])
-                request.assert_not_called()
-            with mock.patch.object(MODULE, "request_json", return_value={"data": {"id": 42}}):
+                upload.assert_not_called()
+            with mock.patch.object(MODULE, "presign_upload", return_value={"id": "42", "url": ""}):
                 with self.assertRaises(MODULE.WorkflowError):
-                    MODULE.upload_media(source, args.base_url, args.upload_path, "test", image=True)
+                    MODULE.upload_media(source, args.base_url, args.presign_path, args.confirm_path, "test", image=True)
+            with mock.patch.object(MODULE, "presign_upload", side_effect=MODULE.LingtuHttpError("上传超时", url="https://example.test")):
+                with self.assertRaises(MODULE.WorkflowError):
+                    MODULE.upload_media(source, args.base_url, args.presign_path, args.confirm_path, "test", image=False)
 
     def test_reference_validation_and_cli_order(self):
         args = MODULE.build_parser().parse_args(["regenerate", "--job-dir", "job", "--segment", "segment-001",

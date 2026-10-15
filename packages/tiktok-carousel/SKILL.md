@@ -1,7 +1,7 @@
 ---
 name: lingtu-tiktok-carousel
 slug: lingtu-tiktok-carousel
-version: 0.1.5
+version: 0.1.6
 auth: lingtu-api-key
 displayName: "TikTok 带货图文策划与出图 By 灵途 AI"
 summary: "基于商品真实卖点策划 TikTok 带货图文，确认方案后生成逐页图片与发布文案。"

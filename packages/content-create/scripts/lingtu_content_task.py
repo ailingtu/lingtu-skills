@@ -35,7 +35,7 @@ sys.path.insert(0, str(_shared_scripts_dir()))
 
 from lingtu_auth import require_api_key
 from lingtu_http import LingtuHttpError, build_url, request_json as shared_request_json
-from lingtu_upload import multipart_upload
+from lingtu_upload import presign_upload
 
 
 SUCCESS_STATUSES = {"succeeded", "success", "completed", "complete", "done", "finished"}
@@ -172,13 +172,11 @@ def generate_client_task_id() -> str:
 
 def upload_reference_image(path: str, base_url: str, api_key: str) -> str:
     try:
-        result = multipart_upload(
+        result = presign_upload(
             path,
             base=base_url,
             api_key=api_key,
-            stream=False,
-            allow_null_code=True,
-            require_id=False,
+            as_system_exit=False,
         )
     except LingtuHttpError as exc:
         raise RuntimeError(str(exc)) from exc
@@ -198,13 +196,11 @@ def resolve_reference_image(path_or_url: str, base_url: str, api_key: str) -> st
 
 def upload_reference_file_id(path: str, base_url: str, api_key: str, label: str) -> int:
     try:
-        result = multipart_upload(
+        result = presign_upload(
             path,
             base=base_url,
             api_key=api_key,
-            stream=True,
-            allow_null_code=True,
-            require_id=True,
+            as_system_exit=False,
         )
     except LingtuHttpError as exc:
         raise RuntimeError(str(exc)) from exc
@@ -539,7 +535,7 @@ def parse_args() -> argparse.Namespace:
         "--reference-image",
         action="append",
         default=[],
-        help="Reference image as a remote http(s) url, or a local path that will be uploaded to /v1/file/upload first. Repeat for multiple images; order is preserved.",
+        help="Reference image as a remote http(s) url, or a local path that will be uploaded through the file presign + confirm flow first. Repeat for multiple images; order is preserved.",
     )
     parser.add_argument(
         "--reference-video",

@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-remake
 slug: lingtu-video-remake
-version: 0.2.6
+version: 0.2.7
 auth: lingtu-api-key
 displayName: "AI 爆款视频分段复刻 By 灵途 AI"
 summary: 将源视频按语义分段，用 Wan3.0 逐段重绘、确认并合成爆款复刻视频。
