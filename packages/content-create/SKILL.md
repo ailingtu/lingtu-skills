@@ -1,7 +1,7 @@
 ---
 name: lingtu-content-create
 slug: lingtu-content-create
-version: 0.4.2
+version: 0.4.3
 auth: lingtu-api-key
 displayName: AI 带货视频和 AI 商品图片生成 by 灵途 AI
 summary: 用灵途 AI 生成电商带货视频、UGC 短视频、商品主图和场景图。
@@ -50,7 +50,7 @@ Use `https://api.ailingtu.com` as the default base URL. Read `references/api.md`
    - Video duration defaults by model: `wan3.0-video`=15s, `gemini-omni-video`=10s, `veo3.1-extend`/`veo3.1-lite-extend`=8s, `grok-imagine-1.5`=15s, `seedance2.0-mini`/`seedance2.0`/`seedance2.0-fast`=10s. For `wan3.0-video`, `-1` means adaptive duration and integers from 1 through 30 are supported. If the user specifies duration, use the user's value.
    - 写视频提示词前确定本次实际模型；未指定时用 `--kind video --show-default-model` 查询。Wan (`wan3.0-video`) 读取 `references/wan-prompt-guide.md`，按素材与意图选用自然语言、参考素材或分镜写法，不强制八字段。
    - For other video models, use this field format in this exact order: `Video style:`, `Scene:`, `Camera:`, `Tone & pacing:`, `Character:`, `Spoken script:`, `Audio:`, `Overall feeling:`. Do not add other top-level fields or prose outside the format.
-2. Upload local reference files to Lingtu first via `POST /v1/file/upload` (multipart `file` field). For images, use the returned `data.url`; the create API does not accept base64 / `data:` image URLs. For `wan3.0-video` reference videos and voiceovers, use the returned `data.id`. Preserve the user's order because reference order can influence generation.
+2. Upload local reference files to Lingtu first with the presign flow: `POST /v1/file/presign` → `PUT` the bytes to the returned `data.uploadUrl` → `POST /v1/file/confirm`. For images, use the returned `data.url`; the create API does not accept base64 / `data:` image URLs. For `wan3.0-video` reference videos and voiceovers, use the returned `data.fileId`. Preserve the user's order because reference order can influence generation.
 3. Create a Lingtu AI schedule using `scripts/lingtu_content_task.py`. The script auto-uploads local paths passed via `--reference-image`, `--reference-video`, or `--reference-audio`. Image references are sent as `params.inputReference` / `params.inputReferences`; `wan3.0-video` reference videos and voiceovers are sent as integer arrays in `params.videoFileIds` and `params.audioFileIds`. The media flags can also take existing Lingtu file ids for video/audio. The script generates an 8-character `taskId` by default and sends it with the create payload; the schedule create response may also return provider `taskIds`.
 4. Unless the user explicitly asks for multiple outputs, pass `--nums 1`, create only one schedule/task for the request, return the first successful asset, and stop. If the current task is pending, processing, or otherwise not explicitly failed or timed out, keep polling that same task and do not create a new one. Do not generate extra variants or rerun the same prompt after success. **Crucial: a script crash, network error, or non-zero exit during polling does NOT mean the task failed.** Always re-run poll-only with the existing id before considering a retry:
    ```bash

@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-understand
 slug: lingtu-video-understand
-version: 0.9.0
+version: 0.9.1
 auth: lingtu-api-key
 displayName: 灵途视频拆解分析
 summary: 分析多平台视频，生成脚本结构、卖点和复刻提示词。
@@ -23,12 +23,12 @@ Use this skill to turn a video into a natural-language replication prompt.
 Supported inputs:
 
 - A public TikTok, Douyin (抖音), Xiaohongshu (小红书), WeChat Channels (视频号), YouTube, or Instagram URL.
-- A local video file (the script uploads it through `/v1/file/upload` first, then replicates by file id).
+- A local video file (the script uploads it through the `/v1/file/presign` + `confirm` flow first, then replicates by file id).
 - A material/file already uploaded to Lingtu, referenced by `businessId` + `businessType`.
 
 Supported API flows:
 
-- File upload: `POST /v1/file/upload`, multipart/form-data with form field `file`.
+- File upload: `POST /v1/file/presign` → `PUT` to `data.uploadUrl` → `POST /v1/file/confirm`.
 - Replication prompt: `POST /v1/material/analysisTask/stream`, server-sent events.
 
 Read `references/api.md` before changing endpoint paths, request fields, response fields, or streaming parsing. Use `scripts/lingtu_video_understand.py` for deterministic calls.
@@ -68,7 +68,7 @@ The replication prompt is a model-generated description, not verified footage or
 
 1. Decide the input shape.
    - If the user provides a TikTok, Douyin, Xiaohongshu, WeChat Channels, YouTube, or Instagram URL, send `{ type: "REPLICATION", url }`. Accept full share links and short links (e.g. `v.douyin.com`, `www.douyin.com`, `xhslink.com`, `www.xiaohongshu.com`, `channels.weixin.qq.com`).
-   - If the user provides a local video file path, upload it first through `POST /v1/file/upload` (form field `file`), then send `{ type: "REPLICATION", businessId: <data.id>, businessType: "FILE" }`.
+   - If the user provides a local video file path, upload it first through the presign flow (`POST /v1/file/presign` → `PUT` to `data.uploadUrl` → `POST /v1/file/confirm`), then send `{ type: "REPLICATION", businessId: <data.fileId>, businessType: "FILE" }`.
    - If the user references an already-uploaded material/file, send `{ type: "REPLICATION", businessId, businessType }` where `businessType` is `MATERIAL` or `FILE`.
 2. Always send `type: "REPLICATION"` for now. The `ANALYSIS` mode is reserved and not used by this skill.
 3. Use the script to validate SSE data and concatenate streaming results. A non-zero exit means the result is unusable; do not interpret raw diagnostic fragments as a completed analysis.

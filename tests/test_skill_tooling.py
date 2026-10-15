@@ -9,6 +9,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SHARED_SCRIPTS = ROOT / "shared" / "scripts"
+if str(SHARED_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SHARED_SCRIPTS))
 
 
 def load_module(name: str, path: Path):
@@ -145,6 +148,28 @@ class SkillAuthContractTests(unittest.TestCase):
                 "user_keys.py single bind",
                 (public_destination / "SKILL.md").read_text(encoding="utf-8"),
             )
+
+
+class SkillUploadContractTests(unittest.TestCase):
+    def test_no_skill_still_uses_the_gateway_multipart_upload_endpoint(self):
+        current = Path(__file__).resolve()
+        for path in sorted(ROOT.rglob("*")):
+            relative = path.relative_to(ROOT)
+            if not path.is_file() or path.suffix not in {".md", ".py"}:
+                continue
+            if ".git" in relative.parts or "dist" in relative.parts or path.resolve() == current:
+                continue
+            with self.subTest(path=relative):
+                self.assertNotIn("/v1/file/upload", path.read_text(encoding="utf-8"))
+
+    def test_shared_upload_module_exposes_only_the_presign_flow(self):
+        import lingtu_upload
+
+        self.assertEqual(lingtu_upload.FILE_PRESIGN_PATH, "/v1/file/presign")
+        self.assertEqual(lingtu_upload.FILE_CONFIRM_PATH, "/v1/file/confirm")
+        self.assertTrue(callable(lingtu_upload.presign_upload))
+        self.assertFalse(hasattr(lingtu_upload, "multipart_upload"))
+        self.assertFalse(hasattr(lingtu_upload, "UPLOAD_PATH"))
 
 
 if __name__ == "__main__":

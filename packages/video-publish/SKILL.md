@@ -1,7 +1,7 @@
 ---
 name: lingtu-video-publish
 slug: lingtu-video-publish
-version: 0.2.1
+version: 0.2.2
 auth: lingtu-api-key
 displayName: 灵途批量视频发布
 summary: 按 CSV 排期批量发布 TikTok Shop 带货视频、图文和养号内容。

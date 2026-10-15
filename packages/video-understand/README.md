@@ -2,12 +2,12 @@
 
 Video Understand turns a video into a natural-language replication prompt. The output is a Markdown-style brief (title, subjects, scene, scripted shots, production notes) that can feed downstream video generation or be used as a tagging/understanding source.
 
-Current package version: `0.9.0`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
+Current package version: `0.9.1`. Remote installers can compare the `version` field in [`SKILL.md`](./SKILL.md) frontmatter to decide whether an installed copy needs updating.
 
 ## What It Does
 
 - Accepts a public TikTok, Douyin (抖音), Xiaohongshu (小红书), WeChat Channels (视频号), YouTube, or Instagram URL, a local video file path, or a Lingtu material/file reference (`businessId` + `businessType`).
-- Local files are uploaded through `POST /v1/file/upload` (multipart form field `file`); the returned `data.id` is reused as `businessId` with `businessType: "FILE"`.
+- Local files are uploaded through the presign flow (`POST /v1/file/presign` → `PUT` to `data.uploadUrl` → `POST /v1/file/confirm`); the returned `data.fileId` is reused as `businessId` with `businessType: "FILE"`.
 - Streams a replication prompt from `POST /v1/material/analysisTask/stream` (`type: "REPLICATION"`).
 - Validates the stream, then prints the assembled prompt; `--json` includes source and task id. `--raw` prints diagnostic SSE lines and still reports validation failures.
 - For TikTok/Instagram video analysis, fetch real-time metrics with `packages/social-monitor`. Fetch comment context for TikTok, Instagram, Douyin, WeChat Channels, or Xiaohongshu with `packages/social-comments`, then combine it with this replication prompt.
