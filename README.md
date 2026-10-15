@@ -4,7 +4,7 @@
 
 灵途 AI 官网：[www.ailingtu.com](https://www.ailingtu.com)。
 
-源码仓库：[coss/ailingtu/skills.ailingtu](https://codeup.aliyun.com/coss/ailingtu/skills.ailingtu)，仅用于开发和发布。用户安装与升级统一使用[灵途 Skills 官方安装文档](https://ailingtu.com/install/skills.md)，不要从 Codeup 或 GitHub 安装。
+源码仓库：[阿里 Codeup](https://codeup.aliyun.com/coss/ailingtu/skills.ailingtu) 与 [GitHub](https://github.com/ailingtu/lingtu-skills)，双源同步，仅用于开发和发布。用户安装与升级统一使用[灵途 Skills 官方安装文档](https://ailingtu.com/install/skills.md)，不要从 Codeup 或 GitHub 安装。
 
 ## 包含哪些能力
 

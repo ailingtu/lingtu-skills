@@ -8,7 +8,7 @@ Use this repository when a user asks for Lingtu AI OpenAPI developer integration
 
 - User installation and upgrades must follow https://ailingtu.com/install/skills.md.
 - Do not tell users to install or update Skills with Codeup, GitHub, `git clone`, `git pull`, or another skill store.
-- Codeup https://codeup.aliyun.com/coss/ailingtu/skills is the development source only.
+- Codeup https://codeup.aliyun.com/coss/ailingtu/skills.ailingtu and GitHub https://github.com/ailingtu/lingtu-skills are synchronized development sources only. See docs/git-remotes.md for dual-source Git configuration; installation and upgrades still use the official installation document.
 - Before updating or adding a package in the official SkillHub, read `docs/skillhub-release.md` completely. Normal releases must build exactly one package, then preview and publish it through the officially installed `lingtu-skillhub-publish` Skill. Do not invoke a website-repository publisher or manually call the publishing API.
 
 ## Available Packages

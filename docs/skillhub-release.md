@@ -19,8 +19,10 @@ Skill 时，先完整阅读本文，再执行构建、上传或官网发布。
 
 ## 项目位置
 
-开发源码仓库为 <https://codeup.aliyun.com/coss/ailingtu/skills>，Git 远程地址为
-`git@codeup.aliyun.com:coss/ailingtu/skills.git`。
+开发源码同步保存于 <https://codeup.aliyun.com/coss/ailingtu/skills.ailingtu> 与
+<https://github.com/ailingtu/lingtu-skills>。Codeup Git 地址为
+`git@codeup.aliyun.com:coss/ailingtu/skills.ailingtu.git`，GitHub Git 地址为
+`git@github.com:ailingtu/lingtu-skills.git`。双源配置见 [Git 双源同步](git-remotes.md)。
 
 默认源码项目：
 
